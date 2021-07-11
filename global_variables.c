@@ -5,17 +5,12 @@
  *      Author: symon
  */
 
-#include "stm32l0xx.h"
-#include "stm32l0xx_nucleo.h"
+#include "stm32f4xx.h"
 #include "global_constants.h"
 #include "global_variables.h"
 
 
-
-
-
-
-uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 2000, 1000, 1000,
+uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
 		1000, 1000, 1000, 1000, 1000, };
 
 int16_t Throttle = 1000;
@@ -42,6 +37,8 @@ uint8_t ibus_received = 0;
 
 uint8_t I2C1_read_write_flag = 1;
 
+uint8_t imu_received = 0;
+
 uint8_t transmitting_is_Done = 1;
 
 uint8_t failsafe_type;
@@ -51,6 +48,6 @@ uint8_t failsafe_type;
 
 uint16_t motor_off = 1000 - 1; //value of PWM to power off motors
 
-ThreeD global_euler_angles={ 0, 0, 0 };
+ThreeF global_euler_angles={ 0, 0, 0 };
 
-ThreeD global_angles={ 0, 0, 0 };
+ThreeF global_angles={ 0, 0, 0 };

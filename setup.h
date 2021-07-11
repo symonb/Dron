@@ -1,8 +1,8 @@
 /*
  * setup.h
  *
- *  Created on: 03.01.2021
- *      Author: filip
+ *  Created on: 04.07.2021
+ *      Author: symon
  */
 
 #ifndef SETUP_H_

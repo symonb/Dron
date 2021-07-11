@@ -5,8 +5,7 @@
  *      Author: symon
  */
 
-#include "stm32l0xx.h"
-#include "stm32l0xx_nucleo.h"
+#include "stm32f4xx.h"
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
@@ -16,7 +15,8 @@
 
 static double time_flag = 0;
 
-ThreeD Rotate_Vector_with_Quaternion(ThreeD vector,Quaternion q ,
+
+ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q,
 		int8_t Transposition) {
 	//Transposition say if you want rotate with rotation matrix made from quaternion (0) or you want rotate with transponce of this matrix (1)
 	if (Transposition == 0) {
@@ -66,31 +66,31 @@ Quaternion Rotate_Quaternion(Quaternion q1) {
 	return q1;
 }
 
-ThreeD Quaternion_to_Euler_angles(Quaternion q) {
-	static ThreeD angles;
+ThreeF Quaternion_to_Euler_angles(Quaternion q) {
+	static ThreeF angles;
 // roll (x-axis rotation)
 	double sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
 	double cosr_cosp = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
-	angles.roll = atan2(sinr_cosp, cosr_cosp) * RAD_TO_DEG;
+	angles.roll = atan2f(sinr_cosp, cosr_cosp) * RAD_TO_DEG;
 
 // pitch (y-axis rotation)
-	angles.pitch = asin(2 * (q.w * q.y - q.z * q.x)) * RAD_TO_DEG;
+	angles.pitch = asinf(2 * (q.w * q.y - q.z * q.x)) * RAD_TO_DEG;
 
 // yaw (z-axis rotation)
 	double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
 	double cosy_cosp = q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z;
-	angles.yaw = atan2(siny_cosp, cosy_cosp) * RAD_TO_DEG;
+	angles.yaw = atan2f(siny_cosp, cosy_cosp) * RAD_TO_DEG;
 
 	return angles;
 }
-Quaternion Euler_angles_to_Quaternion(ThreeD euler_angles) {
+Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles) {
 
-	double cr = cos(euler_angles.roll * 0.5 * DEG_TO_RAD);
-	double sr = sin(euler_angles.roll * 0.5 * DEG_TO_RAD);
-	double cp = cos(euler_angles.pitch * 0.5 * DEG_TO_RAD);
-	double sp = sin(euler_angles.pitch * 0.5 * DEG_TO_RAD);
-	double cy = cos(euler_angles.yaw * 0.5 * DEG_TO_RAD);
-	double sy = sin(euler_angles.yaw * 0.5 * DEG_TO_RAD);
+	double cr = cosf(euler_angles.roll * 0.5 * DEG_TO_RAD);
+	double sr = sinf(euler_angles.roll * 0.5 * DEG_TO_RAD);
+	double cp = cosf(euler_angles.pitch * 0.5 * DEG_TO_RAD);
+	double sp = sinf(euler_angles.pitch * 0.5 * DEG_TO_RAD);
+	double cy = cosf(euler_angles.yaw * 0.5 * DEG_TO_RAD);
+	double sy = sinf(euler_angles.yaw * 0.5 * DEG_TO_RAD);
 
 	Quaternion q;
 	q.w = cr * cp * cy + sr * sp * sy;
@@ -128,7 +128,7 @@ Quaternion quaternion_multiply(Quaternion q1, double x) {
 	return q1;
 }
 double quaternion_norm(Quaternion q1) {
-	return sqrt(q1.w * q1.w + q1.x * q1.x + q1.y * q1.y + q1.z * q1.z);
+	return sqrtf(q1.w * q1.w + q1.x * q1.x + q1.y * q1.y + q1.z * q1.z);
 }
 
 Quaternion quaternion_conjugate(Quaternion q1) {
@@ -138,3 +138,6 @@ Quaternion quaternion_conjugate(Quaternion q1) {
 	return q1;
 }
 
+double skalar_quaternions_multiplication(Quaternion q1, Quaternion q2) {
+	return q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z;
+}

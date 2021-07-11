@@ -14,6 +14,24 @@ typedef struct {
 	double pitch; // Y
 	double yaw; // Z
 } ThreeD;
+typedef struct {
+	float roll; // X
+	float pitch; // Y
+	float yaw; // Z
+} ThreeF;
+
+typedef struct {
+	float P;
+	float I;
+	float D;
+} PID;
+
+typedef struct {
+	int32_t roll; // X
+	int32_t pitch; // Y
+	int32_t yaw; // Z
+} Three;
+
 
 extern uint16_t channels[];
 
@@ -37,6 +55,8 @@ extern uint8_t New_data_to_send;
 
 extern uint8_t ibus_received;
 
+extern uint8_t imu_received;
+
 extern uint8_t I2C1_read_write_flag;
 
 extern uint8_t transmitting_is_Done;
@@ -45,8 +65,8 @@ extern uint8_t failsafe_type;
 
 extern uint16_t motor_off;
 
-extern ThreeD global_euler_angles;
+extern ThreeF global_euler_angles;
 
-extern ThreeD global_angles;
+extern ThreeF global_angles;
 
 #endif /* GLOBAL_VARIABLES_H_ */

@@ -17,7 +17,7 @@
 #define DISARM_VALUE 1600
 #define MAX_I2C_TIME 0.005				//[s]
 // MUST BE DIVISIBLE BY 4  How many samples for median filter (average is computed from a half of samples):
-#define MEASUREMENT_BUFFOR_SIZE 8	//aktualnie nieu¿ywany
+
 
 // OFFSETS and CALIBRATIONS VALUE
 
@@ -52,9 +52,9 @@
 #define MAX_ROLL_ANGLE 30
 #define MAX_PITCH_ANGLE 30
 
-#define FREQUENCY_PID_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 250 //[Hz]
-#define FREQUENCY_IMU_READING 250 //[Hz]
+#define FREQUENCY_PID_LOOP 400 //[Hz]
+#define FREQUENCY_ESC_UPDATE 400 //[Hz]
+#define FREQUENCY_IMU_READING 400 //[Hz]
 #define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 #define RAD_TO_DEG  180 / M_PI
