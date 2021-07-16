@@ -45,13 +45,13 @@ double get_Global_Time() {
 }
 
 void set_motors(ThreeF corr) {
-	const uint16_t max_pwm=2000;
+	const uint16_t max_pwm=1200;
 	const uint16_t idle_pwm=1050;
 	//	Make corrections:
 	//	right front:
-	pwm_m1 = Throttle - corr.pitch + corr.yaw - corr.roll;
+	pwm_m1 = Throttle + corr.pitch - corr.yaw - corr.roll;
 	//	right back:
-	pwm_m2 = Throttle + corr.pitch - corr.yaw - corr.roll;
+	pwm_m2 = Throttle - corr.pitch + corr.yaw - corr.roll;
 	//	left back:
 	pwm_m3 = Throttle + corr.pitch + corr.yaw + corr.roll;
 	//	left front:
@@ -120,6 +120,8 @@ void EXTI15_10_IRQHandler() {
 		case 4:
 			break;
 		case 5:
+			break;
+		case 6:
 			break;
 		}
 	}

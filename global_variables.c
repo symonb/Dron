@@ -43,7 +43,7 @@ uint8_t transmitting_is_Done = 1;
 
 uint8_t failsafe_type;
 /* 1-disarmed 2-incorrect channels values 3-RX timeout
- * 4-setup_error 5-I2C communication error
+ * 4-setup_error 5-I2C communication error 6-SPI communication error
  */
 
 uint16_t motor_off = 1000 - 1; //value of PWM to power off motors

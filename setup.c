@@ -13,6 +13,7 @@
 
 static void change_RCC_HSI();
 static void setup_PLL();
+static void setup_FPU();
 static void setup_GPIOA(); // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1 )
 static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 5 - blue LED; 10 - TX USART3)
 static void setup_GPIOC();		// GPIOC (pin 6 - TX USART6; pin 7 - RX USART6 )
@@ -33,6 +34,7 @@ extern volatile uint8_t rxBuf[];
 void setup() {
 	change_RCC_HSI();
 	setup_PLL();
+	//setup_FPU();
 	setup_GPIOA();
 	setup_GPIOB();
 	setup_GPIOC();
@@ -100,6 +102,11 @@ static void setup_PLL() {
 	}
 }
 
+static void setup_FPU(){
+	SCB->CPACR|=(3UL<<10*2)|(3UL<<11*2);
+
+}
+
 static void setup_GPIOA() {
 	// enable GPIOA clock:
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
@@ -131,6 +138,12 @@ static void setup_GPIOA() {
 	GPIOA->AFR[0] |= 0x55501100;
 	GPIOA->AFR[1] &= ~0x00000F00;
 	GPIOA->AFR[1] |= 0x00000700;
+
+	//pull up (01) on PIN4 (SPI CS):
+	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;
+
+	//set high on PIN4 (SPI CS)
+	GPIOA->BSRR |= GPIO_BSRR_BS4;
 
 	GPIOA->OSPEEDR |= ( GPIO_OSPEEDER_OSPEEDR2_1 | GPIO_OSPEEDER_OSPEEDR2_0 |
 	GPIO_OSPEEDER_OSPEEDR3_1 | GPIO_OSPEEDER_OSPEEDR3_0 |
@@ -268,9 +281,9 @@ static void setup_USART1() {
 	RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
 	USART1->BRR = 0x5B2; // 168 000 000 / 115 200/16 = 91,1458 so 91 is mantissa 0x5B and fraction 16*0.1458=~2 =0x2 so BRR is 0x5B2
 //	USART1->CR3 |= USART_CR3_DMAR;//uncomment for DMA reading
-	USART1->CR1 |=
+	USART1->CR1 |= USART_CR1_IDLEIE|
 	USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
-//	| USART_CR1_IDLEIE
+
 }
 static void setup_USART3() {
 	// enable USART3 clock:
@@ -353,30 +366,33 @@ static void setup_EXTI() {
 void setup_NVIC() {
 	// nvic interrupt enable (USART6 interrupt):
 	NVIC_EnableIRQ(USART6_IRQn);
+	NVIC_SetPriority(USART6_IRQn, 15);
 
 	// nvic interrupt enable (USART3 interrupt):
 	NVIC_EnableIRQ(USART3_IRQn);
+	NVIC_SetPriority(USART3_IRQn, 14);
 
 	// nvic interrupt enable (USART1 interrupt):
 	NVIC_EnableIRQ(USART1_IRQn);
-	// I2C1 interrupt enable:
+	NVIC_SetPriority(USART1_IRQn, 13);
 
 	// nvic interrupt enable (TIM6 interrupt);
 	NVIC_EnableIRQ(TIM6_DAC_IRQn);
+	NVIC_SetPriority(TIM6_DAC_IRQn, 9);
 
 	// nvic EXTI interrupt enable:
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
-	NVIC_SetPriority(EXTI15_10_IRQn, 4);
+	NVIC_SetPriority(EXTI15_10_IRQn, 7);
 
 	NVIC_EnableIRQ(EXTI4_IRQn);
-	NVIC_SetPriority(EXTI4_IRQn,3);
+	NVIC_SetPriority(EXTI4_IRQn,8);
 
 	// nvic DMA interrupt enable:
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
-	//NVIC_SetPriority(DMA2_Stream5_IRQn, 1);
+	NVIC_SetPriority(DMA2_Stream5_IRQn, 11);
 
 	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
-	//NVIC_SetPriority(DMA2_Stream6_IRQn, 2);
+	NVIC_SetPriority(DMA2_Stream6_IRQn, 12);
 
 }
 

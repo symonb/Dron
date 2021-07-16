@@ -33,15 +33,15 @@ void DMA2_Stream5_IRQHandler(void) {
 		ibus_received = 1;
 
 		if (I2C1_read_write_flag == 0) {
-			EXTI->IMR |= EXTI_IMR_IM9;
+			EXTI->IMR |= EXTI_IMR_IM4;
 		}
 	}
 }
-//for DMA:
-//void USART2_IRQHandler(void) {
+//	//for DMA:
+//void USART1_IRQHandler(void) {
 //	//RDR not empty flag:
 //	static double time_flag5_1;
-//	if (0 != (USART_ISR_RXNE & USART2->ISR)) {
+//	if (0 != (USART_SR_RXNE & USART1->SR)) {
 //		//check gap duration if bigger than 500 us brake
 //
 ////tu jest coœ Ÿle przy zakomenntowanym dzia³a porawinie a jesli to odkomentujê przerwa wynosi oko³o 0.065[s] a to czas trwania 10 ramek ibusa bez sensu
@@ -52,12 +52,12 @@ void DMA2_Stream5_IRQHandler(void) {
 ////		time_flag5_1 = get_Global_Time();
 //
 //		//	read actual value of I-BUS (Interrupt flag will be automatically removed):
-//		rxBuf[rxindex] = USART2->RDR;
+//		rxBuf[rxindex] = USART1->DR;
 //		if (rxindex == 1 && rxBuf[rxindex] == 0x40) {
 //
-//			//block USART2 interrupt until DMA reading finish and data are processed:
-//			USART2->CR1 &= ~USART_CR1_RXNEIE;
-//			EXTI->IMR &= ~EXTI_IMR_IM9;
+//			//block USART1 interrupt until DMA reading finish and data are processed:
+//			USART1->CR1 &= ~USART_CR1_RXNEIE;
+//			EXTI->IMR &= ~EXTI_IMR_IM4;
 //
 //			//start DMA USART2 reading:
 ////			for (int i=0;i<300;i++){
@@ -82,7 +82,7 @@ void DMA2_Stream5_IRQHandler(void) {
 //
 ////delay_micro(90);//waiting for clearing RDR register FIND BETTER WAY!!!!
 //
-//			DMA1_Channel5->CCR |= DMA_CCR_EN;
+//			DMA2_Stream5->CR |= DMA_SxCR_EN;
 //
 //		} else if (rxindex == 0 && rxBuf[rxindex] != 0x20) {
 //			rxindex = 0;
@@ -96,13 +96,11 @@ void DMA2_Stream5_IRQHandler(void) {
 //		}
 //	}
 ////idle detection flag:
-//	if (0 != (USART_ISR_IDLE & USART2->ISR)) {
-//		USART2->ICR |= USART_ICR_IDLECF;
-//
-//		if (ibus_received == 0) {
-//			USART2->CR1 |= USART_CR1_RXNEIE;
-//		}
-//
+//	if (0 != (USART_SR_IDLE & USART1->SR)) {
+//			 USART1->DR;
+//				if (ibus_received == 0) {
+//					USART1->CR1 |= USART_CR1_RXNEIE;
+//				}
 //	}
 //}
 
@@ -140,7 +138,7 @@ void USART1_IRQHandler(void) {
 		}
 	}
 	//idle detection flag:
-	status_register=USART1->SR;
+
 	 if (0 != (USART_SR_IDLE & USART1->SR)) {
 		 USART1->DR;
 			if (ibus_received == 0) {

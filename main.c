@@ -38,12 +38,10 @@ int main(void) {
 	static float time_flag0_2 = 0;
 	static float time_flag0_3 = 0;
 
-	static float time_flag1_2 = 0;
-
-	uint8_t Who_I_am=0;
-	SPI_enable();
-	MPU6000_SPI_read(0x75,&Who_I_am,1);
-	SPI_disable();
+	uint8_t Register_value[2];
+			SPI_enable();
+			MPU6000_SPI_read(0x1A,Register_value,1);
+			SPI_disable();
 
 	while (1) {
 		if ((get_Global_Time() - time_flag0_1) >= 10) {
@@ -59,28 +57,24 @@ int main(void) {
 					rewrite_data();
 					pik++;
 
-					if ((get_Global_Time() - time_flag1_2) >= 1. / FREQUENCY_TELEMETRY_UPDATE) {
-								time_flag1_2 = get_Global_Time();
-
 					if (channels[6] < 1400) {
 						acro();
-
-
-					}
 						turn_ON_LED();
 					}
+
+
 					else if (channels[6] > 1450) {
 						stabilize();
 						turn_OFF_LED();
 					}
 
 					if (0 != transmitting_is_Done && 0 != New_data_to_send) {
-						// Transmit data
-						print(table_to_send, ALL_ELEMENTS_TO_SEND);
-					}
+								// Transmit data
+								print(table_to_send, ALL_ELEMENTS_TO_SEND);
+							}
 				}
 				else {
-					delay_mili(1);
+					delay_micro(10);
 				}
 
 				if ((get_Global_Time() - time_flag0_3) >= 1. / FREQUENCY_ESC_UPDATE) {
