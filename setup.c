@@ -15,13 +15,13 @@ static void change_RCC_HSI();
 static void setup_PLL();
 static void setup_FPU();
 static void setup_GPIOA(); // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1 )
-static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 5 - blue LED; 10 - TX USART3)
-static void setup_GPIOC();		// GPIOC (pin 6 - TX USART6; pin 7 - RX USART6 )
+static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 4 -  LED; pin 5 - blue LED; 10 - TX USART3)
+static void setup_GPIOC();		// GPIOC (pin 4 EXTI (INT MPU6000); pin 6 - TX USART6; pin 7 - RX USART6 )
 static void setup_TIM2(); 			// setup TIM2
 static void setup_TIM3(); 			// setup TIM3
 static void setup_TIM6(); 			// setup TIM6
 static void setup_USART1(); 		// USART for radioreceiver
-static void setup_USART3();	// USART for communication via (3Dradio or bluetooth) debug
+static void setup_USART3();	// USART for communication via (3Dradio or bluetooth) - UNUSED
 static void setup_USART6();	// USART for communication via (3Dradio or bluetooth)
 static void setup_SPI1();			// SPI for communication with MPU6000
 static void setup_DMA();
@@ -34,7 +34,7 @@ extern volatile uint8_t rxBuf[];
 void setup() {
 	change_RCC_HSI();
 	setup_PLL();
-	//setup_FPU();
+	setup_FPU();
 	setup_GPIOA();
 	setup_GPIOB();
 	setup_GPIOC();
@@ -165,6 +165,9 @@ static void setup_GPIOB() {
 	GPIOB->MODER &= ~GPIO_MODER_MODER1;
 	GPIOB->MODER |= GPIO_MODER_MODER1_1;
 
+	GPIOB->MODER &= ~GPIO_MODER_MODER4;
+	GPIOB->MODER |= GPIO_MODER_MODER4_0;
+
 	GPIOB->MODER &= ~GPIO_MODER_MODER5;
 	GPIOB->MODER |= GPIO_MODER_MODER5_0;
 
@@ -179,6 +182,7 @@ static void setup_GPIOB() {
 
 	GPIOB->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR0_1 | GPIO_OSPEEDER_OSPEEDR0_0 |
 	GPIO_OSPEEDER_OSPEEDR1_1 | GPIO_OSPEEDER_OSPEEDR1_0 |
+	GPIO_OSPEEDER_OSPEEDR4_1 | GPIO_OSPEEDER_OSPEEDR4_0 |
 	GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
 	GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0);
 }
@@ -280,7 +284,7 @@ static void setup_USART1() {
 	// enable USART1 clock:
 	RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
 	USART1->BRR = 0x5B2; // 168 000 000 / 115 200/16 = 91,1458 so 91 is mantissa 0x5B and fraction 16*0.1458=~2 =0x2 so BRR is 0x5B2
-//	USART1->CR3 |= USART_CR3_DMAR;//uncomment for DMA reading
+	USART1->CR3 |= USART_CR3_DMAR;//uncomment for DMA reading
 	USART1->CR1 |= USART_CR1_IDLEIE|
 	USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
 
@@ -334,7 +338,7 @@ static void setup_DMA() {
 
 	//USART1 RX reading:
 	DMA2_Stream5->CR |= DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC | DMA_SxCR_CIRC
-			| DMA_SxCR_PL_1;
+			| DMA_SxCR_TCIE| DMA_SxCR_PL_1;
 	DMA2_Stream5->PAR = (uint32_t) (&(USART1->DR));
 	DMA2_Stream5->M0AR = (uint32_t) (&rxBuf[1]);
 	DMA2_Stream5->NDTR = 31;
@@ -374,7 +378,7 @@ void setup_NVIC() {
 
 	// nvic interrupt enable (USART1 interrupt):
 	NVIC_EnableIRQ(USART1_IRQn);
-	NVIC_SetPriority(USART1_IRQn, 13);
+	NVIC_SetPriority(USART1_IRQn, 7);
 
 	// nvic interrupt enable (TIM6 interrupt);
 	NVIC_EnableIRQ(TIM6_DAC_IRQn);
@@ -382,7 +386,7 @@ void setup_NVIC() {
 
 	// nvic EXTI interrupt enable:
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
-	NVIC_SetPriority(EXTI15_10_IRQn, 7);
+	NVIC_SetPriority(EXTI15_10_IRQn, 6);
 
 	NVIC_EnableIRQ(EXTI4_IRQn);
 	NVIC_SetPriority(EXTI4_IRQn,8);

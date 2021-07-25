@@ -74,12 +74,19 @@ void set_motors(ThreeF corr) {
 		pwm_m4 = max_pwm;
 
 }
-void turn_ON_LED(){
+void turn_ON_BLUE_LED(){
 	GPIOB->BSRR |=GPIO_BSRR_BR5;
 	}
 
-void turn_OFF_LED(){
+void turn_OFF_BLUE_LED(){
 	GPIOB->BSRR |=GPIO_BSRR_BS5;
+	}
+void turn_ON_RED_LED(){
+	GPIOB->BSRR |=GPIO_BSRR_BR4;
+	}
+
+void turn_OFF_RED_LED(){
+	GPIOB->BSRR |=GPIO_BSRR_BS4;
 	}
 
 //FAILSAFE HANDLER:

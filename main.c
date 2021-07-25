@@ -1,12 +1,13 @@
 /**
- ******************************************************************************
- * @file    main.c
- * @author  Ac6
- * @version V1.0
- * @date    01-December-2013
- * @brief   Default main function.
- ******************************************************************************
- */
+  ******************************************************************************
+  * @file    main.c
+  * @author  Ac6
+  * @version V1.0
+  * @date    01-December-2013
+  * @brief   Default main function.
+  ******************************************************************************
+*/
+
 
 
 #include "stm32f4xx.h"
@@ -59,13 +60,15 @@ int main(void) {
 
 					if (channels[6] < 1400) {
 						acro();
-						turn_ON_LED();
+						turn_OFF_RED_LED();
+						turn_ON_BLUE_LED();
 					}
 
 
 					else if (channels[6] > 1450) {
 						stabilize();
-						turn_OFF_LED();
+						turn_OFF_BLUE_LED();
+						turn_ON_RED_LED();
 					}
 
 					if (0 != transmitting_is_Done && 0 != New_data_to_send) {
@@ -95,6 +98,4 @@ void update_motors() {
 	TIM2->CCR4 = *PWM_M3 - 1; 			//wypelneinie motor 3
 	TIM2->CCR3 = *PWM_M4 - 1; 			//wypelneinie motor 4
 }
-
-
 

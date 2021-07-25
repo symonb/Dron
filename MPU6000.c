@@ -202,19 +202,19 @@ void SPI_receive(uint8_t adress_of_register, uint8_t *data, int size) {
 
 	int i = 0;
 	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE)&&failsafe_type!=6) {
+	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type!=6) {
 		failsafe_SPI(); 			//wait
 	}
 	SPI1->DR = adress_of_register;
 
 	while (i < size) {
 		time_flag4_1=get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_TXE)&&failsafe_type!=6) {
+		while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type!=6) {
 			failsafe_SPI(); 			//wait
 		}
 		SPI1->DR = 0xFF; 			//send anything IMPORTANT!
 		time_flag4_1=get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_RXNE)&&failsafe_type!=6) {
+		while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type!=6) {
 			failsafe_SPI(); 			//wait
 		}
 		if (i == 0) {
@@ -228,16 +228,16 @@ void SPI_receive(uint8_t adress_of_register, uint8_t *data, int size) {
 		i++;
 	}
 	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_RXNE)&&failsafe_type!=6) {
+	while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type!=6) {
 		failsafe_SPI(); 			//wait
 	}
 	*data = SPI1->DR;
 	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE)&&failsafe_type!=6) {
+	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type!=6) {
 		failsafe_SPI(); 			//wait
 	}
 	time_flag4_1=get_Global_Time();
-	while (((SPI1->SR) & SPI_SR_BSY)&&failsafe_type!=6) {
+	while (((SPI1->SR) & SPI_SR_BSY) && failsafe_type!=6) {
 		failsafe_SPI();
 	}
 
