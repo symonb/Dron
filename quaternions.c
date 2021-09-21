@@ -5,8 +5,7 @@
  *      Author: symon
  */
 
-#include "stm32l0xx.h"
-#include "stm32l0xx_nucleo.h"
+#include "stm32f4xx.h"
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
@@ -14,9 +13,10 @@
 
 #include <math.h>
 
-static double time_flag = 0;
+static float time_flag = 0;
 
-ThreeD Rotate_Vector_with_Quaternion(ThreeD vector,Quaternion q ,
+
+ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q,
 		int8_t Transposition) {
 	//Transposition say if you want rotate with rotation matrix made from quaternion (0) or you want rotate with transponce of this matrix (1)
 	if (Transposition == 0) {
@@ -46,10 +46,10 @@ ThreeD Rotate_Vector_with_Quaternion(ThreeD vector,Quaternion q ,
 }
 
 Quaternion Rotate_Quaternion(Quaternion q1) {
-	static double delta_time;
+	static float delta_time;
 	static Quaternion q1_prim;
 	static Quaternion angular_velocity;
-	const double GYRO_TO_RAD = 1. / 32.768 * DEG_TO_RAD;
+	const float GYRO_TO_RAD = 1.f / 32.768f * DEG_TO_RAD;
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
 	angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
@@ -66,31 +66,31 @@ Quaternion Rotate_Quaternion(Quaternion q1) {
 	return q1;
 }
 
-ThreeD Quaternion_to_Euler_angles(Quaternion q) {
-	static ThreeD angles;
+ThreeF Quaternion_to_Euler_angles(Quaternion q) {
+	static ThreeF angles;
 // roll (x-axis rotation)
-	double sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
-	double cosr_cosp = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
-	angles.roll = atan2(sinr_cosp, cosr_cosp) * RAD_TO_DEG;
+	float sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
+	float cosr_cosp = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
+	angles.roll = atan2f(sinr_cosp, cosr_cosp) * RAD_TO_DEG;
 
 // pitch (y-axis rotation)
-	angles.pitch = asin(2 * (q.w * q.y - q.z * q.x)) * RAD_TO_DEG;
+	angles.pitch = asinf(2 * (q.w * q.y - q.z * q.x)) * RAD_TO_DEG;
 
 // yaw (z-axis rotation)
-	double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
-	double cosy_cosp = q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z;
-	angles.yaw = atan2(siny_cosp, cosy_cosp) * RAD_TO_DEG;
+	float siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+	float cosy_cosp = q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z;
+	angles.yaw = atan2f(siny_cosp, cosy_cosp) * RAD_TO_DEG;
 
 	return angles;
 }
-Quaternion Euler_angles_to_Quaternion(ThreeD euler_angles) {
+Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles) {
 
-	double cr = cos(euler_angles.roll * 0.5 * DEG_TO_RAD);
-	double sr = sin(euler_angles.roll * 0.5 * DEG_TO_RAD);
-	double cp = cos(euler_angles.pitch * 0.5 * DEG_TO_RAD);
-	double sp = sin(euler_angles.pitch * 0.5 * DEG_TO_RAD);
-	double cy = cos(euler_angles.yaw * 0.5 * DEG_TO_RAD);
-	double sy = sin(euler_angles.yaw * 0.5 * DEG_TO_RAD);
+	float cr = cosf(euler_angles.roll * 0.5 * DEG_TO_RAD);
+	float sr = sinf(euler_angles.roll * 0.5 * DEG_TO_RAD);
+	float cp = cosf(euler_angles.pitch * 0.5 * DEG_TO_RAD);
+	float sp = sinf(euler_angles.pitch * 0.5 * DEG_TO_RAD);
+	float cy = cosf(euler_angles.yaw * 0.5 * DEG_TO_RAD);
+	float sy = sinf(euler_angles.yaw * 0.5 * DEG_TO_RAD);
 
 	Quaternion q;
 	q.w = cr * cp * cy + sr * sp * sy;
@@ -119,7 +119,16 @@ Quaternion quaternions_sum(Quaternion q1, Quaternion q2) {
 
 	return q3;
 }
-Quaternion quaternion_multiply(Quaternion q1, double x) {
+Quaternion quaternions_sub(Quaternion q1, Quaternion q2) {
+	Quaternion q3;
+	q3.w = q1.w - q2.w;
+	q3.x = q1.x - q2.x;
+	q3.y = q1.y - q2.y;
+	q3.z = q1.z - q2.z;
+
+	return q3;
+}
+Quaternion quaternion_multiply(Quaternion q1, float x) {
 	q1.w *= x;
 	q1.x *= x;
 	q1.y *= x;
@@ -127,8 +136,8 @@ Quaternion quaternion_multiply(Quaternion q1, double x) {
 
 	return q1;
 }
-double quaternion_norm(Quaternion q1) {
-	return sqrt(q1.w * q1.w + q1.x * q1.x + q1.y * q1.y + q1.z * q1.z);
+float quaternion_norm(Quaternion q1) {
+	return sqrtf(q1.w * q1.w + q1.x * q1.x + q1.y * q1.y + q1.z * q1.z);
 }
 
 Quaternion quaternion_conjugate(Quaternion q1) {
@@ -138,3 +147,6 @@ Quaternion quaternion_conjugate(Quaternion q1) {
 	return q1;
 }
 
+float skalar_quaternions_multiplication(Quaternion q1, Quaternion q2) {
+	return q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z;
+}
