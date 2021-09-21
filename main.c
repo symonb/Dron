@@ -22,6 +22,7 @@
 #include "MPU6000.h"
 
 
+
 void update_motors();
 
 //for debugging only:
@@ -32,17 +33,17 @@ uint8_t test2;
 int main(void) {
 
 	setup();
+	turn_OFF_BLUE_LED();
+	setup_NVIC_1();
+	delay_mili(1000);
 	setup_MPU6000();
-	setup_NVIC();
+	setup_NVIC_2();
+
 
 	static float time_flag0_1 = 0;
 	static float time_flag0_2 = 0;
 	static float time_flag0_3 = 0;
 
-	uint8_t Register_value[2];
-			SPI_enable();
-			MPU6000_SPI_read(0x1A,Register_value,1);
-			SPI_disable();
 
 	while (1) {
 		if ((get_Global_Time() - time_flag0_1) >= 10) {
@@ -78,24 +79,23 @@ int main(void) {
 				}
 				else {
 					delay_micro(10);
+
 				}
 
 				if ((get_Global_Time() - time_flag0_3) >= 1. / FREQUENCY_ESC_UPDATE) {
 					time_flag0_3 = get_Global_Time();
 					update_motors();
-
 				}
-
-
 	}
 
 }
 
 
+
 void update_motors() {
-	TIM3->CCR3 = *PWM_M1 - 1; 			//wypelneinie motor 1
-	TIM3->CCR4 = *PWM_M2 - 1; 			//wypelneinie motor 2
-	TIM2->CCR4 = *PWM_M3 - 1; 			//wypelneinie motor 3
-	TIM2->CCR3 = *PWM_M4 - 1; 			//wypelneinie motor 4
+	TIM2->CCR4 = *PWM_M1 ; 			//wypelneinie motor 1
+	TIM3->CCR3 = *PWM_M2 ; 			//wypelneinie motor 2
+	TIM3->CCR4 = *PWM_M3 ; 			//wypelneinie motor 3
+	TIM2->CCR3 = *PWM_M4 ; 			//wypelneinie motor 4
 }
 

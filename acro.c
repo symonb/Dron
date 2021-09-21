@@ -63,10 +63,10 @@ void acro() {
 		table_to_send[5] = R_PID.D * D_corr.roll * 500. / 32768. + 1000;
 		table_to_send[6] = (Gyro_Acc[0] /32.768/Rates.roll * 50) + 1000;
 		table_to_send[7] = (Gyro_Acc[1] /32.768/ Rates.pitch * 50) + 1000;
-		table_to_send[8] = 0;
-		table_to_send[9] = 0;
-		table_to_send[10] = 0;
-		table_to_send[11] = 0;
+		table_to_send[8] = Y_PID.P * err.yaw * 500. / 32768. + 1000;
+		table_to_send[9] = Y_PID.I * sum_err.yaw * 500. / 32768. + 1000;
+		table_to_send[10] = Y_PID.D * D_corr.yaw * 500. / 32768. + 1000;
+		table_to_send[11] = (Gyro_Acc[2] /32.768/Rates.yaw * 50) + 1000;
 		table_to_send[12] = channels[1] - 500;
 		table_to_send[13] = channels[0] - 500;
 

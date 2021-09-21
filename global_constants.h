@@ -9,7 +9,7 @@
 #define GLOBAL_CONSTANTS_H_
 
 #define CHANNELS  10					//ilosc kanalĂłw (4 potrzebne do sterownaia)
-#define  GYRO_ACC_SIZE 7				//3 for gyro, 3 acc and 1 for temperature
+#define GYRO_ACC_SIZE 7				//3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14			//telemetry informations
 #define MAX_RX_SIGNAL 2050
 #define MIN_RX_SIGNAL 950
@@ -50,9 +50,9 @@
 #define MAX_ROLL_ANGLE 30
 #define MAX_PITCH_ANGLE 30
 
-#define FREQUENCY_PID_LOOP 1000 //[Hz]
-#define FREQUENCY_ESC_UPDATE 1000 //[Hz]
-#define FREQUENCY_IMU_READING 1000 //[Hz]
+#define FREQUENCY_PID_LOOP 400 //[Hz]
+#define FREQUENCY_ESC_UPDATE 400 //[Hz]
+#define FREQUENCY_IMU_READING 400 //[Hz]
 #define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 #define RAD_TO_DEG  180 / M_PI

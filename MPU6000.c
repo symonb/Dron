@@ -15,16 +15,17 @@
 static void setup_conf();
 static void setup_gyro();
 static void setup_acc();
-void read_acc();
-void read_temp();
-void read_gyro();
-void SPI_transmit(uint8_t*data, int size);
-void SPI_receive(uint8_t adress_of_register, uint8_t*data, int size);
-void failsafe_CONF();
-void failsafe_I2C();
-void failsafe_SPI();
-void MPU6000_self_test_configuration();
-void MPU6000_self_test_measurements();
+static void SPI1_enable();
+static void SPI1_disable();
+static void CS_enable();
+static void CS_disable();
+static void SPI_transmit(uint8_t*data, int size);
+static void SPI_receive(uint8_t adress_of_register, uint8_t*data, int size);
+static void failsafe_CONF();
+static void failsafe_I2C();
+static void failsafe_SPI();
+static void MPU6000_self_test_configuration();
+static void MPU6000_self_test_measurements();
 
 //float M_rotacji[3][3] = { { (ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET)
 //		/ sqrtf(
@@ -78,7 +79,7 @@ void MPU6000_self_test_measurements();
 //								+ powf(ACC_CALIBRATION_Z_X - ACC_PITCH_OFFSET,
 //										2)) } };
 
-float M_rotacji[3][3]={{0,1,0},{-1,0,0},{0,0,1}};
+float M_rotacji[3][3]={{-1,0,0},{0,1,0},{0,0,1}};
 
 
 uint8_t read_write_tab[14];
@@ -110,7 +111,11 @@ void EXTI4_IRQHandler() {
 		//INSTRUCTIONS FOR READING IMU SENSORS:
 		imu_received = 0;
 		EXTI->IMR &= ~EXTI_IMR_IM4;
+		//block RX reading while IMU reading
+		USART1->CR1 &= ~USART_CR1_RXNEIE;
 		read_all();
+		//unblock RX reading while IMU reading
+		USART1->CR1 |=USART_CR1_RXNEIE;
 
 	}
 }
@@ -126,25 +131,25 @@ void setup_MPU6000() {
 ////
 }
 
-void SPI_enable() {
+static void SPI1_enable() {
 	SPI1->CR1 |= SPI_CR1_SPE; 			//	enabling SPI1
 
 }
 
-void SPI_disable() {
+static void SPI1_disable() {
 	SPI1->CR1 &= ~SPI_CR1_SPE; 			//	disabling SPI1
 
 }
 
-void CS_enable() {
+static void CS_enable() {
 	GPIOA->BSRR |= GPIO_BSRR_BR4;
 }
 
-void CS_disable() {
+static void CS_disable() {
 	GPIOA->BSRR |= GPIO_BSRR_BS4;
 }
 
-void SPI_transmit(uint8_t *data, int size) {
+static void SPI_transmit(uint8_t *data, int size) {
 	//----------------STEPS--------------------
 	/* 1 Wait for TXE bit to set in the Status Register
 	 * 2 Write the Register Adress (&~x80 for writing) to the Data register
@@ -190,7 +195,7 @@ void SPI_transmit(uint8_t *data, int size) {
 
 }
 
-void SPI_receive(uint8_t adress_of_register, uint8_t *data, int size) {
+static void SPI_receive(uint8_t adress_of_register, uint8_t *data, int size) {
 	//----------------STEPS--------------------
 	/* 1 Wait for TXE bit to set in the Status Register
 	 * 2 Write the Register Adress (|0x80 for reading) to the Data register
@@ -261,15 +266,15 @@ void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t *memory_adress,
 }
 
 //-------main MPU6000 setting-----------
-void setup_conf() {
+static void setup_conf() {
 
 	// enable SPI1
-	SPI_enable();
+	SPI1_enable();
 
 	// 0x6A - address of (106)  User Control register:
-		//  and disable I2C
-		MPU6000_SPI_write(0x6A, 0x10);
-		delay_micro(15);
+	//  and disable I2C
+	MPU6000_SPI_write(0x6A, 0x10);
+	delay_micro(15);
 
 	// 0x6B - address of Power Management 1 register:
 	// set 0x80 in this register (RESET)
@@ -283,19 +288,10 @@ void setup_conf() {
 	//delay of min. 0.1[s] according the MPU6000 datasheet
 	delay_mili(150);
 
-	// 0x6A - address of (106)  User Control register:
-	// Reset FIFO
-//	MPU6000_SPI_write(0x6A, 0x4);
-//	delay_mili(150);
-
 	// 0x6B - address of (107) Power Management 1 register:
 	// set 0x3 in this register (SLEEP -> 0 and PLL with Z axis gyroscope reference)
 	MPU6000_SPI_write(0x6B, 0x3);
 	delay_micro(15);
-
-	// 0x23 - address of (35) FIFO Enable register:
-	// setting all sensors to FIFO
-	//MPU6000_SPI_write(0x23, 0xFF);
 
 	// 0x6A - address of (106)  User Control register:
 	//  and disable I2C
@@ -313,28 +309,28 @@ void setup_conf() {
 	delay_micro(15);
 
 
-	SPI_disable();
+	SPI1_disable();
 }
 static void setup_gyro() {
 	//---------setting Gyro--------
 	//start communication:
 
 	// enable SPI1
-	SPI_enable();
+	SPI1_enable();
 
 	// 0x1B- address of Gyroscope Configuration register:
 	// set +/-1000[deg/s]
 	MPU6000_SPI_write(0x1B, 0x10);
 	delay_micro(15);
 
-	SPI_disable();
+	SPI1_disable();
 }
 static void setup_acc() {
 	//---------setting Accelerometer-----------
 	//	start communication:
 
 	// enable SPI1
-	SPI_enable();
+	SPI1_enable();
 
 	//	0x1C - address of Accelerometer Configuration register:
 	// set +/-8[g]
@@ -342,13 +338,10 @@ static void setup_acc() {
 	MPU6000_SPI_write(0x1C, 0x10);
 	delay_micro(15);
 
-	SPI_disable();
+	SPI1_disable();
 }
 
 void read_all() {
-
-	SPI_enable();
-
 //	uint8_t temp[117] = { 0 };
 //		//X:
 //		MPU6000_SPI_read(0x0D, temp, 117);
@@ -358,14 +351,13 @@ void read_all() {
 	read_acc();
 	read_temp();
 	read_gyro();
-
-	SPI_disable();
 	imu_received = 1;
 }
 
 void read_acc() {
-	SPI_enable();
-	uint8_t temp[6] = { 0 };
+
+	SPI1_enable();
+	static uint8_t temp[6];
 
 	//X:
 	MPU6000_SPI_read(0x3B, temp, 6);
@@ -380,22 +372,22 @@ void read_acc() {
 	read_write_tab[4] = temp[4];
 	read_write_tab[5] = temp[5];
 
-	SPI_disable();
+	SPI1_disable();
 }
 
 void read_temp() {
-	SPI_enable();
-	uint8_t temp[2] = { 0 };
+	SPI1_enable();
+	static uint8_t temp[2];
 	MPU6000_SPI_read(0x3F, temp, 2);
 	read_write_tab[6] = temp[0];
 	read_write_tab[7] = temp[1];
 
-	SPI_disable();
+	SPI1_disable();
 }
 
 void read_gyro() {
-	SPI_enable();
-	uint8_t temp[6] = { 0 };
+	SPI1_enable();
+	static uint8_t temp[6];
 
 	//X:
 	MPU6000_SPI_read(0x43, temp, 6);
@@ -410,7 +402,7 @@ void read_gyro() {
 	read_write_tab[12] = temp[4];
 	read_write_tab[13] = temp[5];
 
-	SPI_disable();
+	SPI1_disable();
 }
 
 void rewrite_data() {
@@ -450,9 +442,6 @@ void rewrite_data() {
 		float accZ;
 		Gyro_Acc[6] = read_write_tab[6] << 8 | read_write_tab[7];
 
-
-
-
 		temperature = Gyro_Acc[6] / 340.f + 36.53f;
 		gyroX = temporary[0] /32.768;
 		gyroY = temporary[1] / 32.768;
@@ -464,7 +453,7 @@ void rewrite_data() {
 	}
 }
 
-void failsafe_CONF() {
+static void failsafe_CONF() {
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= TIMEOUT_VALUE) {
 		failsafe_type = 4;
@@ -472,14 +461,14 @@ void failsafe_CONF() {
 
 	}
 }
-void failsafe_I2C() {
+static void failsafe_I2C() {
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= TIMEOUT_VALUE) {
 		failsafe_type = 5;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 	}
 }
-void failsafe_SPI() {
+static void failsafe_SPI() {
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= TIMEOUT_VALUE) {
 		failsafe_type = 6;
@@ -487,8 +476,8 @@ void failsafe_SPI() {
 	}
 }
 
-void MPU6000_self_test_configuration(){
-	SPI_enable();
+static void MPU6000_self_test_configuration(){
+	SPI1_enable();
 	// 0x1B- address of Gyroscope Configuration register:
 	// set +/-250[deg/s] and Self_test activate
 	MPU6000_SPI_write(0x1B, 0xE0);
@@ -500,10 +489,10 @@ void MPU6000_self_test_configuration(){
 	MPU6000_SPI_write(0x1C, 0xF0);
 	delay_micro(15);
 
-	SPI_disable();
+	SPI1_disable();
 
 }
-void MPU6000_self_test_measurements(float temporary[]){
+static void MPU6000_self_test_measurements(float temporary[]){
 static int i;
 static float averagegyroX;
 static float averagegyroY;
@@ -529,7 +518,7 @@ if (i<1000){
 	i++;
 }
 else if(i==1000){
-	SPI_enable();
+	SPI1_enable();
 	// 0x1B- address of Gyroscope Configuration register:
 	// set +/-250[deg/s] and Self_test deactivate
 	MPU6000_SPI_write(0x1B, 0x00);
@@ -541,7 +530,7 @@ else if(i==1000){
 	MPU6000_SPI_write(0x1C, 0x10);
 	delay_micro(15);
 
-	SPI_disable();
+	SPI1_disable();
 	i++;
 }
 else if(i<2001){

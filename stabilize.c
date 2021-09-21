@@ -21,13 +21,15 @@ static double gyro_angle_pitch = 0;
 static ThreeF acc_angle = { 0, 0, 0 };
 static Quaternion q_acc;
 static Quaternion q_gyro = { 1, 0, 0, 0 };
-static double dt;
+static Quaternion q_global_position = { 1, 0, 0, 0 };
+static float dt;
 
 static void gyro_angles(Quaternion *q_gyro);
 static void complementary_filter();
+static void madgwick_filter();
 static void acc_angles();
 static ThreeF corrections();
-static ThreeF Corrections_from_quaternion();
+static ThreeF Corrections_from_quaternion(Quaternion position_quaternion);
 
 static void anti_windup();
 
@@ -69,8 +71,9 @@ void stabilize() {
 //	gyro_angle_roll = gangles.roll;
 //	gyro_angle_pitch = gangles.pitch;
 
-	complementary_filter();
-	set_motors(Corrections_from_quaternion());
+	//complementary_filter();
+	madgwick_filter();
+	set_motors(Corrections_from_quaternion(q_gyro));
 
 	if ((get_Global_Time() - time_flag1_2) >= 1. / FREQUENCY_TELEMETRY_UPDATE) {
 		time_flag1_2 = get_Global_Time();
@@ -115,16 +118,6 @@ void stabilize() {
 
 }
 
-//static void acc_angles() {
-//	double acc_filter_rate = 0.05;
-//	acc_angle_roll = (1 - acc_filter_rate) * acc_angle_roll
-//			+ acc_filter_rate
-//					* (atan2(Gyro_Acc[4], Gyro_Acc[5]) * RAD_TO_DEG + ROLL_OFFSET);
-//	acc_angle_pitch = (1 - acc_filter_rate) * acc_angle_pitch
-//			+ acc_filter_rate
-//					* (-atan2(Gyro_Acc[3], Gyro_Acc[5]) * RAD_TO_DEG + PITCH_OFFSET);
-//
-//}
 static void acc_angles(Quaternion *q_gyro) {
 
 	static ThreeF gravity_estimated = { 0, 0, 0 };
@@ -140,7 +133,7 @@ static void acc_angles(Quaternion *q_gyro) {
 	gravity_estimated.pitch /= norm;
 	gravity_estimated.yaw /= norm;
 
-	double acc_filter_rate = 0.1;
+	double acc_filter_rate = 0.1; // modification it is basically a weighted average (it gives much more smooth acc_reading)
 	if (gravity_estimated.yaw >= 0) {
 		q_acc.w = (1 - acc_filter_rate) * q_acc.w
 				+ acc_filter_rate * sqrtf(0.5 * (gravity_estimated.yaw + 1));
@@ -172,29 +165,10 @@ static void acc_angles(Quaternion *q_gyro) {
 
 }
 
-//static void gyro_angles(ThreeF *gyro_angles) {
-//	gyro_angles->roll += Gyro_Acc[0] * dt / (GYRO_TO_DPS);
-//	gyro_angles->pitch += Gyro_Acc[1] * dt
-//			/ (GYRO_TO_DPS);
-//	gyro_angles->roll += gyro_angles->pitch
-//			* sin(
-//					Gyro_Acc[2] * dt / (GYRO_TO_DPS)
-//							/ RAD_TO_DEG);
-//	gyro_angles->pitch -= gyro_angles->roll
-//			* sin(
-//					Gyro_Acc[2] * dt / (GYRO_TO_DPS)
-//							/ RAD_TO_DEG);
-//
-//}
 static void gyro_angles(Quaternion *q_gyro) {
 	*q_gyro = Rotate_Quaternion(*q_gyro);
 }
-//static void complementary_filter() {
-//	gyro_angles(&global_euler_angles);
-//	acc_angles();
-//	global_euler_angles.roll = ACC_PART * acc_angle_roll + GYRO_PART * global_euler_angles.roll;
-//	global_euler_angles.pitch = ACC_PART * acc_angle_pitch + GYRO_PART * global_euler_angles.pitch;
-//}
+
 static void complementary_filter() {
 	gyro_angles(&q_gyro);
 	acc_angles(&q_gyro);
@@ -208,6 +182,66 @@ static void complementary_filter() {
 			1 / quaternion_norm(delta_q_acc));
 
 	q_gyro = quaternions_multiplication(delta_q_acc, q_gyro);
+	global_euler_angles = Quaternion_to_Euler_angles(q_gyro);
+
+	global_euler_angles.roll *= -1;
+	global_euler_angles.pitch *= -1;
+	global_euler_angles.yaw *= -1;
+
+}
+
+
+static void madgwick_filter() {
+
+//calculate derivative of q as usually
+		q_global_position.w=q_gyro.w;
+		q_global_position.x=-q_gyro.x;
+		q_global_position.y=-q_gyro.y;
+		q_global_position.z=-q_gyro.z;
+		static Quaternion q_prim;
+		static Quaternion angular_velocity;
+		const float GYRO_TO_RAD = 1.f / 32.768f * DEG_TO_RAD;
+		angular_velocity.w = 0;
+		angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
+		angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
+		angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
+
+		q_prim = quaternion_multiply(
+				quaternions_multiplication(q_global_position,angular_velocity), 0.5f);
+
+
+	static float min_fun[3];
+	static Quaternion acc_reading;
+	const float ACC_TO_GRAVITY = 1.f / 4096 ;
+	acc_reading.w = 0;
+	acc_reading.x = Gyro_Acc[3] * ACC_TO_GRAVITY;
+	acc_reading.y = Gyro_Acc[4] * ACC_TO_GRAVITY;
+	acc_reading.z = Gyro_Acc[5] * ACC_TO_GRAVITY;
+
+	acc_reading=quaternion_multiply(acc_reading,1.f/quaternion_norm(acc_reading));
+
+	min_fun[0]=2*(q_global_position.x*q_global_position.z-q_global_position.w*q_global_position.y)-acc_reading.x;
+	min_fun[1]=2*(q_global_position.w*q_global_position.x+q_global_position.y*q_global_position.z)-acc_reading.y;
+	min_fun[2]=2*(0.5f-q_global_position.x*q_global_position.x-q_global_position.y*q_global_position.y)-acc_reading.z;
+
+	static Quaternion delta_min_fun;
+
+	delta_min_fun.w=-2*q_global_position.y*min_fun[0]+2*q_global_position.x*min_fun[1];
+	delta_min_fun.x=2*q_global_position.z*min_fun[0]+2*q_global_position.w*min_fun[1]-4*q_global_position.x*min_fun[2];
+	delta_min_fun.y=-2*q_global_position.w*min_fun[0]+2*q_global_position.z*min_fun[1]-4*q_global_position.y*min_fun[2];
+	delta_min_fun.z=2*q_global_position.x*min_fun[0]+2*q_global_position.y*min_fun[1];
+
+	//normalize the gradient
+	delta_min_fun=quaternion_multiply(delta_min_fun,1.f/quaternion_norm(delta_min_fun));
+
+
+	static float coefficient_Beta=0.073;
+
+	q_gyro =quaternions_sum(q_gyro,quaternion_multiply(quaternion_conjugate(quaternions_sub( q_prim,quaternion_multiply(delta_min_fun,coefficient_Beta))),dt));
+
+	//normalize quaternion:
+	q_gyro = quaternion_multiply(q_gyro, 1.f / quaternion_norm(q_gyro));
+
 	global_euler_angles = Quaternion_to_Euler_angles(q_gyro);
 
 	global_euler_angles.roll *= -1;
@@ -269,7 +303,7 @@ static ThreeF corrections() {
 	return corr;
 }
 
-static ThreeF Corrections_from_quaternion() {
+static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 
 	static ThreeF corr;
 	static ThreeF set_angles;
@@ -284,20 +318,20 @@ static ThreeF Corrections_from_quaternion() {
 	//define quaternion of desired position (global) :
 	set_position_quaternion = Euler_angles_to_Quaternion(set_angles);
 	//to achieve the shortest path it is required to choose between q and -q so at first check cos(alfa) between quaternions
-	if (skalar_quaternions_multiplication(q_gyro,set_position_quaternion)<0){
+	if (skalar_quaternions_multiplication(position_quaternion,set_position_quaternion)<0){
 		set_position_quaternion=quaternion_multiply(set_position_quaternion,-1);
 	}
 
 	//compute error quaternion (quaternion by which actual position quaternion has to be multiplied to achieve desired position quaternion)
 	//NOTE my position quaternion is already conjunction of quaternion of global position ( so it is from local to global position) so counting error is made in this way:
-	error_quaternion = quaternions_multiplication(q_gyro,
+	error_quaternion = quaternions_multiplication(position_quaternion,
 			set_position_quaternion);
 	//because error_quaternion (imaginary part of it) is vector in global (earth) coordinate system to have local error and then correction it can be rotate by matrix or quaternion rotation (quaternion of actual position)
 	err.roll = error_quaternion.x;
 	err.pitch = error_quaternion.y;
 	err.yaw = error_quaternion.z;
 
-	err = Rotate_Vector_with_Quaternion(err, q_gyro, 0);
+	err = Rotate_Vector_with_Quaternion(err, position_quaternion, 0);
 
 	// PLEACE CHANGE THIS:
 	err.roll *= 32768;

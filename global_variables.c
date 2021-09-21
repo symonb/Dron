@@ -9,8 +9,10 @@
 #include "global_constants.h"
 #include "global_variables.h"
 
+volatile double Global_Time = 0;
+volatile uint8_t Tim_7_flag=0;
 
-uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 2000, 1000, 1000,
+uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
 		1000, 1000, 1000, 1000, 1000, };
 
 int16_t Throttle = 1000;
@@ -46,7 +48,7 @@ uint8_t failsafe_type;
  * 4-setup_error 5-I2C communication error 6-SPI communication error
  */
 
-uint16_t motor_off = 1000 - 1; //value of PWM to power off motors
+uint16_t motor_off = 1000 ; //value of PWM to power off motors
 
 ThreeF global_euler_angles={ 0, 0, 0 };
 

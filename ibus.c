@@ -54,7 +54,7 @@ void USART1_IRQHandler(void) {
 		rxBuf[rxindex] = USART1->DR;
 		if (rxindex == 1 && rxBuf[rxindex] == 0x40) {
 
-			//block USART1 interrupt until DMA reading finish and data are processed:
+			//block USART1 interrupt and IMU reading until DMA reading finish and data are processed:
 			USART1->CR1 &= ~USART_CR1_RXNEIE;
 			EXTI->IMR &= ~EXTI_IMR_IM4;
 			DMA2_Stream5->CR |= DMA_SxCR_EN;

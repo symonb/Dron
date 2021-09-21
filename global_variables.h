@@ -32,6 +32,9 @@ typedef struct {
 	int32_t yaw; // Z
 } Three;
 
+extern volatile double Global_Time;
+
+extern volatile uint8_t Tim_7_flag;
 
 extern uint16_t channels[];
 
