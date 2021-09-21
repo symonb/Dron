@@ -9,24 +9,22 @@
 #define QUATERNIONS_H_
 
 typedef struct {
-	float w;
-	float x;
-	float y;
-	float z;
+	double w;
+	double x;
+	double y;
+	double z;
 } Quaternion;
 
 Quaternion quaternions_multiplication(Quaternion q1, Quaternion q2);
-Quaternion quaternion_multiply(Quaternion q1, float x);
+Quaternion quaternion_multiply(Quaternion q1, double x);
 Quaternion quaternions_sum(Quaternion q1, Quaternion q2);
-Quaternion quaternions_sub(Quaternion q1, Quaternion q2);
 Quaternion quaternion_conjugate(Quaternion q1);
-float quaternion_norm(Quaternion q1);
-float skalar_quaternions_multiplication(Quaternion q1, Quaternion q2);
+double quaternion_norm(Quaternion q1);
 
-ThreeF Rotate_Vector_with_Quaternion(ThreeF vector,Quaternion q ,
+ThreeD Rotate_Vector_with_Quaternion(ThreeD vector,Quaternion q ,
 		int8_t Transposition);
 Quaternion Rotate_Quaternion(Quaternion q1);
-Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles);
-ThreeF Quaternion_to_Euler_angles(Quaternion q);
+Quaternion Euler_angles_to_Quaternion(ThreeD euler_angles);
+ThreeD Quaternion_to_Euler_angles(Quaternion q);
 
 #endif /* QUATERNIONS_H_ */

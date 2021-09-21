@@ -8,8 +8,8 @@
 #ifndef IBUS_H_
 #define IBUS_H_
 
-void USART1_IRQHandler();
-void DMA2_Stream5_IRQHandler();
+void USART2_IRQHandler();
+void DMA1_Channel4_5_6_7_IRQHandler();
 void Ibus_save();
 
 #endif /* IBUS_H_ */

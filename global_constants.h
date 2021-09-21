@@ -9,13 +9,15 @@
 #define GLOBAL_CONSTANTS_H_
 
 #define CHANNELS  10					//ilosc kanalĂłw (4 potrzebne do sterownaia)
-#define GYRO_ACC_SIZE 7				//3 for gyro, 3 acc and 1 for temperature
+#define  GYRO_ACC_SIZE 7				//3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14			//telemetry informations
 #define MAX_RX_SIGNAL 2050
 #define MIN_RX_SIGNAL 950
 #define MAX_NO_SIGNAL_TIME 0.5 			//[s]
 #define DISARM_VALUE 1600
-#define TIMEOUT_VALUE 0.005				//[s]
+#define MAX_I2C_TIME 0.005				//[s]
+// MUST BE DIVISIBLE BY 4  How many samples for median filter (average is computed from a half of samples):
+#define MEASUREMENT_BUFFOR_SIZE 8	//aktualnie nieu�ywany
 
 // OFFSETS and CALIBRATIONS VALUE
 
@@ -50,9 +52,9 @@
 #define MAX_ROLL_ANGLE 30
 #define MAX_PITCH_ANGLE 30
 
-#define FREQUENCY_PID_LOOP 400 //[Hz]
-#define FREQUENCY_ESC_UPDATE 400 //[Hz]
-#define FREQUENCY_IMU_READING 400 //[Hz]
+#define FREQUENCY_PID_LOOP 200 //[Hz]
+#define FREQUENCY_ESC_UPDATE 250 //[Hz]
+#define FREQUENCY_IMU_READING 250 //[Hz]
 #define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 #define RAD_TO_DEG  180 / M_PI

@@ -6,17 +6,31 @@
  */
 
 #include <math.h>
-#include "stm32f4xx.h"
+#include "stm32l0xx.h"
+#include "stm32l0xx_nucleo.h"
+#include "MPU6050.h"
+#include "acro.h"
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
-#include "acro.h"
-#include "MPU6000.h"
+
+typedef struct {
+	double P;
+	double I;
+	double D;
+} PID;
+
+typedef struct {
+	int32_t roll;
+	int32_t pitch;
+	int32_t yaw;
+} Three;
+
 
 
 static void anti_windup();
-static  ThreeF corrections();
-
+static ThreeD corrections();
+static void set_motors(ThreeD corr);
 
 //---User defines maximum speed of spinning [deg/s]:
 static Three Rates = { 500, 500, 400 };
@@ -30,21 +44,21 @@ static PID Y_PID = { 2, 0.1, 0.001 };
 //static PID Y_PID = { 2, 0.1, 0.001 };
 
 static Three err = { 0, 0, 0 };
-static ThreeF sum_err = { 0, 0, 0 };
+static ThreeD sum_err = { 0, 0, 0 };
 static Three last_err = { 0, 0, 0 };
 static Three D_corr = { 0, 0, 0 };
 static Three last_D_corr = { 0, 0, 0 };
 
-static float dt;
+static double dt;
 
 //for debuging only:
 static int puk2 = 0;
-static float czas_trwania_petli = 0;
+static double czas_trwania_petli = 0;
 
 void acro() {
 	czas_trwania_petli =get_Global_Time();
-	static float time_flag2_1;
-	static float time_flag2_2;
+	static double time_flag2_1;
+	static double time_flag2_2;
 
 	dt = (get_Global_Time() - time_flag2_1);
 	time_flag2_1 = get_Global_Time();
@@ -63,10 +77,10 @@ void acro() {
 		table_to_send[5] = R_PID.D * D_corr.roll * 500. / 32768. + 1000;
 		table_to_send[6] = (Gyro_Acc[0] /32.768/Rates.roll * 50) + 1000;
 		table_to_send[7] = (Gyro_Acc[1] /32.768/ Rates.pitch * 50) + 1000;
-		table_to_send[8] = Y_PID.P * err.yaw * 500. / 32768. + 1000;
-		table_to_send[9] = Y_PID.I * sum_err.yaw * 500. / 32768. + 1000;
-		table_to_send[10] = Y_PID.D * D_corr.yaw * 500. / 32768. + 1000;
-		table_to_send[11] = (Gyro_Acc[2] /32.768/Rates.yaw * 50) + 1000;
+		table_to_send[8] = 0;
+		table_to_send[9] = 0;
+		table_to_send[10] = 0;
+		table_to_send[11] = 0;
 		table_to_send[12] = channels[1] - 500;
 		table_to_send[13] = channels[0] - 500;
 
@@ -120,9 +134,9 @@ static void anti_windup() {
 
 }
 
-static ThreeF corrections() {
+static ThreeD corrections() {
 
-	static ThreeF corr = { 0, 0, 0 };
+	static ThreeD corr = { 0, 0, 0 };
 
 	err.roll = (channels[0] - 1500) * 32768 / 500.
 			- Gyro_Acc[0] * 1000 / Rates.roll;
@@ -167,5 +181,32 @@ static ThreeF corrections() {
 
 	return corr;
 }
+static void set_motors(ThreeD corr) {
+	//	Make corrections:
+	//	right front:
+	pwm_m1 = Throttle - corr.pitch + corr.yaw - corr.roll;
+	//	right back:
+	pwm_m2 = Throttle + corr.pitch - corr.yaw - corr.roll;
+	//	left back:
+	pwm_m3 = Throttle + corr.pitch + corr.yaw + corr.roll;
+	//	left front:
+	pwm_m4 = Throttle - corr.pitch - corr.yaw + corr.roll;
+	if (pwm_m1 < 1050) {
+		pwm_m1 = 1050;
+	} else if (pwm_m1 > 2000)
+		pwm_m1 = 2000;
+	if (pwm_m2 < 1050) {
+		pwm_m2 = 1050;
+	} else if (pwm_m2 > 2000)
+		pwm_m2 = 2000;
+	if (pwm_m3 < 1050) {
+		pwm_m3 = 1050;
+	} else if (pwm_m3 > 2000)
+		pwm_m3 = 2000;
+	if (pwm_m4 < 1050) {
+		pwm_m4 = 1050;
+	} else if (pwm_m4 > 2000)
+		pwm_m4 = 2000;
 
+}
 

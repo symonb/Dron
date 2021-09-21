@@ -1,15 +1,14 @@
 /*
  * setup.h
  *
- *  Created on: 04.07.2021
- *      Author: symon
+ *  Created on: 03.01.2021
+ *      Author: filip
  */
 
 #ifndef SETUP_H_
 #define SETUP_H_
 
 void setup();
-void setup_NVIC_1();
-void setup_NVIC_2();
+void setup_NVIC();
 
 #endif /* SETUP_H_ */
