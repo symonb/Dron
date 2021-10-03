@@ -27,6 +27,13 @@ typedef struct {
 } PID;
 
 typedef struct {
+	float P;
+	float I;
+	float D;
+	float F;
+} PIDF;
+
+typedef struct {
 	int32_t roll; // X
 	int32_t pitch; // Y
 	int32_t yaw; // Z

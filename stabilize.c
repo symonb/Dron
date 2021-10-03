@@ -10,7 +10,6 @@
 #include "MPU6000.h"
 #include "quaternions.h"
 
-
 static ThreeF gangles = { 0, 0, 0 };
 static Quaternion q_gyro_dryf = { 1, 0, 0, 0 };
 
@@ -38,18 +37,19 @@ static ThreeF err = { 0, 0, 0 };
 static ThreeF sum_err = { 0, 0, 0 };
 static ThreeF last_err = { 0, 0, 0 };
 static ThreeF D_corr = { 0, 0, 0 };
+static ThreeF F_corr = { 0, 0, 0 };
 static ThreeF last_D_corr = { 0, 0, 0 };
 static Three Rates = { 400, 400, 400 };
 
 //4s
-static PID R_PID = { 0.31, 0.0001, 0.009 };
-static PID P_PID = { 0.31, 0.0001, 0.008 };
-static PID Y_PID = {0.2, 0.00, 0.01 };
+static PIDF R_PIDF = { 0.55, 0.01, 0.02, 0.005 };
+static PIDF P_PIDF = { 0.55, 0.01, 0.02, 0.005 };
+static PIDF Y_PIDF = { 1, 0.01, 0.01, 0.01 };
 
 // 3s
-//static PID R_PID = { 0.14, 0.03, 0.014 };
-//static PID P_PID = { 0.14, 0.03, 0.013 };
-//static PID Y_PID = { 2, 0.11, 0.0005 };
+//static PIDF R_PIDF = { 0.14, 0.03, 0.014, 0.014 };
+//static PIDF P_PIDF = { 0.14, 0.03, 0.013, 0.013 };
+//static PIDF Y_PIDF = { 2, 0.11, 0.0005, 0.0005 };
 
 //for debugging only:
 static int puk2 = 0;
@@ -71,7 +71,7 @@ void stabilize() {
 //	gyro_angle_roll = gangles.roll;
 //	gyro_angle_pitch = gangles.pitch;
 
-	//complementary_filter();
+//complementary_filter();
 	madgwick_filter();
 	set_motors(Corrections_from_quaternion(q_gyro));
 
@@ -79,12 +79,12 @@ void stabilize() {
 		time_flag1_2 = get_Global_Time();
 		puk2++;
 		//wypisywanie korekcji pitch P I D i roll P I D; k¹tów; zadanych wartosci
-//		table_to_send[0] = P_PID.P * err.pitch * 500. / 32768. + 1000;
-//		table_to_send[1] = P_PID.I * sum_err.pitch * 500. / 32768. + 1000;
-//		table_to_send[2] = P_PID.D * D_corr.pitch * 500. / 32768. + 1000;
-//		table_to_send[3] = R_PID.P * err.roll * 500. / 32768. + 1000;
-//		table_to_send[4] = R_PID.I * sum_err.roll * 500. / 32768. + 1000;
-//		table_to_send[5] = R_PID.D * D_corr.roll * 500. / 32768. + 1000;
+//		table_to_send[0] = P_PIDF.P * err.pitch * 500. / 32768. + 1000;
+//		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500. / 32768. + 1000;
+//		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500. / 32768. + 1000;
+//		table_to_send[3] = R_PIDF.P * err.roll * 500. / 32768. + 1000;
+//		table_to_send[4] = R_PIDF.I * sum_err.roll * 500. / 32768. + 1000;
+//		table_to_send[5] = R_PIDF.D * D_corr.roll * 500. / 32768. + 1000;
 //		table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50) + 1000;
 //		table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50) + 1000;
 //		table_to_send[8] = 10 * (gyro_angle_roll + 360);
@@ -95,20 +95,20 @@ void stabilize() {
 //		table_to_send[13] = channels[0] - 500;
 
 //FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW NO ANGLES
-		table_to_send[0] = P_PID.P * err.pitch * 500. / 32768. + 1000;
-		table_to_send[1] = P_PID.I * sum_err.pitch * 500. / 32768. + 1000;
-		table_to_send[2] = P_PID.D * D_corr.pitch * 500. / 32768. + 1000;
-		table_to_send[3] = R_PID.P * err.roll * 500. / 32768. + 1000;
-		table_to_send[4] = R_PID.I * sum_err.roll * 500. / 32768. + 1000;
-		table_to_send[5] = R_PID.D * D_corr.roll * 500. / 32768. + 1000;
+		table_to_send[0] = P_PIDF.P * err.pitch * 500. / 32768. + 1000;
+		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500. / 32768. + 1000;
+		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500. / 32768. + 1000;
+		table_to_send[3] = R_PIDF.P * err.roll * 500. / 32768. + 1000;
+		table_to_send[4] = R_PIDF.I * sum_err.roll * 500. / 32768. + 1000;
+		table_to_send[5] = R_PIDF.D * D_corr.roll * 500. / 32768. + 1000;
 		table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50)
 				+ 1000;
 		table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50)
 				+ 1000;
-		table_to_send[8] = Y_PID.P * err.yaw * 500. / 32768. + 1000;
-		table_to_send[9] = Y_PID.I * sum_err.yaw * 500. / 32768. + 1000;
-		table_to_send[10] = Y_PID.D * D_corr.yaw * 500. / 32768. + 1000;
-		table_to_send[11] = (10*global_euler_angles.yaw) + 1500;
+		table_to_send[8] = Y_PIDF.P * err.yaw * 500. / 32768. + 1000;
+		table_to_send[9] = Y_PIDF.I * sum_err.yaw * 500. / 32768. + 1000;
+		table_to_send[10] = Y_PIDF.D * D_corr.yaw * 500. / 32768. + 1000;
+		table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
 		table_to_send[12] = channels[1] - 500;
 		table_to_send[13] = channels[0] - 500;
 
@@ -190,54 +190,74 @@ static void complementary_filter() {
 
 }
 
-
 static void madgwick_filter() {
 
 //calculate derivative of q as usually
-		q_global_position.w=q_gyro.w;
-		q_global_position.x=-q_gyro.x;
-		q_global_position.y=-q_gyro.y;
-		q_global_position.z=-q_gyro.z;
-		static Quaternion q_prim;
-		static Quaternion angular_velocity;
-		const float GYRO_TO_RAD = 1.f / 32.768f * DEG_TO_RAD;
-		angular_velocity.w = 0;
-		angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
-		angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
-		angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
+	q_global_position.w = q_gyro.w;
+	q_global_position.x = -q_gyro.x;
+	q_global_position.y = -q_gyro.y;
+	q_global_position.z = -q_gyro.z;
+	static Quaternion q_prim;
+	static Quaternion angular_velocity;
+	const float GYRO_TO_RAD = 1.f / 32.768f * DEG_TO_RAD;
+	angular_velocity.w = 0;
+	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
+	angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
+	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
 
-		q_prim = quaternion_multiply(
-				quaternions_multiplication(q_global_position,angular_velocity), 0.5f);
-
+	q_prim = quaternion_multiply(
+			quaternions_multiplication(q_global_position, angular_velocity),
+			0.5f);
 
 	static float min_fun[3];
 	static Quaternion acc_reading;
-	const float ACC_TO_GRAVITY = 1.f / 4096 ;
+	const float ACC_TO_GRAVITY = 1.f / 4096;
 	acc_reading.w = 0;
 	acc_reading.x = Gyro_Acc[3] * ACC_TO_GRAVITY;
 	acc_reading.y = Gyro_Acc[4] * ACC_TO_GRAVITY;
 	acc_reading.z = Gyro_Acc[5] * ACC_TO_GRAVITY;
 
-	acc_reading=quaternion_multiply(acc_reading,1.f/quaternion_norm(acc_reading));
+	acc_reading = quaternion_multiply(acc_reading,
+			1.f / quaternion_norm(acc_reading));
 
-	min_fun[0]=2*(q_global_position.x*q_global_position.z-q_global_position.w*q_global_position.y)-acc_reading.x;
-	min_fun[1]=2*(q_global_position.w*q_global_position.x+q_global_position.y*q_global_position.z)-acc_reading.y;
-	min_fun[2]=2*(0.5f-q_global_position.x*q_global_position.x-q_global_position.y*q_global_position.y)-acc_reading.z;
+	min_fun[0] = 2
+			* (q_global_position.x * q_global_position.z
+					- q_global_position.w * q_global_position.y)
+			- acc_reading.x;
+	min_fun[1] = 2
+			* (q_global_position.w * q_global_position.x
+					+ q_global_position.y * q_global_position.z)
+			- acc_reading.y;
+	min_fun[2] = 2
+			* (0.5f - q_global_position.x * q_global_position.x
+					- q_global_position.y * q_global_position.y)
+			- acc_reading.z;
 
 	static Quaternion delta_min_fun;
 
-	delta_min_fun.w=-2*q_global_position.y*min_fun[0]+2*q_global_position.x*min_fun[1];
-	delta_min_fun.x=2*q_global_position.z*min_fun[0]+2*q_global_position.w*min_fun[1]-4*q_global_position.x*min_fun[2];
-	delta_min_fun.y=-2*q_global_position.w*min_fun[0]+2*q_global_position.z*min_fun[1]-4*q_global_position.y*min_fun[2];
-	delta_min_fun.z=2*q_global_position.x*min_fun[0]+2*q_global_position.y*min_fun[1];
+	delta_min_fun.w = -2 * q_global_position.y * min_fun[0]
+			+ 2 * q_global_position.x * min_fun[1];
+	delta_min_fun.x = 2 * q_global_position.z * min_fun[0]
+			+ 2 * q_global_position.w * min_fun[1]
+			- 4 * q_global_position.x * min_fun[2];
+	delta_min_fun.y = -2 * q_global_position.w * min_fun[0]
+			+ 2 * q_global_position.z * min_fun[1]
+			- 4 * q_global_position.y * min_fun[2];
+	delta_min_fun.z = 2 * q_global_position.x * min_fun[0]
+			+ 2 * q_global_position.y * min_fun[1];
 
 	//normalize the gradient
-	delta_min_fun=quaternion_multiply(delta_min_fun,1.f/quaternion_norm(delta_min_fun));
+	delta_min_fun = quaternion_multiply(delta_min_fun,
+			1.f / quaternion_norm(delta_min_fun));
 
+	static float coefficient_Beta = 0.073;
 
-	static float coefficient_Beta=0.073;
-
-	q_gyro =quaternions_sum(q_gyro,quaternion_multiply(quaternion_conjugate(quaternions_sub( q_prim,quaternion_multiply(delta_min_fun,coefficient_Beta))),dt));
+	q_gyro = quaternions_sum(q_gyro,
+			quaternion_multiply(
+					quaternion_conjugate(
+							quaternions_sub(q_prim,
+									quaternion_multiply(delta_min_fun,
+											coefficient_Beta))), dt));
 
 	//normalize quaternion:
 	q_gyro = quaternion_multiply(q_gyro, 1.f / quaternion_norm(q_gyro));
@@ -279,13 +299,12 @@ static ThreeF corrections() {
 	anti_windup();
 
 	//	calculate corrections:
-	corr.roll = (R_PID.P * err.roll + R_PID.I * sum_err.roll
-			+ R_PID.D * D_corr.roll) * 500 / 32768.;
-	corr.pitch = (P_PID.P * err.pitch + P_PID.I * sum_err.pitch
-			+ P_PID.D * D_corr.pitch) * 500 / 32768.;
-	corr.yaw =
-			(Y_PID.P * err.yaw + Y_PID.I * sum_err.yaw + Y_PID.D * D_corr.yaw)
-					* 500 / 32768.;
+	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll
+			+ R_PIDF.D * D_corr.roll) * 500 / 32768.;
+	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch
+			+ P_PIDF.D * D_corr.pitch) * 500 / 32768.;
+	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw
+			+ Y_PIDF.D * D_corr.yaw) * 500 / 32768.;
 
 	//	set current errors as last errors:
 	last_err.roll = err.roll;
@@ -313,13 +332,15 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 
 	set_angles.roll = (channels[0] - 1500) / 500. * MAX_ROLL_ANGLE;
 	set_angles.pitch = (channels[1] - 1500) / 500. * MAX_PITCH_ANGLE;
-	set_angles.yaw += (channels[3] - 1500) / 500. * Rates.yaw  * dt;
+	set_angles.yaw += (channels[3] - 1500) / 500. * Rates.yaw * dt;
 
 	//define quaternion of desired position (global) :
 	set_position_quaternion = Euler_angles_to_Quaternion(set_angles);
 	//to achieve the shortest path it is required to choose between q and -q so at first check cos(alfa) between quaternions
-	if (skalar_quaternions_multiplication(position_quaternion,set_position_quaternion)<0){
-		set_position_quaternion=quaternion_multiply(set_position_quaternion,-1);
+	if (skalar_quaternions_multiplication(position_quaternion,
+			set_position_quaternion) < 0) {
+		set_position_quaternion = quaternion_multiply(set_position_quaternion,
+				-1);
 	}
 
 	//compute error quaternion (quaternion by which actual position quaternion has to be multiplied to achieve desired position quaternion)
@@ -343,27 +364,25 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 	sum_err.pitch += err.pitch * dt;
 	sum_err.yaw += err.yaw * dt;
 
-	//	//low-pass filter
-	//	D_corr.roll= ((err.roll-last_err.roll)/dt+last_D_corr.roll)/2.;
-	//	D_corr.pitch=((err.pitch-last_err.pitch)/dt+last_D_corr.pitch)/2.;
-	//	D_corr.yaw=((err.yaw-last_err.yaw)/dt+last_D_corr.yaw)/2.;
+	//D correction will be divide for measurements and set-point corrections:
 
-	D_corr.roll = -(Gyro_Acc[0]) * 1000 / MAX_ROLL_ANGLE
-			+ (channels[0] - last_channels.roll) / 500. * 32768 / dt;
-	D_corr.pitch = -(Gyro_Acc[1]) * 1000 / MAX_PITCH_ANGLE
-			+ (channels[1] - last_channels.pitch) / 500. * 32768 / dt;
+	D_corr.roll = -(Gyro_Acc[0]) * 1000 / MAX_ROLL_ANGLE;
+	D_corr.pitch = -(Gyro_Acc[1]) * 1000 / MAX_PITCH_ANGLE;
 	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
+
+	F_corr.roll = (channels[0] - last_channels.roll) / 500. * 32768 / dt;
+	F_corr.pitch = (channels[1] - last_channels.pitch) / 500. * 32768 / dt;
+	F_corr.yaw = 0;
 
 	anti_windup();
 
 	//	calculate corrections:
-	corr.roll = (R_PID.P * err.roll + R_PID.I * sum_err.roll
-			+ R_PID.D * D_corr.roll) * 500 / 32768.;
-	corr.pitch = (P_PID.P * err.pitch + P_PID.I * sum_err.pitch
-			+ P_PID.D * D_corr.pitch) * 500 / 32768.;
-	corr.yaw =
-			(Y_PID.P * err.yaw + Y_PID.I * sum_err.yaw + Y_PID.D * D_corr.yaw)
-					* 500 / 32768.;
+	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll
+			+ R_PIDF.D * D_corr.roll+R_PIDF.F*F_corr.roll) * 500 / 32768.;
+	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch
+			+ P_PIDF.D * D_corr.pitch+P_PIDF.F*F_corr.pitch) * 500 / 32768.;
+	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw
+			+ Y_PIDF.D * D_corr.yaw+Y_PIDF.F*F_corr.yaw) * 500 / 32768.;
 
 	//	set current errors as last errors:
 	last_err.roll = err.roll;
@@ -384,22 +403,23 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 static void anti_windup() {
 	if (channels[4] > 1600) {
 		int16_t max_I_correction = 300;
-		if ((sum_err.roll * R_PID.I * 500. / 32768.) > max_I_correction) {
-			sum_err.roll = max_I_correction / R_PID.I / 500. * 32768.;
-		} else if ((sum_err.roll * R_PID.I * 500. / 32768.)
+		if ((sum_err.roll * R_PIDF.I * 500. / 32768.) > max_I_correction) {
+			sum_err.roll = max_I_correction / R_PIDF.I / 500. * 32768.;
+		} else if ((sum_err.roll * R_PIDF.I * 500. / 32768.)
 				< -max_I_correction) {
-			sum_err.roll = -max_I_correction / R_PID.I / 500. * 32768.;
+			sum_err.roll = -max_I_correction / R_PIDF.I / 500. * 32768.;
 		}
-		if ((sum_err.pitch * P_PID.I * 500. / 32768.) > max_I_correction) {
-			sum_err.pitch = max_I_correction / P_PID.I / 500. * 32768.;
-		} else if ((sum_err.pitch * P_PID.I * 500 / 32768.)
+		if ((sum_err.pitch * P_PIDF.I * 500. / 32768.) > max_I_correction) {
+			sum_err.pitch = max_I_correction / P_PIDF.I / 500. * 32768.;
+		} else if ((sum_err.pitch * P_PIDF.I * 500 / 32768.)
 				< -max_I_correction) {
-			sum_err.pitch = -max_I_correction / P_PID.I / 500. * 32768.;
+			sum_err.pitch = -max_I_correction / P_PIDF.I / 500. * 32768.;
 		}
-		if ((sum_err.yaw * Y_PID.I * 500. / 32768.) > max_I_correction) {
-			sum_err.yaw = max_I_correction / Y_PID.I / 500. * 32768.;
-		} else if ((sum_err.yaw * Y_PID.I * 500 / 32768.) < -max_I_correction) {
-			sum_err.yaw = -max_I_correction / Y_PID.I / 500. * 32768.;
+		if ((sum_err.yaw * Y_PIDF.I * 500. / 32768.) > max_I_correction) {
+			sum_err.yaw = max_I_correction / Y_PIDF.I / 500. * 32768.;
+		} else if ((sum_err.yaw * Y_PIDF.I * 500 / 32768.)
+				< -max_I_correction) {
+			sum_err.yaw = -max_I_correction / Y_PIDF.I / 500. * 32768.;
 		}
 	} else {			// quad is disarmed so turn off I term of corrections
 		sum_err.roll = 0;
@@ -408,16 +428,16 @@ static void anti_windup() {
 	}
 
 	int16_t max_D_correction = 300;
-	if ((D_corr.roll * R_PID.D * 500. / 32768.) > max_D_correction
-			|| (D_corr.roll * R_PID.D * 500. / 32768.) < -max_D_correction) {
+	if ((D_corr.roll * R_PIDF.D * 500. / 32768.) > max_D_correction
+			|| (D_corr.roll * R_PIDF.D * 500. / 32768.) < -max_D_correction) {
 		D_corr.roll = last_D_corr.roll;
 	}
-	if (D_corr.pitch * P_PID.D * 500. / 32768. > max_D_correction
-			|| D_corr.pitch * P_PID.D * 500. / 32768. < -max_D_correction) {
+	if (D_corr.pitch * P_PIDF.D * 500. / 32768. > max_D_correction
+			|| D_corr.pitch * P_PIDF.D * 500. / 32768. < -max_D_correction) {
 		D_corr.pitch = last_D_corr.pitch;
 	}
-	if (D_corr.yaw * Y_PID.D * 500. / 32768. > max_D_correction
-			|| D_corr.yaw * Y_PID.D * 500. / 32768. < -max_D_correction) {
+	if (D_corr.yaw * Y_PIDF.D * 500. / 32768. > max_D_correction
+			|| D_corr.yaw * Y_PIDF.D * 500. / 32768. < -max_D_correction) {
 		D_corr.yaw = last_D_corr.yaw;
 	}
 

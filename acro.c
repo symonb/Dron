@@ -21,8 +21,8 @@ static  ThreeF corrections();
 //---User defines maximum speed of spinning [deg/s]:
 static Three Rates = { 500, 500, 400 };
 //4s
-static PID R_PID = { 0.5, 0.6, 0.008 };
-static PID P_PID = { 0.5, 0.6, 0.008};
+static PID R_PID = { 0.5, 0.6, 0.002 };
+static PID P_PID = { 0.5, 0.6, 0.002};
 static PID Y_PID = { 2, 0.1, 0.001 };
 // 3s
 //static PID R_PID = { 0.7, 0.8, 0.01 };
@@ -135,11 +135,6 @@ static ThreeF corrections() {
 	sum_err.roll += err.roll * dt;
 	sum_err.pitch += err.pitch * dt;
 	sum_err.yaw += err.yaw * dt;
-
-//	//low-pass filter
-//	D_corr.roll= ((err.roll-last_err.roll)/dt+last_D_corr.roll)/2.;
-//	D_corr.pitch=((err.pitch-last_err.pitch)/dt+last_D_corr.pitch)/2.;
-//	D_corr.yaw=((err.yaw-last_err.yaw)/dt+last_D_corr.yaw)/2.;
 
 	D_corr.roll = (err.roll - last_err.roll) / dt;
 	D_corr.pitch = (err.pitch - last_err.pitch) / dt;

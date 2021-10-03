@@ -9,6 +9,7 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
+#include "filters.h"
 #include <math.h>
 #include "MPU6000.h"
 
@@ -20,10 +21,11 @@ static void SPI1_disable();
 static void CS_enable();
 static void CS_disable();
 static void SPI_transmit(uint8_t*data, int size);
-static void SPI_receive(uint8_t adress_of_register, uint8_t*data, int size);
+static void SPI_receive(uint8_t address_of_register, uint8_t*data, int size);
 static void failsafe_CONF();
 static void failsafe_I2C();
 static void failsafe_SPI();
+static void average_filters_setup();
 static void MPU6000_self_test_configuration();
 static void MPU6000_self_test_measurements();
 
@@ -79,15 +81,19 @@ static void MPU6000_self_test_measurements();
 //								+ powf(ACC_CALIBRATION_Z_X - ACC_PITCH_OFFSET,
 //										2)) } };
 
-float M_rotacji[3][3]={{-1,0,0},{0,1,0},{0,0,1}};
-
+float M_rotacji[3][3] = { { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, 1 } };
 
 uint8_t read_write_tab[14];
 static volatile uint8_t read_write_quantity;
 static float time_flag4_1; //for SPI timeout detection
 
+static FIR_Filter average_gyro_X;
+static FIR_Filter average_gyro_Y;
+static FIR_Filter average_gyro_Z;
+static FIR_Filter average_acc_X;
+static FIR_Filter average_acc_Y;
+static FIR_Filter average_acc_Z;
 //for debugging only:
-static uint32_t pak1 = 0;
 
 void I2C1_IRQHandler() {
 	static uint8_t i = 0;
@@ -106,7 +112,6 @@ void I2C1_IRQHandler() {
 void EXTI4_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR4)) {
 		EXTI->PR |= EXTI_PR_PR4; // clear this bit setting it high
-		pak1++;
 
 		//INSTRUCTIONS FOR READING IMU SENSORS:
 		imu_received = 0;
@@ -115,20 +120,20 @@ void EXTI4_IRQHandler() {
 		USART1->CR1 &= ~USART_CR1_RXNEIE;
 		read_all();
 		//unblock RX reading while IMU reading
-		USART1->CR1 |=USART_CR1_RXNEIE;
-
+		USART1->CR1 |= USART_CR1_RXNEIE;
 	}
 }
 
 void setup_MPU6000() {
-	delay_mili(30);// MPU datasheet specifies 30ms
+	delay_mili(30); // MPU datasheet specifies 30ms
 	setup_conf();
 	setup_gyro();
 	setup_acc();
+	average_filters_setup();
 	//change speed of SPI up to 10.5 [MHz] (only for reading sensors) IT DOESN T WORK
 //	SPI1->CR1 &= ~SPI_CR1_BR;
 //	SPI1->CR1 |=  SPI_CR1_BR_1|SPI_CR1_BR_0;
-////
+
 }
 
 static void SPI1_enable() {
@@ -159,93 +164,83 @@ static void SPI_transmit(uint8_t *data, int size) {
 	 * 6 After last transmission you need to clear DR and wait until everything stop (more inf. in datasheet)
 	 * */
 	int i = 0;
-	int rx_data;
+
+	time_flag4_1 = get_Global_Time();
 	while (!((SPI1->SR) & SPI_SR_TXE)) {
-	failsafe_SPI(); 			//wait
+		failsafe_SPI(); 			//wait
 	}
-	SPI1->DR = data[i]; //first data usually  slave's Register which you're interested in
+	SPI1->DR = data[i]; //first data - usually  slave's Register which you're interested in
 	i++;
 
 	while (i < size) {
-		time_flag4_1=get_Global_Time();
+		time_flag4_1 = get_Global_Time();
 		while (!((SPI1->SR) & SPI_SR_TXE)) {
 			failsafe_SPI(); 			//wait
 		}
 		SPI1->DR = data[i]; //second and following data sending as soon as TX flag is set
 		i++;
-		time_flag4_1=get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_RXNE)) {
-			failsafe_SPI(); 			//wait
-		}
-		rx_data = SPI1->DR;
 	}
-	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_RXNE)) {
-		failsafe_SPI(); 			//wait
-	}
-	rx_data = SPI1->DR;
-	time_flag4_1=get_Global_Time();
+
+	time_flag4_1 = get_Global_Time();
 	while (!((SPI1->SR) & SPI_SR_TXE)) {
 		failsafe_SPI(); 			//wait
 	}
-	time_flag4_1=get_Global_Time();
+	time_flag4_1 = get_Global_Time();
 	while (((SPI1->SR) & SPI_SR_BSY)) {
-		failsafe_SPI();
+		failsafe_SPI();				//wait
 	}
+	SPI1->DR;
+	SPI1->SR;
 
 }
 
-static void SPI_receive(uint8_t adress_of_register, uint8_t *data, int size) {
+static void SPI_receive(uint8_t address_of_register, uint8_t *data, int size) {
 	//----------------STEPS--------------------
-	/* 1 Wait for TXE bit to set in the Status Register
-	 * 2 Write the Register Adress (|0x80 for reading) to the Data register
-	 * 3 Write 0x00 (slave will send data only if receive sth.)
-	 * 4 Receive 1 data it is anything (slave started sending it when received first bit of first byte so it is not interesting byte for sure) ignore it
-	 * 5 Repeat step 3 and then receive data from slave do it until you receive all data you wanted
-	 * 6 After last transmission you need to clear DR and wait until everything stop (more inf. in datasheet)
+	/* 1 Wait for TXE flag and write address_of_register |0x80 (first bit = 1 - reading)
+	 * 2 Wait for TXE bit and write anything since you want reading and slave will send your data only after receiving sth.
+	 * 3 Wait for RXNE and receive first data - it is rubbish (started as soon as you started sending register address so it is not data from this register)
+	 * 4 Wait for TXE send dummy data, wait for RXNE and receive your data. Repeat until you receive size-1 data
+	 * 5 Wait for RXNE and receive last byte
 	 * */
 
-	int i = 0;
-	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type!=6) {
+	time_flag4_1 = get_Global_Time();
+	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type != 6) {
 		failsafe_SPI(); 			//wait
 	}
-	SPI1->DR = adress_of_register;
+	SPI1->DR = address_of_register; //first data - usually  slave's Register which you're interested in
 
-	while (i < size) {
-		time_flag4_1=get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type!=6) {
+	time_flag4_1 = get_Global_Time();
+	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type != 6) {
+		failsafe_SPI(); 			//wait
+	}
+	SPI1->DR = 0xFF;	//send something - IMPORTANT!
+
+	time_flag4_1 = get_Global_Time();
+	while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
+		failsafe_SPI(); 			//wait
+	}
+	SPI1->DR;	//first byte - rubbish
+
+	while (size > 1) {
+
+		time_flag4_1 = get_Global_Time();
+		while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type != 6) {
 			failsafe_SPI(); 			//wait
 		}
 		SPI1->DR = 0xFF; 			//send anything IMPORTANT!
-		time_flag4_1=get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type!=6) {
+		time_flag4_1 = get_Global_Time();
+		while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
 			failsafe_SPI(); 			//wait
 		}
-		if (i == 0) {
-			*data=SPI1->DR;	//ignore first received data because it is some dummy data from slave
-
-		} else {
-			*data = SPI1->DR;
-			data++;
-		}
-
-		i++;
+		*data++ = SPI1->DR;
+		size--;
 	}
-	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type!=6) {
+
+	time_flag4_1 = get_Global_Time();
+	while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
 		failsafe_SPI(); 			//wait
 	}
 	*data = SPI1->DR;
-	time_flag4_1=get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type!=6) {
-		failsafe_SPI(); 			//wait
-	}
-	time_flag4_1=get_Global_Time();
-	while (((SPI1->SR) & SPI_SR_BSY) && failsafe_type!=6) {
-		failsafe_SPI();
-	}
-
 }
 
 void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value) {
@@ -308,7 +303,6 @@ static void setup_conf() {
 	MPU6000_SPI_write(0x38, 0x1);
 	delay_micro(15);
 
-
 	SPI1_disable();
 }
 static void setup_gyro() {
@@ -339,6 +333,53 @@ static void setup_acc() {
 	delay_micro(15);
 
 	SPI1_disable();
+}
+
+void average_filters_setup(){
+
+	average_gyro_X.length = 5;
+	float value = 1. / average_gyro_X.length;
+	FIR_Filter_Init(&average_gyro_X);
+
+	for (uint8_t i = 0; i < average_gyro_X.length; i++) {
+		average_gyro_X.impulse_responce[i] = value;
+	}
+
+	average_gyro_Y.length = 5;
+	value = 1. / average_gyro_Y.length;
+	FIR_Filter_Init(&average_gyro_Y);
+	for (uint8_t i = 0; i < average_gyro_Y.length; i++) {
+		average_gyro_Y.impulse_responce[i] = value;
+	}
+
+	average_gyro_Z.length = 5;
+	value = 1. / average_gyro_Z.length;
+	FIR_Filter_Init(&average_gyro_Z);
+	for (uint8_t i = 0; i < average_gyro_Z.length; i++) {
+		average_gyro_Z.impulse_responce[i] = value;
+	}
+
+	average_acc_X.length = 5;
+	value = 1. / average_acc_X.length;
+	FIR_Filter_Init(&average_acc_X);
+	for (uint8_t i = 0; i < average_acc_X.length; i++) {
+		average_acc_X.impulse_responce[i] = value;
+	}
+
+	average_acc_Y.length = 5;
+	value = 1. / average_acc_Y.length;
+	FIR_Filter_Init(&average_acc_Y);
+	for (uint8_t i = 0; i < average_acc_Y.length; i++) {
+		average_acc_Y.impulse_responce[i] = value;
+	}
+
+	average_acc_Z.length = 5;
+	value = 1. / average_acc_Z.length;
+	FIR_Filter_Init(&average_acc_Z);
+	for (uint8_t i = 0; i < average_acc_Z.length; i++) {
+		average_acc_Z.impulse_responce[i] = value;
+	}
+
 }
 
 void read_all() {
@@ -425,31 +466,21 @@ void rewrite_data() {
 			}
 		}
 
-		Gyro_Acc[0] = temporary[0] - GYRO_ROLL_OFFSET;
-		Gyro_Acc[1] = temporary[1] - GYRO_PITCH_OFFSET;
-		Gyro_Acc[2] = temporary[2] - GYRO_YAW_OFFSET;
-		Gyro_Acc[3] = temporary[3] - ACC_ROLL_OFFSET;
-		Gyro_Acc[4] = temporary[4] - ACC_PITCH_OFFSET;
-		Gyro_Acc[5] = temporary[5] - ACC_YAW_OFFSET;
-
-		//temperature:
-		float temperature;
-		float gyroX;
-		float gyroY;
-		float gyroZ;
-		float accX;
-		float accY;
-		float accZ;
+		Gyro_Acc[0] = FIR_Filter_filtering(&average_gyro_X,
+				temporary[0] - GYRO_ROLL_OFFSET);
+		Gyro_Acc[1] = FIR_Filter_filtering(&average_gyro_Y,
+				temporary[1] - GYRO_PITCH_OFFSET);
+		Gyro_Acc[2] = FIR_Filter_filtering(&average_gyro_Z,
+				temporary[2] - GYRO_YAW_OFFSET);
+		Gyro_Acc[3] = FIR_Filter_filtering(&average_acc_X,
+				temporary[3] - ACC_ROLL_OFFSET);
+		Gyro_Acc[4] = FIR_Filter_filtering(&average_acc_Y,
+				temporary[4] - ACC_PITCH_OFFSET);
+		Gyro_Acc[5] = FIR_Filter_filtering(&average_acc_Z,
+				temporary[5] - ACC_YAW_OFFSET);
 		Gyro_Acc[6] = read_write_tab[6] << 8 | read_write_tab[7];
 
-		temperature = Gyro_Acc[6] / 340.f + 36.53f;
-		gyroX = temporary[0] /32.768;
-		gyroY = temporary[1] / 32.768;
-		gyroZ = temporary[2] / 32.768;
-		accX = temporary[3] / 4096.;
-		accY = temporary[4] / 4096.;
-		accZ = temporary[5] / 4096.;
- 		EXTI->IMR |= EXTI_IMR_IM4;
+		EXTI->IMR |= EXTI_IMR_IM4;
 	}
 }
 
@@ -476,7 +507,7 @@ static void failsafe_SPI() {
 	}
 }
 
-static void MPU6000_self_test_configuration(){
+static void MPU6000_self_test_configuration() {
 	SPI1_enable();
 	// 0x1B- address of Gyroscope Configuration register:
 	// set +/-250[deg/s] and Self_test activate
@@ -492,58 +523,55 @@ static void MPU6000_self_test_configuration(){
 	SPI1_disable();
 
 }
-static void MPU6000_self_test_measurements(float temporary[]){
-static int i;
-static float averagegyroX;
-static float averagegyroY;
-static float averagegyroZ;
-static float averageaccX;
-static float averageaccY;
-static float averageaccZ;
+static void MPU6000_self_test_measurements(float temporary[]) {
+	static int i;
+	static float averagegyroX;
+	static float averagegyroY;
+	static float averagegyroZ;
+	static float averageaccX;
+	static float averageaccY;
+	static float averageaccZ;
 
-static float averagegyroX_ST;
-static float averagegyroY_ST;
-static float averagegyroZ_ST;
-static float averageaccX_ST;
-static float averageaccY_ST;
-static float averageaccZ_ST;
+	static float averagegyroX_ST;
+	static float averagegyroY_ST;
+	static float averagegyroZ_ST;
+	static float averageaccX_ST;
+	static float averageaccY_ST;
+	static float averageaccZ_ST;
 
-if (i<1000){
-	averagegyroX_ST += temporary[0] /1000;
-	averagegyroY_ST += temporary[1] /1000;
-	averagegyroZ_ST += temporary[2] /1000;
-	averageaccX_ST += temporary[3] /1000;
-	averageaccY_ST += temporary[4] /1000;
-	averageaccZ_ST += temporary[5] /1000;
-	i++;
-}
-else if(i==1000){
-	SPI1_enable();
-	// 0x1B- address of Gyroscope Configuration register:
-	// set +/-250[deg/s] and Self_test deactivate
-	MPU6000_SPI_write(0x1B, 0x00);
-	delay_micro(15);
+	if (i < 1000) {
+		averagegyroX_ST += temporary[0] / 1000;
+		averagegyroY_ST += temporary[1] / 1000;
+		averagegyroZ_ST += temporary[2] / 1000;
+		averageaccX_ST += temporary[3] / 1000;
+		averageaccY_ST += temporary[4] / 1000;
+		averageaccZ_ST += temporary[5] / 1000;
+		i++;
+	} else if (i == 1000) {
+		SPI1_enable();
+		// 0x1B- address of Gyroscope Configuration register:
+		// set +/-250[deg/s] and Self_test deactivate
+		MPU6000_SPI_write(0x1B, 0x00);
+		delay_micro(15);
 
-	//	0x1C - address of Accelerometer Configuration register:
-	// set +/-8[g]	and Self_test deactivate
+		//	0x1C - address of Accelerometer Configuration register:
+		// set +/-8[g]	and Self_test deactivate
 
-	MPU6000_SPI_write(0x1C, 0x10);
-	delay_micro(15);
+		MPU6000_SPI_write(0x1C, 0x10);
+		delay_micro(15);
 
-	SPI1_disable();
-	i++;
-}
-else if(i<2001){
-	averagegyroX += temporary[0] /1000;
-	averagegyroY += temporary[1] /1000;
-	averagegyroZ += temporary[2] /1000;
-	averageaccX += temporary[3] /1000;
-	averageaccY += temporary[4] /1000;
-	averageaccZ += temporary[5] /1000;
-i++;
+		SPI1_disable();
+		i++;
+	} else if (i < 2001) {
+		averagegyroX += temporary[0] / 1000;
+		averagegyroY += temporary[1] / 1000;
+		averagegyroZ += temporary[2] / 1000;
+		averageaccX += temporary[3] / 1000;
+		averageaccY += temporary[4] / 1000;
+		averageaccZ += temporary[5] / 1000;
+		i++;
 
-}
-else if(i==2001){
-	i=12345;// end of measurements
-}
+	} else if (i == 2001) {
+		i = 12345;	// end of measurements
+	}
 }
