@@ -23,6 +23,8 @@ static void setup_TIM2(); 			// setup TIM2 motors PWM
 static void setup_TIM3(); 			// setup TIM3 motors PWM
 static void setup_TIM6(); 			// setup TIM6 global time
 static void setup_TIM7(); 			// setup TIM7 delay functions
+static void setup_PWM();			// if you use PWM for ESC
+static void setup_Dshot();			// if you use Dshot for ESC
 static void setup_USART1(); 		// USART for radioreceiver
 static void setup_USART3();	// USART for communication via (3Dradio or bluetooth) - UNUSED
 static void setup_USART6();	// USART for communication via (3Dradio or bluetooth)
@@ -44,8 +46,10 @@ void setup() {
 	setup_GPIOC();
 	setup_TIM6();
 	setup_TIM7();
-	setup_TIM3();
 	setup_TIM2();
+	setup_TIM3();
+	setup_PWM();
+	//setup_Dshot();
 	setup_USART1();
 	setup_USART3();
 	setup_USART6();
@@ -267,15 +271,6 @@ static void setup_TIM2() {
 	//channel 4 enable:
 	TIM2->CCER |= TIM_CCER_CC4E;
 
-	TIM2->PSC = 168-1; 		// counter count every microsecond
-	TIM2->ARR = 20000 ; 		// 1 period of PWM is 20[ms]
-
-	TIM2->CCR3 = 1000 ; 			//wypelneinie channel 3
-	TIM2->CCR4 = 1000 ; 			//wypelneinie channel 4
-
-	//	TIM2 enabling:
-	TIM2->EGR |= TIM_EGR_UG;
-	TIM2->CR1 |= TIM_CR1_CEN;
 }
 
 static void setup_TIM3() {
@@ -295,15 +290,6 @@ static void setup_TIM3() {
 	//channel 4 enable:
 	TIM3->CCER |= TIM_CCER_CC4E;
 
-	TIM3->PSC = 168 - 1; 		// counter count every microsecond
-	TIM3->ARR = 20000 ; 		// 1 period of PWM is 20[ms]
-
-	TIM3->CCR3 = 1000 ; 			//wypelneinie channel 3
-	TIM3->CCR4 = 1000 ; 			//wypelneinie channel 4
-
-	//	TIM3 enabling:
-	TIM3->EGR |= TIM_EGR_UG;
-	TIM3->CR1 |= TIM_CR1_CEN;
 }
 
 static void setup_TIM6() {
@@ -322,6 +308,7 @@ static void setup_TIM6() {
 	TIM6->EGR |= TIM_EGR_UG;
 	TIM6->CR1 |= TIM_CR1_CEN;
 }
+
 static void setup_TIM7() {
 	// enable TIM7 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
@@ -339,6 +326,65 @@ static void setup_TIM7() {
 
 }
 
+static void setup_PWM() {
+
+	TIM2->PSC = 168 - 1; 		// counter count every microsecond
+	TIM2->ARR = 20000; 		// 1 period of PWM is 20[ms]
+
+	TIM2->CCR3 = 1000; 			//wypelneinie channel 3
+	TIM2->CCR4 = 1000; 			//wypelneinie channel 4
+
+	//	TIM2 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+
+	TIM3->PSC = 168 - 1; 		// counter count every microsecond
+	TIM3->ARR = 20000; 		// 1 period of PWM is 20[ms]
+
+	TIM3->CCR3 = 1000; 			//wypelneinie channel 3
+	TIM3->CCR4 = 1000; 			//wypelneinie channel 4
+
+	//	TIM3 enabling:
+	TIM3->EGR |= TIM_EGR_UG;
+	TIM3->CR1 |= TIM_CR1_CEN;
+
+}
+
+static void setup_Dshot() {
+
+	//	TIM2:
+
+	TIM2->PSC = 168000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH;
+
+	TIM2->DIER|=TIM_DIER_CC1DE|TIM_DIER_CC2DE;
+
+	TIM2->CCR1 = DSHOT_PWM_FRAME_LENGTH-1; //	DMA request is send right before PWM generation
+	TIM2->CCR2 = DSHOT_PWM_FRAME_LENGTH-1; //	DMA request is send right before PWM generation
+	TIM2->CCR3 = 0; 				//wypelneinie channel 3
+	TIM2->CCR4 = 0; 				//wypelneinie channel 4
+
+	//	TIM2 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+
+	//	TIM3:
+
+	TIM3->PSC = 168000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH;
+
+	TIM3->DIER|=TIM_DIER_CC1DE|TIM_DIER_CC2DE;
+
+	TIM3->CCR1 = DSHOT_PWM_FRAME_LENGTH-1;	//	DMA request is send right before PWM generation
+	TIM3->CCR2 = DSHOT_PWM_FRAME_LENGTH-1; 	//	DMA request is send right before PWM generation
+	TIM3->CCR3 = 0; 						//	PWM duration channel 3
+	TIM3->CCR4 = 0; 						//	PWM duration channel 4
+
+	//	TIM3 enabling:
+	TIM3->EGR |= TIM_EGR_UG;
+	TIM3->CR1 |= TIM_CR1_CEN;
+}
+
 static void setup_USART1() {
 	// enable USART1 clock:
 	RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
@@ -348,6 +394,7 @@ static void setup_USART1() {
 	USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
 
 }
+
 static void setup_USART3() {
 	// enable USART3 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
@@ -382,19 +429,45 @@ static void setup_DMA() {
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
 
-	//USART6 telemetry TX (from memory to peripheral):
-	DMA2_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
-			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
-	DMA2_Stream6->PAR = (uint32_t) (&(USART6->DR));
-	DMA2_Stream6->M0AR = (uint32_t) (table_of_bytes_to_sent);
-	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
-
 //	//USART3 TX (from memory to peripheral):
 //	DMA1_Stream3->CR = DMA_SxCR_CHSEL_2| DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_DIR_0
 //			| DMA_SxCR_TCIE| DMA_SxCR_PL_0;
 //	DMA1_Stream3->PAR = (uint32_t)&(USART3->DR);
 //	DMA1_Stream3->M0AR = (uint32_t) (& MEMORY ADRESS FOR UASRT3);
 //	DMA1_Stream3->NDTR = NUMBER OF ELEMENT TO SEND;
+
+	// DSHOT:
+	//motor1:
+	DMA1_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_1 | DMA_SxCR_MINC
+			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA1_Stream6->PAR = (uint32_t) (&(TIM2->CCR4));
+	DMA1_Stream6->M0AR = (uint32_t) (dshot_buffer_1);
+	DMA1_Stream6->NDTR = DSHOT_BUFFER_LENGTH;
+	//motor2
+	DMA1_Stream7->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
+			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA1_Stream7->PAR = (uint32_t) (&(TIM2->CCR3));
+	DMA1_Stream7->M0AR = (uint32_t) (dshot_buffer_2);
+	DMA1_Stream7->NDTR = DSHOT_BUFFER_LENGTH;
+	//motor3
+	DMA1_Stream2->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
+			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA1_Stream2->PAR = (uint32_t) (&(TIM2->CCR4));
+	DMA1_Stream2->M0AR = (uint32_t) (dshot_buffer_3);
+	DMA1_Stream2->NDTR = DSHOT_BUFFER_LENGTH;
+	//motor4
+	DMA1_Stream1->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_1 | DMA_SxCR_MINC
+			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA1_Stream1->PAR = (uint32_t) (&(TIM2->CCR3));
+	DMA1_Stream1->M0AR = (uint32_t) (dshot_buffer_4);
+	DMA1_Stream1->NDTR = DSHOT_BUFFER_LENGTH;
+
+	//USART6 telemetry TX (from memory to peripheral):
+	DMA2_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
+			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA2_Stream6->PAR = (uint32_t) (&(USART6->DR));
+	DMA2_Stream6->M0AR = (uint32_t) (table_of_bytes_to_sent);
+	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
 
 	//USART1 RX reading:
 	DMA2_Stream5->CR |= DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC | DMA_SxCR_CIRC
@@ -462,6 +535,19 @@ void setup_NVIC_2() {
 	NVIC_SetPriority(EXTI4_IRQn, 10);
 
 	// nvic DMA interrupt enable:
+
+	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+	NVIC_SetPriority(DMA1_Stream1_IRQn, 13);
+
+	NVIC_EnableIRQ(DMA1_Stream2_IRQn);
+	NVIC_SetPriority(DMA1_Stream2_IRQn, 13);
+
+	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+	NVIC_SetPriority(DMA1_Stream6_IRQn, 13);
+
+	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+	NVIC_SetPriority(DMA1_Stream7_IRQn, 13);
+
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 	NVIC_SetPriority(DMA2_Stream5_IRQn, 11);
 

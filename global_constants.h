@@ -16,12 +16,24 @@
 #define MAX_NO_SIGNAL_TIME 0.5 			//[s]
 #define DISARM_VALUE 1600
 #define TIMEOUT_VALUE 0.005				//[s]
+#define MAX_ROLL_ANGLE 30
+#define MAX_PITCH_ANGLE 30
+
+#define DSHOT_MODE 600 		// 150 300 600 are available
+#define DSHOT_BUFFER_LENGTH 16
+#define DSHOT_PWM_FRAME_LENGTH 8
+#define DSHOT_1_LENGTH 6
+#define DSHOT_0_LENGTH 3
+
+#define FREQUENCY_PID_LOOP 400 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_ESC_UPDATE 400 //[Hz]
+#define FREQUENCY_IMU_READING 400 //[Hz]
+#define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 // OFFSETS and CALIBRATIONS VALUE
 
 #define PITCH_OFFSET -3
 #define ROLL_OFFSET 12
-
 
 #define GYRO_ROLL_OFFSET -33
 #define GYRO_PITCH_OFFSET 32
@@ -46,14 +58,6 @@
 #define GYRO_PART 0.99
 #define ACC_PART 0.01
 #define GYRO_TO_DPS 32768/1000. // convert gyro register into degrees per second unit
-
-#define MAX_ROLL_ANGLE 30
-#define MAX_PITCH_ANGLE 30
-
-#define FREQUENCY_PID_LOOP 800 //[Hz]
-#define FREQUENCY_ESC_UPDATE 500 //[Hz]
-#define FREQUENCY_IMU_READING 500 //[Hz]
-#define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 #define RAD_TO_DEG  180 / M_PI
 #define DEG_TO_RAD  M_PI/180

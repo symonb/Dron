@@ -30,8 +30,6 @@ static void acc_angles();
 static ThreeF corrections();
 static ThreeF Corrections_from_quaternion(Quaternion position_quaternion);
 
-static void anti_windup();
-
 // err values - difference between set value and measured value:
 static ThreeF err = { 0, 0, 0 };
 static ThreeF sum_err = { 0, 0, 0 };
@@ -42,8 +40,8 @@ static ThreeF last_D_corr = { 0, 0, 0 };
 static Three Rates = { 400, 400, 400 };
 
 //4s
-static PIDF R_PIDF = { 0.55, 0.01, 0.02, 0.005 };
-static PIDF P_PIDF = { 0.55, 0.01, 0.02, 0.005 };
+static PIDF R_PIDF = { 0.4, 0.001, 0.0004, 0.005 };
+static PIDF P_PIDF = { 0.4, 0.001, 0.0004 , 0.005 };
 static PIDF Y_PIDF = { 1, 0.01, 0.01, 0.01 };
 
 // 3s
@@ -79,12 +77,12 @@ void stabilize() {
 		time_flag1_2 = get_Global_Time();
 		puk2++;
 		//wypisywanie korekcji pitch P I D i roll P I D; k¹tów; zadanych wartosci
-//		table_to_send[0] = P_PIDF.P * err.pitch * 500. / 32768. + 1000;
-//		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500. / 32768. + 1000;
-//		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500. / 32768. + 1000;
-//		table_to_send[3] = R_PIDF.P * err.roll * 500. / 32768. + 1000;
-//		table_to_send[4] = R_PIDF.I * sum_err.roll * 500. / 32768. + 1000;
-//		table_to_send[5] = R_PIDF.D * D_corr.roll * 500. / 32768. + 1000;
+//		table_to_send[0] = P_PIDF.P * err.pitch * 500.f  + 1000;
+//		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500.f  + 1000;
+//		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500.f + 1000;
+//		table_to_send[3] = R_PIDF.P * err.roll * 500.f + 1000;
+//		table_to_send[4] = R_PIDF.I * sum_err.roll * 500.f  + 1000;
+//		table_to_send[5] = R_PIDF.D * D_corr.roll * 500.f + 1000;
 //		table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50) + 1000;
 //		table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50) + 1000;
 //		table_to_send[8] = 10 * (gyro_angle_roll + 360);
@@ -95,19 +93,19 @@ void stabilize() {
 //		table_to_send[13] = channels[0] - 500;
 
 //FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW NO ANGLES
-		table_to_send[0] = P_PIDF.P * err.pitch * 500. / 32768. + 1000;
-		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500. / 32768. + 1000;
-		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500. / 32768. + 1000;
-		table_to_send[3] = R_PIDF.P * err.roll * 500. / 32768. + 1000;
-		table_to_send[4] = R_PIDF.I * sum_err.roll * 500. / 32768. + 1000;
-		table_to_send[5] = R_PIDF.D * D_corr.roll * 500. / 32768. + 1000;
+		table_to_send[0] = P_PIDF.P * err.pitch * 500.f  + 1000;
+		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500.f + 1000;
+		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500.f + 1000;
+		table_to_send[3] = R_PIDF.P * err.roll * 500.f + 1000;
+		table_to_send[4] = R_PIDF.I * sum_err.roll * 500.f + 1000;
+		table_to_send[5] = R_PIDF.D * D_corr.roll * 500.f + 1000;
 		table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50)
 				+ 1000;
 		table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50)
 				+ 1000;
-		table_to_send[8] = Y_PIDF.P * err.yaw * 500. / 32768. + 1000;
-		table_to_send[9] = Y_PIDF.I * sum_err.yaw * 500. / 32768. + 1000;
-		table_to_send[10] = Y_PIDF.D * D_corr.yaw * 500. / 32768. + 1000;
+		table_to_send[8] = Y_PIDF.P * err.yaw * 500.f + 1000;
+		table_to_send[9] = Y_PIDF.I * sum_err.yaw * 500.f + 1000;
+		table_to_send[10] = Y_PIDF.D * D_corr.yaw * 500.f + 1000;
 		table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
 		table_to_send[12] = channels[1] - 500;
 		table_to_send[13] = channels[0] - 500;
@@ -273,30 +271,31 @@ static void madgwick_filter() {
 static ThreeF corrections() {
 	static ThreeF corr;
 	static ThreeF last_channels;
-	err.roll = ((channels[0] - 1500) * 32768 / 500.
-			- global_angles.roll * 32768 / MAX_ROLL_ANGLE);
-	err.pitch = ((channels[1] - 1500) * 32768 / 500.
-			- global_angles.pitch * 32768 / MAX_PITCH_ANGLE);
-	err.yaw = (channels[3] - 1500) * 32768 / 500.
-			- (Gyro_Acc[2]) * 1000 / Rates.yaw;
+	err.roll = ((channels[0] - 1500)  / 500.
+			- global_angles.roll  / MAX_ROLL_ANGLE);
+	err.pitch = ((channels[1] - 1500)/ 500.
+			- global_angles.pitch  / MAX_PITCH_ANGLE);
+	err.yaw = (channels[3] - 1500)  / 500.
+			- (Gyro_Acc[2]) * 0.0305185f/ Rates.yaw;
 
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;
 	sum_err.pitch += err.pitch * dt;
 	sum_err.yaw += err.yaw * dt;
 
-//	//low-pass filter
-//	D_corr.roll= ((err.roll-last_err.roll)/dt+last_D_corr.roll)/2.;
-//	D_corr.pitch=((err.pitch-last_err.pitch)/dt+last_D_corr.pitch)/2.;
-//	D_corr.yaw=((err.yaw-last_err.yaw)/dt+last_D_corr.yaw)/2.;
 
-	D_corr.roll = -(Gyro_Acc[0]) * 1000 / MAX_ROLL_ANGLE
-			+ (channels[0] - last_channels.roll) / 500. * 32768 / dt;
-	D_corr.pitch = -(Gyro_Acc[1]) * 1000 / MAX_PITCH_ANGLE
-			+ (channels[1] - last_channels.pitch) / 500. * 32768 / dt;
+
+	//D correction will be divide for measurements and set-point corrections:
+
+	D_corr.roll = -Gyro_Acc[0]  * 0.0305185f;
+	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
 	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
 
-	anti_windup();
+	F_corr.roll = (channels[0] - last_channels.roll)/500.f / dt;
+	F_corr.pitch = (channels[1] - last_channels.pitch)/500.f  / dt;
+	F_corr.yaw = 0;
+
+	anti_windup(&sum_err,&R_PIDF,&P_PIDF,&Y_PIDF);
 
 	//	calculate corrections:
 	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll
@@ -326,13 +325,13 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 
 	static ThreeF corr;
 	static ThreeF set_angles;
-	static ThreeF last_channels;
+	static Three last_channels;
 	static Quaternion set_position_quaternion;
 	static Quaternion error_quaternion;
 
-	set_angles.roll = (channels[0] - 1500) / 500. * MAX_ROLL_ANGLE;
-	set_angles.pitch = (channels[1] - 1500) / 500. * MAX_PITCH_ANGLE;
-	set_angles.yaw += (channels[3] - 1500) / 500. * Rates.yaw * dt;
+	set_angles.roll = (channels[0] - 1500) / 500.f * MAX_ROLL_ANGLE;
+	set_angles.pitch = (channels[1] - 1500) / 500.f * MAX_PITCH_ANGLE;
+	set_angles.yaw += (channels[3] - 1500) / 500.f * Rates.yaw * dt;
 
 	//define quaternion of desired position (global) :
 	set_position_quaternion = Euler_angles_to_Quaternion(set_angles);
@@ -354,11 +353,6 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 
 	err = Rotate_Vector_with_Quaternion(err, position_quaternion, 0);
 
-	// PLEACE CHANGE THIS:
-	err.roll *= 32768;
-	err.pitch *= 32768;
-	err.yaw *= 32768;
-
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;
 	sum_err.pitch += err.pitch * dt;
@@ -366,23 +360,23 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 
 	//D correction will be divide for measurements and set-point corrections:
 
-	D_corr.roll = -(Gyro_Acc[0]) * 1000 / MAX_ROLL_ANGLE;
-	D_corr.pitch = -(Gyro_Acc[1]) * 1000 / MAX_PITCH_ANGLE;
+	D_corr.roll = -Gyro_Acc[0]  * 0.0305185f;
+	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
 	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
 
-	F_corr.roll = (channels[0] - last_channels.roll) / 500. * 32768 / dt;
-	F_corr.pitch = (channels[1] - last_channels.pitch) / 500. * 32768 / dt;
+	F_corr.roll = (channels[0] - last_channels.roll)/500.f / dt;
+	F_corr.pitch = (channels[1] - last_channels.pitch)/500.f  / dt;
 	F_corr.yaw = 0;
 
-	anti_windup();
+	anti_windup(&sum_err,&R_PIDF,&P_PIDF,&Y_PIDF);
 
 	//	calculate corrections:
 	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll
-			+ R_PIDF.D * D_corr.roll+R_PIDF.F*F_corr.roll) * 500 / 32768.;
+			+ R_PIDF.D * D_corr.roll+R_PIDF.F*F_corr.roll) * 500;
 	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch
-			+ P_PIDF.D * D_corr.pitch+P_PIDF.F*F_corr.pitch) * 500 / 32768.;
+			+ P_PIDF.D * D_corr.pitch+P_PIDF.F*F_corr.pitch) * 500 ;
 	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw
-			+ Y_PIDF.D * D_corr.yaw+Y_PIDF.F*F_corr.yaw) * 500 / 32768.;
+			+ Y_PIDF.D * D_corr.yaw+Y_PIDF.F*F_corr.yaw) * 500;
 
 	//	set current errors as last errors:
 	last_err.roll = err.roll;
@@ -400,45 +394,3 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 	return corr;
 }
 
-static void anti_windup() {
-	if (channels[4] > 1600) {
-		int16_t max_I_correction = 300;
-		if ((sum_err.roll * R_PIDF.I * 500. / 32768.) > max_I_correction) {
-			sum_err.roll = max_I_correction / R_PIDF.I / 500. * 32768.;
-		} else if ((sum_err.roll * R_PIDF.I * 500. / 32768.)
-				< -max_I_correction) {
-			sum_err.roll = -max_I_correction / R_PIDF.I / 500. * 32768.;
-		}
-		if ((sum_err.pitch * P_PIDF.I * 500. / 32768.) > max_I_correction) {
-			sum_err.pitch = max_I_correction / P_PIDF.I / 500. * 32768.;
-		} else if ((sum_err.pitch * P_PIDF.I * 500 / 32768.)
-				< -max_I_correction) {
-			sum_err.pitch = -max_I_correction / P_PIDF.I / 500. * 32768.;
-		}
-		if ((sum_err.yaw * Y_PIDF.I * 500. / 32768.) > max_I_correction) {
-			sum_err.yaw = max_I_correction / Y_PIDF.I / 500. * 32768.;
-		} else if ((sum_err.yaw * Y_PIDF.I * 500 / 32768.)
-				< -max_I_correction) {
-			sum_err.yaw = -max_I_correction / Y_PIDF.I / 500. * 32768.;
-		}
-	} else {			// quad is disarmed so turn off I term of corrections
-		sum_err.roll = 0;
-		sum_err.pitch = 0;
-		sum_err.yaw = 0;
-	}
-
-	int16_t max_D_correction = 300;
-	if ((D_corr.roll * R_PIDF.D * 500. / 32768.) > max_D_correction
-			|| (D_corr.roll * R_PIDF.D * 500. / 32768.) < -max_D_correction) {
-		D_corr.roll = last_D_corr.roll;
-	}
-	if (D_corr.pitch * P_PIDF.D * 500. / 32768. > max_D_correction
-			|| D_corr.pitch * P_PIDF.D * 500. / 32768. < -max_D_correction) {
-		D_corr.pitch = last_D_corr.pitch;
-	}
-	if (D_corr.yaw * Y_PIDF.D * 500. / 32768. > max_D_correction
-			|| D_corr.yaw * Y_PIDF.D * 500. / 32768. < -max_D_correction) {
-		D_corr.yaw = last_D_corr.yaw;
-	}
-
-}

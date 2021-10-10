@@ -71,6 +71,11 @@ extern uint8_t I2C1_read_write_flag;
 
 extern uint8_t transmitting_is_Done;
 
+extern uint8_t dshot_buffer_1[];
+extern uint8_t dshot_buffer_2[];
+extern uint8_t dshot_buffer_3[];
+extern uint8_t dshot_buffer_4[];
+
 extern uint8_t failsafe_type;
 
 extern uint16_t motor_off;

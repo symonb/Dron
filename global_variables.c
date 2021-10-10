@@ -43,6 +43,11 @@ uint8_t imu_received = 0;
 
 uint8_t transmitting_is_Done = 1;
 
+uint8_t dshot_buffer_1[DSHOT_BUFFER_LENGTH];
+uint8_t dshot_buffer_2[DSHOT_BUFFER_LENGTH];
+uint8_t dshot_buffer_3[DSHOT_BUFFER_LENGTH];
+uint8_t dshot_buffer_4[DSHOT_BUFFER_LENGTH];
+
 uint8_t failsafe_type;
 /* 1-disarmed 2-incorrect channels values 3-RX timeout
  * 4-setup_error 5-I2C communication error 6-SPI communication error
