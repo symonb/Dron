@@ -13,24 +13,32 @@
 #include "flash.h"
 #include "OSD.h"
 
+/* IMPORTANT:
+ APB2 max frequency is 84 [MHz], 168 [MHz] only for timers
+ APB1 max frequency is 42 [MHz], 84 [MHz] only for timers
+ */
+
 static void setup_HSE();
 static void setup_PLL();
 static void setup_FPU();
 static void setup_GPIOA(); // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1)
 static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 4 -  LED; pin 5 - blue LED; 10 - TX USART3)
 static void setup_GPIOC(); // GPIOC (pin 4 - EXTI (INT MPU6000); pin 6 - TX USART6; pin 7 - RX USART6)
-static void setup_TIM2(); 			// setup TIM2 motors PWM
-static void setup_TIM3(); 			// setup TIM3 motors PWM
 static void setup_TIM6(); 			// setup TIM6 global time
 static void setup_TIM7(); 			// setup TIM7 delay functions
 static void setup_PWM();			// if you use PWM for ESC
 static void setup_Dshot();			// if you use Dshot for ESC
+static void setup_Dshot_burst();	// if Dshot is capable of burst transfer
+static void setup_OneShot125();		// if you use OneShot125 for ESC
+static void setup_OneShot125_v2();
 static void setup_USART1(); 		// USART for radioreceiver
 static void setup_USART3();	// USART for communication via (3Dradio or bluetooth) - UNUSED
 static void setup_USART6();	// USART for communication via (3Dradio or bluetooth)
 static void setup_SPI1();			// SPI for communication with MPU6000
 static void setup_DMA();
 static void setup_EXTI();
+
+static void DSHOT_TEST_FUN();
 
 extern uint8_t table_of_bytes_to_sent[2 * ALL_ELEMENTS_TO_SEND + 4];
 extern uint8_t read_write_tab[];
@@ -46,10 +54,21 @@ void setup() {
 	setup_GPIOC();
 	setup_TIM6();
 	setup_TIM7();
-	setup_TIM2();
-	setup_TIM3();
-	setup_PWM();
-	//setup_Dshot();
+
+	//setup_PWM();
+
+	//DSHOT_TEST_FUN();
+
+	setup_Dshot();				/* DZIA£A TYLKO TIM3,
+	TIM2 GENERUJE PWM i PRZERWANIA OD DMA ALE NIC NIE PRZESY£A '
+	PLUS PO PEWNYM CZASIE TIM3 blokuje sie na LOW i WYSYLA PODWOJONE RAMKI CO JEST BEZ SENSU BO teoretycznie jedynie CC wywoluje DMA request
+
+
+	WAZNE AKTUALNIE PRESKALER JEST NA 83 a musi byc na 7 wiec trzeba odkomentowac
+	 	 	 	 	 	 	 	 	 	 	 	 	 	 */
+	//setup_Dshot_burst();		//NIE SKONCZONE NIE DZIALA
+	//setup_OneShot125(); 			//DO POPRAWKI WYSTEPUJA DLU¯SZE PULSY prawdopodobnie zanim zostawnie wy³aczony timer juz wartosc skacze jako wysoka i w takiej sie zatrzaskuje az do kolejnego odblokowania timera
+	//setup_OneShot125_v2();
 	setup_USART1();
 	setup_USART3();
 	setup_USART6();
@@ -70,6 +89,12 @@ static void setup_HSE() {
 	while (0 == (RCC->CR & RCC_CR_HSERDY)) {
 		// waiting until RDY bit is set
 	}
+	//set all prescalers (main clock will be set at 168 MHz via PLL):
+
+	RCC->CFGR |= RCC_CFGR_PPRE2_2; //APB2 presc. = 2
+	RCC->CFGR |= RCC_CFGR_PPRE1_2 | RCC_CFGR_PPRE1_0; //APB1 presc. = 4
+	// AHB presc. = 1 (left at default)
+
 	// enable power interface clock
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;
 
@@ -169,8 +194,8 @@ static void setup_GPIOA() {
 	GPIOA->AFR[1] &= ~0x00000F00;
 	GPIOA->AFR[1] |= 0x00000700;
 
-	//pull up (01) on PIN4 (SPI1 CS):
-	//GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;
+	//pull up (01) pull down (10)
+	//GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;  // on PIN4 (SPI1 CS):
 
 	//set high on PIN4 (SPI CS)
 	GPIOA->BSRR |= GPIO_BSRR_BS4;
@@ -254,7 +279,43 @@ static void setup_GPIOC() {
 
 }
 
-static void setup_TIM2() {
+static void setup_TIM6() {
+	// enable TIM6 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
+	// register is buffered and only overflow generate interrupt:
+	TIM6->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	TIM6->PSC = 84 - 1; 			// every 1 us 1 count
+	TIM6->ARR = 65535; 		// 1 period is 0.065535 [s] long
+
+	//	interrupt enable
+	TIM6->DIER |= TIM_DIER_UIE;
+	//	TIM6 enabling:
+
+	TIM6->EGR |= TIM_EGR_UG;
+	TIM6->CR1 |= TIM_CR1_CEN;
+}
+
+static void setup_TIM7() {
+
+	// enable TIM7 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+
+	// register is buffered, only overflow generate interrupt:
+	TIM7->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	TIM7->PSC = 84 - 1; 			// every 1 us 1 count
+	TIM7->ARR = 65535; 		// it will be set by user
+
+	// interrupt enable
+	TIM7->DIER |= TIM_DIER_UIE;
+
+	// TIM7 is enabling in delay functions:
+
+}
+
+static void setup_PWM() {
+
 	// enable TIM2 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
@@ -271,9 +332,16 @@ static void setup_TIM2() {
 	//channel 4 enable:
 	TIM2->CCER |= TIM_CCER_CC4E;
 
-}
+	TIM2->PSC = 42 - 1; // counter count every 0.5 microsecond (typically 1 step is 1 [us] long but for better resolution and easier Dshot implementation it is 0.5 [us]. Notice that lowest motor_value 2000 step is still 1 [ms] long as in typical PWM)
+	TIM2->ARR = 2000000 / FREQUENCY_ESC_UPDATE - 1; 		// 1 period of PWM
 
-static void setup_TIM3() {
+	TIM2->CCR3 = 2000; 			// PWM length channel 3 (1 [ms])
+	TIM2->CCR4 = 2000; 			// PWM length channel 4 (1 [ms])
+
+	//	TIM2 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+
 	// enable TIM3 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
@@ -290,59 +358,11 @@ static void setup_TIM3() {
 	//channel 4 enable:
 	TIM3->CCER |= TIM_CCER_CC4E;
 
-}
+	TIM3->PSC = 42 - 1; // counter count every 0.5 microsecond (typically 1 step is 1 [us] long but for better resolution and easier Dshot implementation it is 0.5 [us]. Notice that lowest motor_value 2000 step is still 1 [ms] long as in typical PWM)
+	TIM3->ARR = 2000000 / FREQUENCY_ESC_UPDATE - 1; 		// 1 period of PWM
 
-static void setup_TIM6() {
-	// enable TIM6 clock:
-	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
-	// register is buffered and only overflow generate interrupt:
-	TIM6->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
-
-	TIM6->PSC = 168 - 1; 			// every 1 us 1 count
-	TIM6->ARR = 65535; 		// 1 period is 0.065535 [s] long
-
-	//	interrupt enable
-	TIM6->DIER |= TIM_DIER_UIE;
-	//	TIM6 enabling:
-
-	TIM6->EGR |= TIM_EGR_UG;
-	TIM6->CR1 |= TIM_CR1_CEN;
-}
-
-static void setup_TIM7() {
-	// enable TIM7 clock:
-	RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
-
-	// register is buffered, only overflow generate interrupt:
-	TIM7->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
-
-	TIM7->PSC = 168 - 1; 			// every 1 us 1 count
-	TIM7->ARR = 65535; 		// it will be set by user
-
-	//	interrupt enable
-	TIM7->DIER |= TIM_DIER_UIE;
-
-	//	TIM7 is enabling in delay functions:
-
-}
-
-static void setup_PWM() {
-
-	TIM2->PSC = 168 - 1; 		// counter count every microsecond
-	TIM2->ARR = 20000; 		// 1 period of PWM is 20[ms]
-
-	TIM2->CCR3 = 1000; 			//wypelneinie channel 3
-	TIM2->CCR4 = 1000; 			//wypelneinie channel 4
-
-	//	TIM2 enabling:
-	TIM2->EGR |= TIM_EGR_UG;
-	TIM2->CR1 |= TIM_CR1_CEN;
-
-	TIM3->PSC = 168 - 1; 		// counter count every microsecond
-	TIM3->ARR = 20000; 		// 1 period of PWM is 20[ms]
-
-	TIM3->CCR3 = 1000; 			//wypelneinie channel 3
-	TIM3->CCR4 = 1000; 			//wypelneinie channel 4
+	TIM3->CCR3 = 2000; 			// PWM length channel 3 (1 [ms])
+	TIM3->CCR4 = 2000; 			// PWM length channel 4 (1 [ms])
 
 	//	TIM3 enabling:
 	TIM3->EGR |= TIM_EGR_UG;
@@ -350,19 +370,251 @@ static void setup_PWM() {
 
 }
 
+static void DSHOT_TEST_FUN() {
+
+	//TEST on TIM8
+	RCC->APB2ENR |= RCC_APB2ENR_TIM8EN;
+	TIM8->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+	;
+
+	TIM8->PSC = 168 - 1; 	//168000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM8->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	//TIM8->DIER |= TIM_DIER_CC2IE;  // DZIA£A
+	TIM8->DIER |= TIM_DIER_CC2DE;	//NIE DZIA£A sam przesyl dma
+//	TIM8->DIER |=  TIM_DIER_UDE;	//TEZ NIE DZIA£A sam przesyl dma
+//	TIM8->CR2 |= TIM_CR2_CCDS;
+
+	TIM8->CCR2 = DSHOT_PWM_FRAME_LENGTH - 2;
+
+	TIM8->CCER |= TIM_CCER_CC2E;
+
+	// enable TIM2 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	// register is buffered and only overflow generate interrupt:
+	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	TIM2->DIER |= TIM_DIER_CC3DE;
+
+	TIM2->PSC = 84 - 1;	//84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM2->CCR3 = 10; 			// PWM length channel 3 (1 [ms])
+	TIM2->CCR4 = 10; 			// PWM length channel 4 (1 [ms])
+
+	//channel 3 enable:
+	TIM2->CCER |= TIM_CCER_CC3E;
+	//channel 4 enable:
+	TIM2->CCER |= TIM_CCER_CC4E;
+
+	//	TIM2 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+	TIM8->EGR |= TIM_EGR_UG;
+	TIM8->CR1 |= TIM_CR1_CEN;
+
+	dshot_buffer_1[0] = 1;
+	dshot_buffer_1[1] = 5;
+	dshot_buffer_1[2] = 10;
+	dshot_buffer_1[3] = 15;
+	dshot_buffer_1[4] = 20;
+	dshot_buffer_1[5] = 25;
+	dshot_buffer_1[6] = 30;
+	dshot_buffer_1[7] = 35;
+	dshot_buffer_1[8] = 30;
+	dshot_buffer_1[9] = 25;
+	dshot_buffer_1[10] = 20;
+	dshot_buffer_1[11] = 15;
+
+	dshot_buffer_4[0] = 1;
+	dshot_buffer_4[1] = 5;
+	dshot_buffer_4[2] = 10;
+	dshot_buffer_4[3] = 15;
+	dshot_buffer_4[4] = 20;
+	dshot_buffer_4[5] = 25;
+	dshot_buffer_4[6] = 30;
+	dshot_buffer_4[7] = 35;
+	dshot_buffer_4[8] = 30;
+	dshot_buffer_4[9] = 25;
+	dshot_buffer_4[10] = 20;
+	dshot_buffer_4[11] = 15;
+
+	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
+	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+
+	volatile uint16_t VARIABLE_TEST_1[3] = { 20, 10, 30 };
+	volatile uint16_t VARIABLE_TEST_2[3] = { 20, 10, 30 };
+
+	DMA2_Stream2->CR = 0x0;
+
+	DMA2_Stream2->CR |= DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_MSIZE_0
+			| DMA_SxCR_PSIZE_0 | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_TEIE
+			| DMA_SxCR_HTIE | DMA_SxCR_DMEIE | DMA_SxCR_PL_0;
+	DMA2_Stream2->PAR = (uint32_t) (&TIM2->CCR4);
+	DMA2_Stream2->M0AR = (uint32_t) (&VARIABLE_TEST_2[2]);
+	DMA2_Stream2->NDTR = 1;
+
+	//	motor4:
+	DMA1_Stream1->CR = 0x0;
+
+	DMA1_Stream1->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_1 | DMA_SxCR_MINC
+			| DMA_SxCR_MSIZE_0 | DMA_SxCR_PSIZE_0 | DMA_SxCR_CIRC
+			| DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_TEIE | DMA_SxCR_HTIE
+			| DMA_SxCR_DMEIE | DMA_SxCR_PL_0;
+	DMA1_Stream1->PAR = (uint32_t) (&TIM2->CCR3);
+	DMA1_Stream1->M0AR = (uint32_t) (&VARIABLE_TEST_2[2]);
+	DMA1_Stream1->NDTR = 1;
+
+	DMA2->LIFCR |= DMA_LIFCR_CTCIF2;
+	DMA1->LIFCR |= DMA_LIFCR_CTCIF1;
+
+}
+
+void TIM8_CC_IRQHandler(void) {
+	static int i;
+	if (TIM_SR_CC2IF & TIM8->SR) {
+		TIM8->SR &= ~TIM_SR_CC2IF;
+		if (i >= DSHOT_PWM_FRAME_LENGTH) {
+			i = 1;
+		}
+		TIM2->CCR4 = i;
+		i++;
+	}
+}
+
 static void setup_Dshot() {
 
 	//	TIM2:
 
-	TIM2->PSC = 168000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
-	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH;
+//	// enable TIM2 clock:
+//	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+//
+//	// register is buffered and update event disable:
+//	TIM2->CR1 |= TIM_CR1_ARPE| TIM_CR1_URS;
+//
+//
+//	// PWM mode 1 and output compare 3 preload enable:
+//	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+//	// PWM mode 1 and output compare 4 preload enable:
+//	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+//
+//	TIM2->PSC = 84-1;//84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+//	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH-1;
+//
+//	TIM2->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+//
+//	TIM2->CCR3 = 10; 							//	PWM duration channel 3
+//	TIM2->CCR4 = 10; 							//	PWM duration channel 4
+//
+//	//channel 3 output enable:
+//	TIM2->CCER |= TIM_CCER_CC3E;
+//	//channel 4 output enable:
+//	TIM2->CCER |= TIM_CCER_CC4E;
+//
+//	//	TIM2 enabling:
+//	TIM2->EGR |= TIM_EGR_UG;
+//	TIM2->CR1 |= TIM_CR1_CEN;
 
-	TIM2->DIER|=TIM_DIER_CC1DE|TIM_DIER_CC2DE;
+	// enable TIM2 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
-	TIM2->CCR1 = DSHOT_PWM_FRAME_LENGTH-1; //	DMA request is send right before PWM generation
-	TIM2->CCR2 = DSHOT_PWM_FRAME_LENGTH-1; //	DMA request is send right before PWM generation
-	TIM2->CCR3 = 0; 				//wypelneinie channel 3
-	TIM2->CCR4 = 0; 				//wypelneinie channel 4
+	// register is buffered and update event disable:
+	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	TIM2->PSC = 84 - 1; 	//84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM2->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+
+	TIM2->CCR3 = 10; 							//	PWM duration channel 3
+	TIM2->CCR4 = 10; 							//	PWM duration channel 4
+
+	//channel 3 output enable:
+	TIM2->CCER |= TIM_CCER_CC3E;
+	//channel 4 output enable:
+	TIM2->CCER |= TIM_CCER_CC4E;
+
+	//	TIM3 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+
+	//	TIM3:
+
+	// enable TIM3 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	// register is buffered and update event disable:
+	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	TIM3->PSC = 84 - 1; 	//84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM3->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+
+	TIM3->CCR3 = 10; 							//	PWM duration channel 3
+	TIM3->CCR4 = 10; 							//	PWM duration channel 4
+
+	//channel 3 output enable:
+	TIM3->CCER |= TIM_CCER_CC3E;
+	//channel 4 output enable:
+	TIM3->CCER |= TIM_CCER_CC4E;
+
+	//	TIM3 enabling:
+	TIM3->EGR |= TIM_EGR_UG;
+	TIM3->CR1 |= TIM_CR1_CEN;
+}
+
+static void setup_Dshot_burst() {
+
+	//	TIM2:
+
+	// enable TIM2 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	TIM2->DIER |= TIM_DIER_CC1DE; //	DMA request enable for 1 and 2 channel
+
+	TIM2->PSC = 84-1;//84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM2->CCR2 = DSHOT_PWM_FRAME_LENGTH - 1; //	DMA request is send right before PWM generation
+	TIM2->CCR3 = 0; 							//	PWM duration channel 3
+	TIM2->CCR4 = 0; 							//	PWM duration channel 4
+
+	//channel 1 enable:
+	TIM2->CCER |= TIM_CCER_CC1E;
+
+	//channel 3 output enable:
+	TIM2->CCER |= TIM_CCER_CC3E;
+	//channel 4 output enable:
+	TIM2->CCER |= TIM_CCER_CC4E;
+
+
+
+	TIM2->DCR |= TIM_DCR_DBL_0;	 	 		//	updating 2 registers CC3 and CC4
+	TIM2->DCR |= TIM_DCR_DBA_3 | TIM_DCR_DBA_2 | TIM_DCR_DBA_1;	//	offset of register CC3 (0x0E)
 
 	//	TIM2 enabling:
 	TIM2->EGR |= TIM_EGR_UG;
@@ -370,25 +622,213 @@ static void setup_Dshot() {
 
 	//	TIM3:
 
-	TIM3->PSC = 168000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
-	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH;
+	// enable TIM3 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
-	TIM3->DIER|=TIM_DIER_CC1DE|TIM_DIER_CC2DE;
+	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
-	TIM3->CCR1 = DSHOT_PWM_FRAME_LENGTH-1;	//	DMA request is send right before PWM generation
-	TIM3->CCR2 = DSHOT_PWM_FRAME_LENGTH-1; 	//	DMA request is send right before PWM generation
-	TIM3->CCR3 = 0; 						//	PWM duration channel 3
-	TIM3->CCR4 = 0; 						//	PWM duration channel 4
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	TIM3->DIER |= TIM_DIER_CC1DE; //	DMA request enable for 1
+
+	TIM3->PSC =84-1;// 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM3->CCR1 = DSHOT_PWM_FRAME_LENGTH - 1; //	DMA request is send right before PWM generation
+	TIM3->CCR3 = 0; 							//	PWM duration channel 3
+	TIM3->CCR4 = 0; 							//	PWM duration channel 4
+
+	// MOZLIWE ZE TE 2 NIE SA POTREZBNE BO TO SA CHYBA WYJSCIA A WYJSCIA MAJA BYC NIEAKTYNWE JEDYNIE MA DZIA£¥Æ POWROWNYWANIE WARTOSCI
+	//channel 1 enable:
+	TIM3->CCER |= TIM_CCER_CC1E;
+
+	//channel 3 output enable:
+	TIM3->CCER |= TIM_CCER_CC3E;
+	//channel 4 output enable:
+	TIM3->CCER |= TIM_CCER_CC4E;
+
+	TIM3->DCR |= TIM_DCR_DBL_0;	 	 		//	updating 2 registers CC3 and CC4
+	TIM3->DCR |= TIM_DCR_DBA_3 | TIM_DCR_DBA_2 | TIM_DCR_DBA_1;	//	offset of register CC3 (0x0E)
 
 	//	TIM3 enabling:
 	TIM3->EGR |= TIM_EGR_UG;
 	TIM3->CR1 |= TIM_CR1_CEN;
+
+
+}
+
+static void setup_OneShot125() {
+
+	//	TIM2:
+	// enable TIM2 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	// register is buffered and only overflow generate interrupt:
+	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	//channel's polarity when channels are active: (we want low because after PWM there should be low signal)
+	TIM2->CCER |= TIM_CCER_CC3P;
+	TIM2->CCER |= TIM_CCER_CC4P;
+
+	//channel 3 output enable:
+	TIM2->CCER |= TIM_CCER_CC3E;
+	//channel 4 output enable:
+	TIM2->CCER |= TIM_CCER_CC4E;
+
+//	 OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
+	TIM2->PSC = 84 / 14 - 1;// I can not make just normal PWM/8 so I make higher resolution and I will unified it in another function
+	TIM2->ARR = 3500 - 1;					//	PWM frame length (250 [us])
+
+	TIM2->CCR3 = 1750; 				//	PWM duration channel 3
+	TIM2->CCR4 = 1750; 				//	PWM duration channel 4
+
+//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. So there is interrupt after OneShot_PWM frame where it is turn off
+	TIM2->DIER |= TIM_DIER_UIE; 			//	Overflow will generate interrupt
+
+	//	TIM3:
+	// enable TIM3 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	// register is buffered and only overflow generate interrupt:
+	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	//channel's polarity when channels are active: (we want low because after PWM there should be low signal)
+	TIM3->CCER |= TIM_CCER_CC3P;
+	TIM3->CCER |= TIM_CCER_CC4P;
+
+	//channel 3 enable:
+	TIM3->CCER |= TIM_CCER_CC3E;
+	//channel 4 enable:
+	TIM3->CCER |= TIM_CCER_CC4E;
+
+	//	 OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
+	TIM3->PSC = 84 / 14 - 1;
+	TIM3->ARR = 3500 - 1;					//	PWM frame length (250 [us])
+
+	TIM3->CCR3 = 1750; 					//	PWM duration channel 3
+	TIM3->CCR4 = 1750; 					//	PWM duration channel 4
+
+//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. So there is interrupt after OneShot_PWM frame where it is turn off
+	TIM3->DIER |= TIM_DIER_UIE; 			//	Overflow will generate interrupt
+
+}
+
+// JEZELI ONESHOT BEDZIE ZROBIONY NA OPCJI ONE PULSE to wtedy te 2 funkcje sa niepotrzebne:
+
+void TIM3_IRQHandler() {
+	if (TIM_SR_UIF & TIM3->SR) {
+		TIM3->SR &= ~TIM_SR_UIF;
+		//turn off PWM generating (turn off timer):
+		TIM3->CR1 &= ~TIM_CR1_CEN;
+	}
+}
+
+void TIM2_IRQHandler() {
+
+	if (TIM_SR_UIF & TIM2->SR) {
+		TIM2->SR &= ~TIM_SR_UIF;
+		//turn off PWM generating (turn off timer):
+		TIM2->CR1 &= ~TIM_CR1_CEN;
+
+	}
+	if (TIM_SR_CC2IF & TIM2->SR) {
+		TIM2->SR &= ~TIM_SR_CC2IF;
+	}
+
+}
+
+static void setup_OneShot125_v2() {
+
+	//	TIM2:
+	// enable TIM2 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	// register is buffered and only overflow generate interrupt:
+	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	//channel's polarity when channels are active: (we want low because after PWM there should be low signal)
+	TIM2->CCER |= TIM_CCER_CC3P;
+	TIM2->CCER |= TIM_CCER_CC4P;
+
+	//channel 3 output enable:
+	TIM2->CCER |= TIM_CCER_CC3E;
+	//channel 4 output enable:
+	TIM2->CCER |= TIM_CCER_CC4E;
+
+//	So OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
+	TIM2->PSC = 84 / 14 - 1;
+	TIM2->ARR = 3500 - 1;					//	PWM frame length (250 [us])
+
+	TIM2->CCR3 = TIM2->ARR / 2; 				//	PWM duration channel 3
+	TIM2->CCR4 = TIM2->ARR / 2; 				//	PWM duration channel 4
+
+//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. Timer is set in One Pulse mode so it is turned off after reaching arr_value
+	TIM2->CR1 |= TIM_CR1_OPM; 				//	ONE_PULSE_MODE
+
+	//	TIM2 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+
+	//	TIM3:
+	// enable TIM3 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	// register is buffered and only overflow generate update interrupt:
+	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	//channel's polarity when channels are active: (we want low because after PWM there should be low signal)
+	TIM3->CCER |= TIM_CCER_CC3P;
+	TIM3->CCER |= TIM_CCER_CC4P;
+
+	//channel 3 enable:
+	TIM3->CCER |= TIM_CCER_CC3E;
+	//channel 4 enable:
+	TIM3->CCER |= TIM_CCER_CC4E;
+
+	// OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
+	TIM3->PSC = 84 / 14 - 1;
+	TIM3->ARR = 3500 - 1;					//	PWM frame length (250 [us])
+
+	TIM3->CCR3 = TIM3->ARR / 2; 					//	PWM duration channel 3
+	TIM3->CCR4 = TIM3->ARR / 2; 					//	PWM duration channel 4
+
+	//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. Timer is set in One Pulse mode so it is turned off after reaching arr_value
+	TIM3->CR1 |= TIM_CR1_OPM; 						//	ONE_PULSE_MODE
+
+	//	TIM3 enabling:
+	TIM3->EGR |= TIM_EGR_UG;
+	TIM3->CR1 |= TIM_CR1_CEN;
+
 }
 
 static void setup_USART1() {
 	// enable USART1 clock:
 	RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
-	USART1->BRR = 0x5B2; // 168 000 000 / 115 200/16 = 91,1458 so 91 is mantissa 0x5B and fraction 16*0.1458=~2 =0x2 so BRR is 0x5B2
+	USART1->BRR = 0x2D9; // 84 000 000 / 115 200/16 = 45.5729 so 45 is mantissa 0x2D and fraction 16*0.5729=~9 =0x9 so BRR is 0x9
 	USART1->CR3 |= USART_CR3_DMAR; //uncomment for DMA reading
 	USART1->CR1 |= USART_CR1_IDLEIE |
 	USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
@@ -398,7 +838,7 @@ static void setup_USART1() {
 static void setup_USART3() {
 	// enable USART3 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_USART3EN;
-	USART3->BRR = 0x5B2; // 168 000 000 / 115 200/16 = 91,1458 so 91 is mantissa 0x5B and fraction 16*0.1458=~2 =0x2 so BRR is 0x5B2
+	USART3->BRR = 0x16D; // 42 000 000 / 115 200/16 = 22.7865 so 22 is mantissa 0x16 and fraction 16*0.7865=~13 =0xD so BRR is 0x16D
 	USART3->CR3 |= USART_CR3_DMAT;
 	USART3->CR1 |=
 	USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_UE;
@@ -407,7 +847,7 @@ static void setup_USART3() {
 static void setup_USART6() {
 	// enable USART6 clock:
 	RCC->APB2ENR |= RCC_APB2ENR_USART6EN;
-	USART6->BRR = 0x5B2; // 168 000 000 / 115 200 / 16 = 91,1458 so 91 is mantissa 0x5B and fraction 16*0.1458=~2 =0x2 so BRR is 0x5B2
+	USART6->BRR = 0x2D9; // 84 000 000 / 115 200/16 = 45.5729 so 45 is mantissa 0x2D and fraction 16*0.5729=~9 =0x9 so BRR is 0x9
 	USART6->CR3 |= USART_CR3_DMAT;
 	USART6->CR1 |= USART_CR1_RXNEIE |
 	USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_UE;
@@ -417,10 +857,10 @@ static void setup_USART6() {
 static void setup_SPI1() {
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
-	SPI1->CR1 |= SPI_CR1_BR; //APB2 is 168 [MHz] and max frequency of MPU6000 registers is 1 [MHz] (168/256<1 [MHz]) later (for sensors reading) it can be speed up to 20 [MHz] (168/16=10.5 [MHz])
+	SPI1->CR1 |= SPI_CR1_BR_2 | SPI_CR1_BR_1; //APB2 is 84 [MHz] and max frequency of MPU6000 registers is 1 [MHz] (84/128<1 [MHz]) later (for sensors reading) it can be speed up to 20 [MHz] (84/8=10.5 [MHz])
 	SPI1->CR1 |= SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_MSTR | SPI_CR1_CPOL
 			| SPI_CR1_CPHA;
-	//SPI1->CR2 |= SPI_CR2_SSOE | SPI_CR2_RXDMAEN;
+	//SPI1->CR2 |= SPI_CR2_RXDMAEN;
 
 }
 
@@ -437,30 +877,89 @@ static void setup_DMA() {
 //	DMA1_Stream3->NDTR = NUMBER OF ELEMENT TO SEND;
 
 	// DSHOT:
-	//motor1:
-	DMA1_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_1 | DMA_SxCR_MINC
-			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+//	motor1:
+	DMA1_Stream6->CR = 0x0;
+	while (DMA1_Stream6->CR & DMA_SxCR_EN) {
+	;//wait
+	}
+	DMA1_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
+			| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+			| DMA_SxCR_PL_1;
 	DMA1_Stream6->PAR = (uint32_t) (&(TIM2->CCR4));
 	DMA1_Stream6->M0AR = (uint32_t) (dshot_buffer_1);
 	DMA1_Stream6->NDTR = DSHOT_BUFFER_LENGTH;
-	//motor2
-	DMA1_Stream7->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
-			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
-	DMA1_Stream7->PAR = (uint32_t) (&(TIM2->CCR3));
+
+//	motor2:
+	DMA1_Stream7->CR = 0x0;
+	while (DMA1_Stream7->CR & DMA_SxCR_EN) {
+	;//wait
+	}
+	DMA1_Stream7->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
+			| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+			| DMA_SxCR_PL_1;
+	DMA1_Stream7->PAR = (uint32_t) (&(TIM3->CCR3));
 	DMA1_Stream7->M0AR = (uint32_t) (dshot_buffer_2);
 	DMA1_Stream7->NDTR = DSHOT_BUFFER_LENGTH;
-	//motor3
-	DMA1_Stream2->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
-			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
-	DMA1_Stream2->PAR = (uint32_t) (&(TIM2->CCR4));
+
+//	motor3:
+	DMA1_Stream2->CR = 0x0;
+	while (DMA1_Stream2->CR & DMA_SxCR_EN) {
+	;//wait
+	}
+	DMA1_Stream2->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
+			| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+			| DMA_SxCR_PL_1;
+	DMA1_Stream2->PAR = (uint32_t) (&(TIM3->CCR4));
 	DMA1_Stream2->M0AR = (uint32_t) (dshot_buffer_3);
 	DMA1_Stream2->NDTR = DSHOT_BUFFER_LENGTH;
-	//motor4
-	DMA1_Stream1->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_1 | DMA_SxCR_MINC
-			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+
+//	motor4:
+	DMA1_Stream1->CR = 0x0;
+	while (DMA1_Stream1->CR & DMA_SxCR_EN) {
+	;//wait
+	}
+	DMA1_Stream1->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
+			| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+			| DMA_SxCR_PL_1;
 	DMA1_Stream1->PAR = (uint32_t) (&(TIM2->CCR3));
 	DMA1_Stream1->M0AR = (uint32_t) (dshot_buffer_4);
 	DMA1_Stream1->NDTR = DSHOT_BUFFER_LENGTH;
+
+	DMA1->LIFCR |= DMA_LIFCR_CTCIF1;
+	DMA1->LIFCR |= DMA_LIFCR_CTCIF2;
+	DMA1->HIFCR |= DMA_HIFCR_CTCIF6;
+	DMA1->HIFCR |= DMA_HIFCR_CTCIF7;
+//-----------------------------END NORMAL DSHOT------------------------------------
+
+							// DSHOT_BURST:
+	//	motor 2 and 3:
+		DMA1_Stream4->CR = 0x0;
+		while (DMA1_Stream4->CR & DMA_SxCR_EN) {
+			;//wait
+		}
+		DMA1_Stream4->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
+				| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+				| DMA_SxCR_PL_1;
+		DMA1_Stream4->PAR = (uint32_t) (&(TIM3->DMAR));
+		DMA1_Stream4->M0AR = (uint32_t) (dshot_buffer_2_3);
+		DMA1_Stream4->NDTR = DSHOT_BUFFER_LENGTH*2;
+
+		//	motor 4 and 1:
+			DMA1_Stream5->CR = 0x0;
+			while (DMA1_Stream5->CR & DMA_SxCR_EN) {
+				;//wait
+			}
+		DMA1_Stream5->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
+				| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+				| DMA_SxCR_PL_1;
+		DMA1_Stream5->PAR = (uint32_t) (&(TIM2->DMAR));
+		DMA1_Stream5->M0AR = (uint32_t) (dshot_buffer_4_1);
+		DMA1_Stream5->NDTR = DSHOT_BUFFER_LENGTH*2;
+
+		DMA1->HIFCR |= DMA_HIFCR_CTCIF5;
+		DMA1->HIFCR |= DMA_HIFCR_CTCIF4;
+
+//-----------------------------END DSHOT_BURST-------------------------------------
 
 	//USART6 telemetry TX (from memory to peripheral):
 	DMA2_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
@@ -520,11 +1019,11 @@ void setup_NVIC_1() {
 void setup_NVIC_2() {
 	// nvic interrupt enable (USART6 interrupt):
 	NVIC_EnableIRQ(USART6_IRQn);
-	NVIC_SetPriority(USART6_IRQn, 15);
+	NVIC_SetPriority(USART6_IRQn, 17);
 
 	// nvic interrupt enable (USART3 interrupt):
 	NVIC_EnableIRQ(USART3_IRQn);
-	NVIC_SetPriority(USART3_IRQn, 14);
+	NVIC_SetPriority(USART3_IRQn, 18);
 
 	// nvic interrupt enable (USART1 interrupt):
 	NVIC_EnableIRQ(USART1_IRQn);
@@ -537,13 +1036,13 @@ void setup_NVIC_2() {
 	// nvic DMA interrupt enable:
 
 	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-	NVIC_SetPriority(DMA1_Stream1_IRQn, 13);
+	NVIC_SetPriority(DMA1_Stream1_IRQn, 16);
 
 	NVIC_EnableIRQ(DMA1_Stream2_IRQn);
-	NVIC_SetPriority(DMA1_Stream2_IRQn, 13);
+	NVIC_SetPriority(DMA1_Stream2_IRQn, 15);
 
 	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
-	NVIC_SetPriority(DMA1_Stream6_IRQn, 13);
+	NVIC_SetPriority(DMA1_Stream6_IRQn, 14);
 
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 	NVIC_SetPriority(DMA1_Stream7_IRQn, 13);
@@ -553,6 +1052,23 @@ void setup_NVIC_2() {
 
 	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
 	NVIC_SetPriority(DMA2_Stream6_IRQn, 12);
+
+//if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
+	// nvic interrupt enable (TIM3 interrupt);
+	NVIC_EnableIRQ(TIM3_IRQn);
+	NVIC_SetPriority(TIM3_IRQn, 13);
+
+	// nvic interrupt enable (TIM2 interrupt);
+	NVIC_EnableIRQ(TIM2_IRQn);
+	NVIC_SetPriority(TIM2_IRQn, 13);
+//
+////	---- delete above
+//	NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+//	NVIC_SetPriority(DMA2_Stream2_IRQn, 13);
+//
+//
+//	NVIC_EnableIRQ(TIM8_CC_IRQn);
+//	NVIC_SetPriority(TIM8_CC_IRQn, 13);
 
 }
 

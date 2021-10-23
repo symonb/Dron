@@ -18,9 +18,6 @@ static double gap_time;
 
 static void failsafe_RX();
 
-//for debugging only:
-static int pok = 0;
-static int pok1 = 0;
 
 void DMA2_Stream5_IRQHandler(void) {
 	//if channel4 transfer is completed:
@@ -168,9 +165,9 @@ static void failsafe_RX() {
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 
 	} else {
-		PWM_M1 = &pwm_m1;
-		PWM_M2 = &pwm_m2;
-		PWM_M3 = &pwm_m3;
-		PWM_M4 = &pwm_m4;
+		motor_1_value_pointer = &motor_1_value;
+		motor_2_value_pointer = &motor_2_value;
+		motor_3_value_pointer = &motor_3_value;
+		motor_4_value_pointer = &motor_4_value;
 	}
 }

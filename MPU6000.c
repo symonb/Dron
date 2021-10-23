@@ -112,13 +112,14 @@ void I2C1_IRQHandler() {
 void EXTI4_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR4)) {
 		EXTI->PR |= EXTI_PR_PR4; // clear this bit setting it high
-
+static uint32_t counter;
 		//INSTRUCTIONS FOR READING IMU SENSORS:
 		imu_received = 0;
 		EXTI->IMR &= ~EXTI_IMR_IM4;
 		//block RX reading while IMU reading
 		USART1->CR1 &= ~USART_CR1_RXNEIE;
 		read_all();
+		counter++;
 		//unblock RX reading while IMU reading
 		USART1->CR1 |= USART_CR1_RXNEIE;
 	}

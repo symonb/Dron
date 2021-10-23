@@ -19,11 +19,11 @@
 #define MAX_ROLL_ANGLE 30
 #define MAX_PITCH_ANGLE 30
 
-#define DSHOT_MODE 600 		// 150 300 600 are available
-#define DSHOT_BUFFER_LENGTH 16
-#define DSHOT_PWM_FRAME_LENGTH 8
-#define DSHOT_1_LENGTH 6
-#define DSHOT_0_LENGTH 3
+#define DSHOT_MODE 600 		// 150 300 600 1200
+#define DSHOT_BUFFER_LENGTH 18 // 16 bits of Dshot and 2 for clearing
+#define DSHOT_PWM_FRAME_LENGTH 35
+#define DSHOT_1_LENGTH 26
+#define DSHOT_0_LENGTH 13
 
 #define FREQUENCY_PID_LOOP 400 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
 #define FREQUENCY_ESC_UPDATE 400 //[Hz]

@@ -21,10 +21,6 @@
 #include "connection.h"
 #include "MPU6000.h"
 
-
-
-void update_motors();
-
 //for debugging only:
 static int pik = 0;
 static int pek = 0;
@@ -39,14 +35,13 @@ int main(void) {
 	setup_MPU6000();
 	setup_NVIC_2();
 
-
 	static float time_flag0_1 = 0;
 	static float time_flag0_2 = 0;
 	static float time_flag0_3 = 0;
 
 
 	while (1) {
-		if ((get_Global_Time() - time_flag0_1) >= 10) {
+		if ((get_Global_Time() - time_flag0_1) >= 30) {
 					time_flag0_1 = get_Global_Time();
 					pik = 0;
 					pek = 0;
@@ -57,7 +52,7 @@ int main(void) {
 					time_flag0_2 = get_Global_Time();
 					Ibus_save();
 					rewrite_data();
-					pik++;
+
 
 					if (channels[6] < 1400) {
 						acro();
@@ -82,9 +77,10 @@ int main(void) {
 
 				}
 
-				if ((get_Global_Time() - time_flag0_3) >= 1. / FREQUENCY_ESC_UPDATE) {
+				if ((get_Global_Time() - time_flag0_3) >= 1.f / FREQUENCY_ESC_UPDATE) {
 					time_flag0_3 = get_Global_Time();
 					update_motors();
+					pik++;
 				}
 	}
 
@@ -92,10 +88,5 @@ int main(void) {
 
 
 
-void update_motors() {
-	TIM2->CCR4 = *PWM_M1 ; 			//wypelneinie motor 1
-	TIM3->CCR3 = *PWM_M2 ; 			//wypelneinie motor 2
-	TIM3->CCR4 = *PWM_M3 ; 			//wypelneinie motor 3
-	TIM2->CCR3 = *PWM_M4 ; 			//wypelneinie motor 4
-}
+
 

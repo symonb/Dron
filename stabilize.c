@@ -372,11 +372,11 @@ static ThreeF Corrections_from_quaternion(Quaternion position_quaternion) {
 
 	//	calculate corrections:
 	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll
-			+ R_PIDF.D * D_corr.roll+R_PIDF.F*F_corr.roll) * 500;
+			+ R_PIDF.D * D_corr.roll+R_PIDF.F*F_corr.roll) * 1000;
 	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch
-			+ P_PIDF.D * D_corr.pitch+P_PIDF.F*F_corr.pitch) * 500 ;
+			+ P_PIDF.D * D_corr.pitch+P_PIDF.F*F_corr.pitch) * 1000 ;
 	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw
-			+ Y_PIDF.D * D_corr.yaw+Y_PIDF.F*F_corr.yaw) * 500;
+			+ Y_PIDF.D * D_corr.yaw+Y_PIDF.F*F_corr.yaw) * 1000;
 
 	//	set current errors as last errors:
 	last_err.roll = err.roll;

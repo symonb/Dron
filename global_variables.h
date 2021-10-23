@@ -47,15 +47,15 @@ extern uint16_t channels[];
 
 extern int16_t Throttle;
 
-extern uint16_t pwm_m1;
-extern uint16_t pwm_m2;
-extern uint16_t pwm_m3;
-extern uint16_t pwm_m4;
+extern uint16_t motor_1_value;
+extern uint16_t motor_2_value;
+extern uint16_t motor_3_value;
+extern uint16_t motor_4_value;
 
-extern uint16_t *PWM_M1;
-extern uint16_t *PWM_M2;
-extern uint16_t *PWM_M3;
-extern uint16_t *PWM_M4;
+extern uint16_t *motor_1_value_pointer;
+extern uint16_t *motor_2_value_pointer;
+extern uint16_t *motor_3_value_pointer;
+extern uint16_t *motor_4_value_pointer;
 
 extern int16_t Gyro_Acc[];
 
@@ -71,14 +71,16 @@ extern uint8_t I2C1_read_write_flag;
 
 extern uint8_t transmitting_is_Done;
 
-extern uint8_t dshot_buffer_1[];
-extern uint8_t dshot_buffer_2[];
-extern uint8_t dshot_buffer_3[];
-extern uint8_t dshot_buffer_4[];
+extern uint16_t dshot_buffer_1[];
+extern uint16_t dshot_buffer_2[];
+extern uint16_t dshot_buffer_3[];
+extern uint16_t dshot_buffer_4[];
+extern uint16_t dshot_buffer_4_1[];
+extern uint16_t dshot_buffer_2_3[];
 
 extern uint8_t failsafe_type;
 
-extern uint16_t motor_off;
+extern uint16_t MOTOR_OFF;
 
 extern ThreeF global_euler_angles;
 
