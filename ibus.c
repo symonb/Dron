@@ -156,7 +156,8 @@ static void failsafe_RX() {
 	if (channels[4] <= DISARM_VALUE) {
 		failsafe_type = 1;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-	} else if (channels[0] <= MIN_RX_SIGNAL || channels[0] >= MAX_RX_SIGNAL
+	}
+	else if (channels[0] <= MIN_RX_SIGNAL || channels[0] >= MAX_RX_SIGNAL
 			|| channels[1] <= MIN_RX_SIGNAL || channels[1] >= MAX_RX_SIGNAL
 			|| channels[2] <= MIN_RX_SIGNAL || channels[2] >= MAX_RX_SIGNAL
 			|| channels[3] <= MIN_RX_SIGNAL || channels[3] >= MAX_RX_SIGNAL) {
@@ -165,6 +166,7 @@ static void failsafe_RX() {
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 
 	} else {
+
 		motor_1_value_pointer = &motor_1_value;
 		motor_2_value_pointer = &motor_2_value;
 		motor_3_value_pointer = &motor_3_value;

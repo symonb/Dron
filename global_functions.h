@@ -11,7 +11,6 @@
 void delay_micro(uint16_t);
 void delay_mili(uint16_t);
 double get_Global_Time();
-double timer(double t1);
 void TIM6_DAC_IRQHandler();
 void TIM7_IRQHandler();
 void set_motors(ThreeF);

@@ -71,10 +71,10 @@ extern uint8_t I2C1_read_write_flag;
 
 extern uint8_t transmitting_is_Done;
 
-extern uint16_t dshot_buffer_1[];
+extern uint32_t dshot_buffer_1[];
 extern uint16_t dshot_buffer_2[];
 extern uint16_t dshot_buffer_3[];
-extern uint16_t dshot_buffer_4[];
+extern uint32_t dshot_buffer_4[];
 extern uint16_t dshot_buffer_4_1[];
 extern uint16_t dshot_buffer_2_3[];
 

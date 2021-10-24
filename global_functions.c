@@ -12,7 +12,7 @@
 
 void delay_micro(uint16_t time) {
 
-	TIM7->ARR = time;
+	TIM7->ARR = time-1;
 	TIM7->EGR |= TIM_EGR_UG;
 	TIM7->CR1 |= TIM_CR1_CEN;
 
@@ -27,20 +27,11 @@ void delay_mili(uint16_t time) {
 		delay_micro(1000);
 	}
 }
-double timer(double t1) {
 
-	double delta_time;
-	double t2 = (TIM2->CNT) * 0.000001;
-	delta_time = t2 - t1;
-	if (delta_time < 0) {
-		delta_time += (double) (TIM2->ARR) * 0.000001;
-	}
-	return delta_time;
-}
 void TIM6_DAC_IRQHandler() {
 	if (TIM_SR_UIF & TIM6->SR) {
 		TIM6->SR &= ~TIM_SR_UIF;
-		Global_Time += (TIM6->ARR) * 0.000001;
+		Global_Time += (TIM6->ARR+1) * 0.000001;
 	}
 }
 void TIM7_IRQHandler() {
@@ -122,7 +113,6 @@ void update_motors() {
 	//	Dshot:
 
 	fill_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),prepare_Dshot_package(*motor_2_value_pointer),prepare_Dshot_package(*motor_3_value_pointer),prepare_Dshot_package(*motor_4_value_pointer));
-
 
 	DMA1_Stream6->PAR = (uint32_t) (&(TIM2->CCR4));
 	DMA1_Stream6->M0AR = (uint32_t) (dshot_buffer_1);
@@ -210,7 +200,7 @@ void EXTI15_10_IRQHandler() {
 		motor_2_value_pointer = &MOTOR_OFF;
 		motor_3_value_pointer = &MOTOR_OFF;
 		motor_4_value_pointer = &MOTOR_OFF;
-		update_motors();
+		//update_motors();
 
 		switch (failsafe_type) {
 		case 1:
@@ -241,39 +231,12 @@ void EXTI15_10_IRQHandler() {
 	}
 }
 
-
-void DMA2_Stream2_IRQHandler(void) {
 //	motor 1
-	if (DMA2->LISR & DMA_LISR_TCIF2) {
-		//DMA2_Stream2->CR &= ~DMA_SxCR_EN;
-
-		DMA2->LIFCR |= DMA_LIFCR_CTCIF2;
-
-//		DMA2_Stream2->PAR = (uint32_t) (&(TIM2->CCR4));
-//		DMA2_Stream2->M0AR = (uint32_t) (&dshot_buffer_1[5]);
-//		DMA2_Stream2->NDTR = 1;
-//		//TIM8->DIER &= ~TIM_DIER_CC2DE;
-//
-//				//channel 4 enable:
-//				TIM2->CCER &=~ TIM_CCER_CC4E;
-	}
-	if (DMA2->LISR & DMA_LISR_HTIF2) {
-		DMA2->LIFCR |= DMA_LIFCR_CHTIF2;
-	}
-	if (DMA2->LISR & DMA_LISR_DMEIF2) {
-		DMA2->LIFCR |= DMA_LIFCR_CDMEIF2;
-	}
-	if (DMA2->LISR & DMA_LISR_TEIF2) {
-		DMA2->LIFCR |= DMA_LIFCR_CTEIF2;
-	}
-}
-
 void DMA1_Stream6_IRQHandler(void) {
-//	motor 1
+
 	if (DMA1->HISR & DMA_HISR_TCIF6) {
 		DMA1->HIFCR |= DMA_HIFCR_CTCIF6;
-		DMA1_Stream6->CR &= ~DMA_SxCR_EN;
-		//TIM2->DIER &= ~TIM_DIER_CC2DE;
+
 	}
 	if (DMA1->HISR & DMA_HISR_HTIF6) {
 		DMA1->HIFCR |= DMA_HIFCR_CHTIF6;
@@ -285,11 +248,12 @@ void DMA1_Stream6_IRQHandler(void) {
 		DMA1->HIFCR |= DMA_HIFCR_CTEIF6;
 	}
 }
-void DMA1_Stream7_IRQHandler(void) {
+
 //	motor 2
+void DMA1_Stream7_IRQHandler(void) {
+
 	if (DMA1->HISR & DMA_HISR_TCIF7) {
 		DMA1->HIFCR |= DMA_HIFCR_CTCIF7;
-		DMA1_Stream7->CR &= ~DMA_SxCR_EN;
 	}
 	if (DMA1->HISR & DMA_HISR_HTIF7) {
 		DMA1->HIFCR |= DMA_HIFCR_CHTIF7;
@@ -302,12 +266,11 @@ void DMA1_Stream7_IRQHandler(void) {
 	}
 }
 
-void DMA1_Stream2_IRQHandler(void) {
 //	motor 3
+void DMA1_Stream2_IRQHandler(void) {
+
 	if (DMA1->LISR & DMA_LISR_TCIF2) {
 		DMA1->LIFCR |= DMA_LIFCR_CTCIF2;
-		DMA1_Stream2->CR &= ~DMA_SxCR_EN;
-
 	}
 	if (DMA1->LISR & DMA_LISR_HTIF2) {
 		DMA1->LIFCR |= DMA_LIFCR_CHTIF2;
@@ -318,6 +281,25 @@ void DMA1_Stream2_IRQHandler(void) {
 	if (DMA1->LISR & DMA_LISR_TEIF2) {
 		DMA1->LIFCR |= DMA_LIFCR_CTEIF2;
 	}
+}
+
+//	motor 4
+void DMA1_Stream1_IRQHandler(void) {
+
+	if (DMA1->LISR & DMA_LISR_TCIF1) {
+		DMA1->LIFCR |= DMA_LIFCR_CTCIF1;
+	}
+
+	if (DMA1->LISR & DMA_LISR_HTIF1) {
+		DMA1->LIFCR |= DMA_LIFCR_CHTIF1;
+	}
+	if (DMA1->LISR & DMA_LISR_DMEIF1) {
+		DMA1->LIFCR |= DMA_LIFCR_CDMEIF1;
+	}
+	if (DMA1->LISR & DMA_LISR_TEIF1) {
+		DMA1->LIFCR |= DMA_LIFCR_CTEIF1;
+	}
+
 }
 
 
@@ -355,29 +337,6 @@ void DMA1_Stream5_IRQHandler(void) {
 }
 
 
-
-void DMA1_Stream1_IRQHandler(void) {
-//	motor 4
-	if (DMA1->LISR & DMA_LISR_TCIF1) {
-		DMA1->LIFCR |= DMA_LIFCR_CTCIF1;
-		DMA1_Stream1->CR &= ~DMA_SxCR_EN;
-	}
-
-	if (DMA1->LISR & DMA_LISR_HTIF1) {
-		DMA1->LIFCR |= DMA_LIFCR_CHTIF1;
-	}
-	if (DMA1->LISR & DMA_LISR_DMEIF1) {
-		DMA1->LIFCR |= DMA_LIFCR_CDMEIF1;
-	}
-	if (DMA1->LISR & DMA_LISR_TEIF1) {
-		DMA1->LIFCR |= DMA_LIFCR_CTEIF1;
-	}
-
-}
-
-
-
-
 uint16_t get_Dshot_checksum(uint16_t value) {
 
 	return (value ^ (value >> 4) ^ (value >> 8)) & 0x0F;
@@ -395,7 +354,7 @@ void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
 		uint16_t m4_value) {
 	static float time_flag;
 	time_flag=get_Global_Time();
-	for (int i = 2; i < DSHOT_BUFFER_LENGTH; i++) {
+	for (uint8_t i = 2; i < DSHOT_BUFFER_LENGTH; i++) {
 		if ((1 << (i-2)) & m1_value) {
 			dshot_buffer_1[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_1_LENGTH;
 		} else {
