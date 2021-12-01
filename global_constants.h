@@ -9,19 +9,31 @@
 #define GLOBAL_CONSTANTS_H_
 
 #define CHANNELS  10					//ilosc kanalĂłw (4 potrzebne do sterownaia)
-#define  GYRO_ACC_SIZE 7				//3 for gyro, 3 acc and 1 for temperature
+#define GYRO_ACC_SIZE 7				//3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14			//telemetry informations
 #define MAX_RX_SIGNAL 2050
 #define MIN_RX_SIGNAL 950
 #define MAX_NO_SIGNAL_TIME 0.5 			//[s]
 #define DISARM_VALUE 1600
 #define TIMEOUT_VALUE 0.005				//[s]
+#define MAX_ROLL_ANGLE 30
+#define MAX_PITCH_ANGLE 30
+
+#define DSHOT_MODE 600 		// 150 300 600 1200
+#define DSHOT_BUFFER_LENGTH 18 // 16 bits of Dshot and 2 for clearing
+#define DSHOT_PWM_FRAME_LENGTH 35
+#define DSHOT_1_LENGTH 26
+#define DSHOT_0_LENGTH 13
+
+#define FREQUENCY_PID_LOOP 400 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_ESC_UPDATE 400 //[Hz]
+#define FREQUENCY_IMU_READING 400 //[Hz]
+#define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 // OFFSETS and CALIBRATIONS VALUE
 
 #define PITCH_OFFSET -3
 #define ROLL_OFFSET 12
-
 
 #define GYRO_ROLL_OFFSET -33
 #define GYRO_PITCH_OFFSET 32
@@ -46,14 +58,6 @@
 #define GYRO_PART 0.99
 #define ACC_PART 0.01
 #define GYRO_TO_DPS 32768/1000. // convert gyro register into degrees per second unit
-
-#define MAX_ROLL_ANGLE 30
-#define MAX_PITCH_ANGLE 30
-
-#define FREQUENCY_PID_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 200 //[Hz]
-#define FREQUENCY_IMU_READING 200 //[Hz]
-#define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 #define RAD_TO_DEG  180 / M_PI
 #define DEG_TO_RAD  M_PI/180
