@@ -54,8 +54,17 @@ uint8_t failsafe_type;
 /* 1-disarmed 2-incorrect channels values 3-RX timeout
  * 4-setup_error 5-I2C communication error 6-SPI communication error
  */
+//uint16_t MOTOR_OFF= 1953;	//value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000)
 
-uint16_t MOTOR_OFF= 2000 ; //value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000)
+#if defined(ESC_PROTOCOL_DSHOT)
+
+	uint16_t MOTOR_OFF= 1953;
+
+#elif defined(ESC_PROTOCOL_PWM) || defined(ESC_PROTOCOL_ONESHOT125)
+
+uint16_t MOTOR_OFF= 2000;
+
+#endif
 
 ThreeF global_euler_angles={ 0, 0, 0 };
 

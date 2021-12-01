@@ -19,13 +19,13 @@ static ThreeF corrections();
 static Three Rates = { 500, 500, 400 };
 
 //4s
-static PIDF R_PIDF = { 0.4, 0.6, 0.0025, 0.001 };
-static PIDF P_PIDF = { 0.4, 0.6, 0.004, 0.001 };
-static PIDF Y_PIDF = { 2, 0.1, 0.001, 0.001 };
+static PIDF R_PIDF = { 200, 300, 1.25, 0.5 };
+static PIDF P_PIDF = {200,300, 2, 0.5 };
+static PIDF Y_PIDF = { 1000, 50, 0.5, 0.5 };
 // 3s
-//static PIDF R_PIDF = { 0.7, 0.8, 0.01, 0.01};
-//static PIDF P_PIDF = { 0.7, 0.8, 0.01, 0.01};
-//static PIDF Y_PIDF = { 2, 0.1, 0.001, 0.001 };
+//static PIDF R_PIDF = { 350, 400, 5, 5};
+//static PIDF P_PIDF = { 350, 400, 5, 5};
+//static PIDF Y_PIDF = { 1000, 50, 0.5, 0.5 };
 
 static ThreeF err = { 0, 0, 0 };
 static ThreeF sum_err = { 0, 0, 0 };
@@ -53,17 +53,17 @@ void acro() {
 		time_flag2_2 = get_Global_Time();
 		puk2++;
 		//wypisywanie korekcji pitch P I D i roll P I D; k¹tów; zadanych wartosci
-		table_to_send[0] = P_PIDF.P * err.pitch * 500.  + 1000;
-		table_to_send[1] = P_PIDF.I * sum_err.pitch * 500. + 1000;
-		table_to_send[2] = P_PIDF.D * D_corr.pitch * 500.  + 1000;
-		table_to_send[3] = R_PIDF.P * err.roll * 500. + 1000;
-		table_to_send[4] = R_PIDF.I * sum_err.roll * 500. + 1000;
-		table_to_send[5] = R_PIDF.D * D_corr.roll * 500. + 1000;
+		table_to_send[0] = P_PIDF.P * err.pitch   + 1000;
+		table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
+		table_to_send[2] = P_PIDF.D * D_corr.pitch   + 1000;
+		table_to_send[3] = R_PIDF.P * err.roll  + 1000;
+		table_to_send[4] = R_PIDF.I * sum_err.roll  + 1000;
+		table_to_send[5] = R_PIDF.D * D_corr.roll  + 1000;
 		table_to_send[6] = (Gyro_Acc[0] / 32.768 / Rates.roll * 50) + 1000;
 		table_to_send[7] = (Gyro_Acc[1] / 32.768 / Rates.pitch * 50) + 1000;
-		table_to_send[8] = Y_PIDF.P * err.yaw * 500.  + 1000;
-		table_to_send[9] = Y_PIDF.I * sum_err.yaw * 500. + 1000;
-		table_to_send[10] = Y_PIDF.D * D_corr.yaw * 500. + 1000;
+		table_to_send[8] = Y_PIDF.P * err.yaw   + 1000;
+		table_to_send[9] = Y_PIDF.I * sum_err.yaw  + 1000;
+		table_to_send[10] = Y_PIDF.D * D_corr.yaw  + 1000;
 		table_to_send[11] = (Gyro_Acc[2] / 32.768 / Rates.yaw * 50) + 1000;
 		table_to_send[12] = channels[1] - 500;
 		table_to_send[13] = channels[0] - 500;
@@ -103,11 +103,11 @@ static ThreeF corrections() {
 
 	//	calculate corrections:
 	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll
-			+ R_PIDF.D * D_corr.roll + R_PIDF.F * F_corr.roll) * 1000;
+			+ R_PIDF.D * D_corr.roll + R_PIDF.F * F_corr.roll) *2;
 	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch
-			+ P_PIDF.D * D_corr.pitch + P_PIDF.F * F_corr.pitch) * 1000;
+			+ P_PIDF.D * D_corr.pitch + P_PIDF.F * F_corr.pitch)*2;
 	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw
-			+ Y_PIDF.D * D_corr.yaw + Y_PIDF.F * F_corr.yaw) * 1000;
+			+ Y_PIDF.D * D_corr.yaw + Y_PIDF.F * F_corr.yaw) *2;
 
 	//	set current measurements as last measurements:
 

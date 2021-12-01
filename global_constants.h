@@ -25,19 +25,21 @@
 #define DSHOT_1_LENGTH 26
 #define DSHOT_0_LENGTH 13
 
-#define FREQUENCY_PID_LOOP 400 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
-#define FREQUENCY_ESC_UPDATE 400 //[Hz]
-#define FREQUENCY_IMU_READING 400 //[Hz]
+#define ESC_PROTOCOL_DSHOT // ESC_PROTOCOL_PWM ESC_PROTOCOL_ONESHOT125 or ESC_PROTOCOL_DSHOT
+
+#define FREQUENCY_PID_LOOP 600 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_ESC_UPDATE 1000 //[Hz]
+#define FREQUENCY_IMU_READING 600 //[Hz]
 #define FREQUENCY_TELEMETRY_UPDATE 50 //[Hz]
 
 // OFFSETS and CALIBRATIONS VALUE
 
-#define PITCH_OFFSET -3
-#define ROLL_OFFSET 12
+#define PITCH_OFFSET -7
+#define ROLL_OFFSET 0
 
 #define GYRO_ROLL_OFFSET -33
 #define GYRO_PITCH_OFFSET 32
-#define GYRO_YAW_OFFSET -55
+#define GYRO_YAW_OFFSET -7
 
 #define ACC_PITCH_OFFSET 125.6525
 #define ACC_ROLL_OFFSET 2.862
@@ -61,6 +63,8 @@
 
 #define RAD_TO_DEG  180 / M_PI
 #define DEG_TO_RAD  M_PI/180
+#define GYRO_TO_RAD  (1.f / 32.768f * DEG_TO_RAD)// convert gyro register into rad per second unit
 
+#define ACC_TO_GRAVITY  1.f / 4096 //convert acc register into gravity unit
 
 #endif /* GLOBAL_CONSTANTS_H_ */

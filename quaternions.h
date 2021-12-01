@@ -21,11 +21,9 @@ Quaternion quaternions_sum(Quaternion q1, Quaternion q2);
 Quaternion quaternions_sub(Quaternion q1, Quaternion q2);
 Quaternion quaternion_conjugate(Quaternion q1);
 float quaternion_norm(Quaternion q1);
-float skalar_quaternions_multiplication(Quaternion q1, Quaternion q2);
+float quaternions_skalar_multiplication(Quaternion q1, Quaternion q2);
 
-ThreeF Rotate_Vector_with_Quaternion(ThreeF vector,Quaternion q ,
-		int8_t Transposition);
-Quaternion Rotate_Quaternion(Quaternion q1);
+ThreeF Rotate_Vector_with_Quaternion(ThreeF vector,Quaternion q);
 Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles);
 ThreeF Quaternion_to_Euler_angles(Quaternion q);
 

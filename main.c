@@ -39,7 +39,6 @@ int main(void) {
 	static float time_flag0_2 = 0;
 	static float time_flag0_3 = 0;
 
-
 	while (1) {
 		if ((get_Global_Time() - time_flag0_1) >= 30) {
 					time_flag0_1 = get_Global_Time();

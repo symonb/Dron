@@ -49,20 +49,20 @@ double get_Global_Time() {
 void anti_windup(ThreeF *sum_err, PIDF *R_PIDF, PIDF *P_PIDF, PIDF *Y_PIDF) {
 	if (channels[4] > 1600) {
 		int16_t max_I_correction = 300;
-		if ((sum_err->roll * R_PIDF->I * 500) > max_I_correction) {
-			sum_err->roll = max_I_correction / R_PIDF->I / 500.f;
-		} else if ((sum_err->roll * R_PIDF->I * 500) < -max_I_correction) {
-			sum_err->roll = -max_I_correction / R_PIDF->I / 500.f;
+		if ((sum_err->roll * R_PIDF->I ) > max_I_correction) {
+			sum_err->roll = max_I_correction / R_PIDF->I ;
+		} else if ((sum_err->roll * R_PIDF->I) < -max_I_correction) {
+			sum_err->roll = -max_I_correction / R_PIDF->I ;
 		}
-		if ((sum_err->pitch * P_PIDF->I * 500) > max_I_correction) {
-			sum_err->pitch = max_I_correction / P_PIDF->I / 500.f;
-		} else if ((sum_err->pitch * P_PIDF->I * 500) < -max_I_correction) {
-			sum_err->pitch = -max_I_correction / P_PIDF->I / 500.f;
+		if ((sum_err->pitch * P_PIDF->I ) > max_I_correction) {
+			sum_err->pitch = max_I_correction / P_PIDF->I ;
+		} else if ((sum_err->pitch * P_PIDF->I ) < -max_I_correction) {
+			sum_err->pitch = -max_I_correction / P_PIDF->I ;
 		}
-		if ((sum_err->yaw * Y_PIDF->I * 500) > max_I_correction) {
-			sum_err->yaw = max_I_correction / Y_PIDF->I / 500.f;
-		} else if ((sum_err->yaw * Y_PIDF->I * 500) < -max_I_correction) {
-			sum_err->yaw = -max_I_correction / Y_PIDF->I / 500.f;
+		if ((sum_err->yaw * Y_PIDF->I) > max_I_correction) {
+			sum_err->yaw = max_I_correction / Y_PIDF->I ;
+		} else if ((sum_err->yaw * Y_PIDF->I ) < -max_I_correction) {
+			sum_err->yaw = -max_I_correction / Y_PIDF->I ;
 		}
 	}
 
@@ -79,13 +79,13 @@ void set_motors(ThreeF corr) {
 	const uint16_t idle_value = 2100;
 	//	Make corrections:
 	//	right back:
-	motor_1_value = Throttle * 2 + corr.pitch - corr.yaw - corr.roll;
+	motor_1_value = Throttle * 2 - corr.roll + corr.pitch - corr.yaw;
 	//	right front:
-	motor_2_value = Throttle * 2 - corr.pitch + corr.yaw - corr.roll;
+	motor_2_value = Throttle * 2  - corr.roll - corr.pitch + corr.yaw;
 	//	left back:
-	motor_3_value = Throttle * 2 + corr.pitch + corr.yaw + corr.roll;
+	motor_3_value = Throttle * 2  + corr.roll + corr.pitch + corr.yaw;
 	//	left front:
-	motor_4_value = Throttle * 2 - corr.pitch - corr.yaw + corr.roll;
+	motor_4_value = Throttle * 2  + corr.roll - corr.pitch - corr.yaw;
 	if (motor_1_value < idle_value) {
 		motor_1_value = idle_value;
 	} else if (motor_1_value > max_value)
@@ -102,13 +102,11 @@ void set_motors(ThreeF corr) {
 		motor_4_value = idle_value;
 	} else if (motor_4_value > max_value)
 		motor_4_value = max_value;
-
 }
 
 void update_motors() {
 
-
-	//TEST:
+#if defined(ESC_PROTOCOL_DSHOT)
 
 	//	Dshot:
 
@@ -135,41 +133,46 @@ void update_motors() {
 	DMA1_Stream6->CR |= DMA_SxCR_EN;
 	DMA1_Stream7->CR |= DMA_SxCR_EN;
 
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
+
 	//	Dshot with burst transfer:
 
 //	fill_Dshot_burst_buffer(prepare_Dshot_package(*motor_1_value_pointer),prepare_Dshot_package(*motor_2_value_pointer),prepare_Dshot_package(*motor_3_value_pointer),prepare_Dshot_package(*motor_4_value_pointer));
 //	DMA1_Stream2->CR |= DMA_SxCR_EN;
 //	DMA1_Stream6->CR |= DMA_SxCR_EN;
 
+#elif defined(ESC_PROTOCOL_ONESHOT125)
+
 	//	OneShot125 or OneShot125_v2:
 
-//
-//	prepare_OneShot_PWM();
-//
-//	TIM2->EGR |= TIM_EGR_UG;
-//	TIM3->EGR |= TIM_EGR_UG;
-//	TIM2->CR1 |= TIM_CR1_CEN;
-//	TIM3->CR1 |= TIM_CR1_CEN;
+	prepare_OneShot_PWM();
+
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM3->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+	TIM3->CR1 |= TIM_CR1_CEN;
+
+#elif defined (ESC_PROTOCOL_PWM)
 
 	//	PWM:
 
-//	TIM2->CCR4 = *motor_1_value_pointer; 			//value motor 1
-//	TIM3->CCR3 = *motor_2_value_pointer; 			//value motor 2
-//	TIM3->CCR4 = *motor_3_value_pointer; 			//value motor 3
-//	TIM2->CCR3 = *motor_4_value_pointer; 			//value motor 4
+	TIM2->CCR4 = *motor_1_value_pointer; 			//value motor 1
+	TIM3->CCR3 = *motor_2_value_pointer; 			//value motor 2
+	TIM3->CCR4 = *motor_3_value_pointer; 			//value motor 3
+	TIM2->CCR3 = *motor_4_value_pointer; 			//value motor 4
+
+#endif
 }
 
 void turn_ON_BLUE_LED() {
 	GPIOB->BSRR |= GPIO_BSRR_BR5;
 }
-
 void turn_OFF_BLUE_LED() {
 	GPIOB->BSRR |= GPIO_BSRR_BS5;
 }
 void turn_ON_RED_LED() {
 	GPIOB->BSRR |= GPIO_BSRR_BR4;
 }
-
 void turn_OFF_RED_LED() {
 	GPIOB->BSRR |= GPIO_BSRR_BS4;
 }
@@ -338,22 +341,23 @@ void DMA1_Stream5_IRQHandler(void) {
 
 
 uint16_t get_Dshot_checksum(uint16_t value) {
-
+	value=value<<1;
 	return (value ^ (value >> 4) ^ (value >> 8)) & 0x0F;
 }
 
 uint16_t prepare_Dshot_package(uint16_t value) {
 	//value is in range of 2000-4000 so I need to transform it into Dshot range (48-2047)
-	value -= 2000;
-	value += 47;
-	return (value << 5) | get_Dshot_checksum(value);
+	value -= 1953;
+	if(value>0 && value<48){
+		value=48;
+	}
+	return ((value << 5) | get_Dshot_checksum(value));
 
 }
 
 void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
 		uint16_t m4_value) {
-	static float time_flag;
-	time_flag=get_Global_Time();
+
 	for (uint8_t i = 2; i < DSHOT_BUFFER_LENGTH; i++) {
 		if ((1 << (i-2)) & m1_value) {
 			dshot_buffer_1[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_1_LENGTH;
@@ -385,8 +389,6 @@ void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
 	dshot_buffer_3[DSHOT_BUFFER_LENGTH - 2]=0;
 	dshot_buffer_4[DSHOT_BUFFER_LENGTH - 1]=0;
 	dshot_buffer_4[DSHOT_BUFFER_LENGTH - 2]=0;
-
-	time_flag=get_Global_Time()-time_flag;
 }
 
 void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,

@@ -52,12 +52,16 @@ void setup() {
 	setup_GPIOC();
 	setup_TIM6();
 	setup_TIM7();
-
-	//setup_PWM();
+#if defined(ESC_PROTOCOL_PWM)
+	setup_PWM();
+#elif defined(ESC_PROTOCOL_DSHOT)
 	setup_Dshot();
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
 	//setup_Dshot_burst();		// NIESKONCZONE NIE DZIALA
-	//setup_OneShot125(); 			//	DO POPRAWKI WYSTEPUJA DLU¯SZE PULSY prawdopodobnie zanim zostawnie wy³aczony timer juz wartosc skacze jako wysoka i w takiej sie zatrzaskuje az do kolejnego odblokowania timera
-	//setup_OneShot125_v2();
+#elif defined(ESC_PROTOCOL_ONESHOT125)
+	setup_OneShot125_v2();
+//setup_OneShot125(); 			//	DO POPRAWKI WYSTEPUJA DLU¯SZE PULSY prawdopodobnie zanim zostawnie wy³aczony timer juz wartosc skacze jako wysoka i w takiej sie zatrzaskuje az do kolejnego odblokowania timera
+#endif
 	setup_USART1();
 	setup_USART3();
 	setup_USART6();

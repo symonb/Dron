@@ -13,13 +13,11 @@
 
 #include <math.h>
 
-static float time_flag = 0;
 
 
-ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q,
-		int8_t Transposition) {
-	//Transposition say if you want rotate with rotation matrix made from quaternion (0) or you want rotate with transponce of this matrix (1)
-	if (Transposition == 0) {
+
+ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q) {
+
 		vector.roll = (q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z)
 				* vector.roll + 2 * (q.x * q.y - q.w * q.z) * vector.pitch
 				+ 2 * (q.x * q.z + q.w * q.y) * vector.yaw;
@@ -29,42 +27,9 @@ ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q,
 		vector.yaw = 2 * (q.x * q.z - q.w * q.y) * vector.roll
 				+ 2 * (q.y * q.z + q.w * q.x) * vector.pitch
 				+ (q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z) * vector.yaw;
-
-	} else if (Transposition == 1) {
-		vector.roll = (q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z)
-				* vector.roll + 2 * (q.x * q.y + q.w * q.z) * vector.pitch
-				+ 2 * (q.x * q.z - q.w * q.y) * vector.yaw;
-		vector.pitch = 2 * (q.x * q.y - q.w * q.z) * vector.roll
-				+ (q.w * q.w - q.x * q.x + q.y * q.y - q.z * q.z) * vector.pitch
-				+ 2 * (q.y * q.z + q.w * q.x) * vector.yaw;
-		vector.yaw = 2 * (q.x * q.z + q.w * q.y) * vector.roll
-				+ 2 * (q.y * q.z - q.w * q.x) * vector.pitch
-				+ (q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z) * vector.yaw;
-	}
-
 	return vector;
 }
 
-Quaternion Rotate_Quaternion(Quaternion q1) {
-	static float delta_time;
-	static Quaternion q1_prim;
-	static Quaternion angular_velocity;
-	const float GYRO_TO_RAD = 1.f / 32.768f * DEG_TO_RAD;
-	angular_velocity.w = 0;
-	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
-	angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
-	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
-
-	q1_prim = quaternion_multiply(
-			quaternions_multiplication(angular_velocity, q1), -0.5);
-	delta_time = get_Global_Time() - time_flag;
-	time_flag = get_Global_Time();
-
-	q1 = quaternions_sum(q1, quaternion_multiply(q1_prim, delta_time));
-	//normalize quaternion:
-	q1 = quaternion_multiply(q1, 1 / quaternion_norm(q1));
-	return q1;
-}
 
 ThreeF Quaternion_to_Euler_angles(Quaternion q) {
 	static ThreeF angles;
@@ -147,6 +112,6 @@ Quaternion quaternion_conjugate(Quaternion q1) {
 	return q1;
 }
 
-float skalar_quaternions_multiplication(Quaternion q1, Quaternion q2) {
+float quaternions_skalar_multiplication(Quaternion q1, Quaternion q2) {
 	return q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z;
 }
