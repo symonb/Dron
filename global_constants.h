@@ -25,7 +25,10 @@
 #define DSHOT_1_LENGTH 26
 #define DSHOT_0_LENGTH 13
 
-#define ESC_PROTOCOL_DSHOT // ESC_PROTOCOL_PWM ESC_PROTOCOL_ONESHOT125 or ESC_PROTOCOL_DSHOT
+#define ESC_PROTOCOL_DSHOT // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125 or ESC_PROTOCOL_DSHOT
+
+#define STABILIZE_FILTER_MAHONY	//STABILIZE_FILTER_MAGDWICK, STABILIZE_FILTER_MAHONY, STABILIZE_FILTER_COMPLEMENTARY
+#define MAGDWICK_NEW  //MAGDWICK_ORIGINAL, MAGDWICK_NEW
 
 #define FREQUENCY_PID_LOOP 600 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
 #define FREQUENCY_ESC_UPDATE 1000 //[Hz]
@@ -41,29 +44,29 @@
 #define GYRO_PITCH_OFFSET 32
 #define GYRO_YAW_OFFSET -7
 
-#define ACC_PITCH_OFFSET 125.6525
-#define ACC_ROLL_OFFSET 2.862
-#define ACC_YAW_OFFSET 391.325
+#define ACC_PITCH_OFFSET 125.6525f
+#define ACC_ROLL_OFFSET 2.862f
+#define ACC_YAW_OFFSET 391.325f
 
-#define ACC_CALIBRATION_X_X 4249.908
-#define ACC_CALIBRATION_X_Y -43.456
-#define ACC_CALIBRATION_X_Z 108.501
+#define ACC_CALIBRATION_X_X 4249.908f
+#define ACC_CALIBRATION_X_Y -43.456f
+#define ACC_CALIBRATION_X_Z 108.501f
 
-#define ACC_CALIBRATION_Y_X 184.890
-#define ACC_CALIBRATION_Y_Y 4107.778
-#define ACC_CALIBRATION_Y_Z 755.494
+#define ACC_CALIBRATION_Y_X 184.890f
+#define ACC_CALIBRATION_Y_Y 4107.778f
+#define ACC_CALIBRATION_Y_Z 755.494f
 
-#define ACC_CALIBRATION_Z_X -114.671
-#define ACC_CALIBRATION_Z_Y -279.031
-#define ACC_CALIBRATION_Z_Z 4521.060
+#define ACC_CALIBRATION_Z_X -114.671f
+#define ACC_CALIBRATION_Z_Y -279.031f
+#define ACC_CALIBRATION_Z_Z 4521.060f
 
-#define GYRO_PART 0.99
-#define ACC_PART 0.01
-#define GYRO_TO_DPS 32768/1000. // convert gyro register into degrees per second unit
+#define GYRO_PART 0.99f
+#define ACC_PART 0.01f
+#define GYRO_TO_DPS 1000/32767.f // convert gyro register into degrees per second unit
 
 #define RAD_TO_DEG  180 / M_PI
 #define DEG_TO_RAD  M_PI/180
-#define GYRO_TO_RAD  (1.f / 32.768f * DEG_TO_RAD)// convert gyro register into rad per second unit
+#define GYRO_TO_RAD  (1.f / 32.767f * DEG_TO_RAD)// convert gyro register into rad per second unit
 
 #define ACC_TO_GRAVITY  1.f / 4096 //convert acc register into gravity unit
 

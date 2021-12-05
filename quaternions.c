@@ -33,18 +33,20 @@ ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q) {
 
 ThreeF Quaternion_to_Euler_angles(Quaternion q) {
 	static ThreeF angles;
-// roll (x-axis rotation)
-	float sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
-	float cosr_cosp = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
-	angles.roll = atan2f(sinr_cosp, cosr_cosp) * RAD_TO_DEG;
-
-// pitch (y-axis rotation)
-	angles.pitch = asinf(2 * (q.w * q.y - q.z * q.x)) * RAD_TO_DEG;
 
 // yaw (z-axis rotation)
-	float siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+	float siny_cosp = 2 * (-q.w * q.z + q.x * q.y);
 	float cosy_cosp = q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z;
 	angles.yaw = atan2f(siny_cosp, cosy_cosp) * RAD_TO_DEG;
+
+
+// pitch (y-axis rotation)
+	angles.pitch = asinf(2 * (-q.w * q.y - q.x * q.z)) * RAD_TO_DEG;
+
+// roll (x-axis rotation)
+	float sinr_cosp = 2 * (-q.w * q.x + q.y * q.z);
+	float cosr_cosp = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
+	angles.roll = atan2f(sinr_cosp, cosr_cosp) * RAD_TO_DEG;
 
 	return angles;
 }
@@ -59,9 +61,9 @@ Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles) {
 
 	Quaternion q;
 	q.w = cr * cp * cy + sr * sp * sy;
-	q.x = sr * cp * cy - cr * sp * sy;
-	q.y = cr * sp * cy + sr * cp * sy;
-	q.z = cr * cp * sy - sr * sp * cy;
+	q.x = -sr * cp * cy + cr * sp * sy;
+	q.y = -cr * sp * cy - sr * cp * sy;
+	q.z = -cr * cp * sy + sr * sp * cy;
 	q = quaternion_multiply(q, 1 / quaternion_norm(q));
 	return q;
 }

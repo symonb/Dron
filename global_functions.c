@@ -194,27 +194,39 @@ void EXTI15_10_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR14)) {
 		EXTI->PR |= EXTI_PR_PR14; // clear this bit setting it high
 	}
-	//FAILSAFE ARM SWITCH is set as DISARM:
+	//FAILSAFEs
 	if ((EXTI->PR & EXTI_PR_PR15)) {
 		static uint16_t err_counter[6];
 		EXTI->PR |= EXTI_PR_PR15; // clear(setting 1) this bit (and at the same time bit SWIER15)
 
-		motor_1_value_pointer = &MOTOR_OFF;
-		motor_2_value_pointer = &MOTOR_OFF;
-		motor_3_value_pointer = &MOTOR_OFF;
-		motor_4_value_pointer = &MOTOR_OFF;
-		//update_motors();
-
 		switch (failsafe_type) {
-		case 1:
+		case 1://DISARM
+
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
+
 			err_counter[0]++;
 			failsafe_type = 0;
 			break;
-		case 2:
+		case 2://BAD_CHANNELS_VALUES
+
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
+
 			err_counter[1]++;
 			failsafe_type = 0;
 			break;
-		case 3:
+		case 3://RX_TIMEOUT
+
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
+
 			err_counter[2]++;
 			failsafe_type = 0;
 			break;

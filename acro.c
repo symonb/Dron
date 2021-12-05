@@ -35,12 +35,8 @@ static ThreeF F_corr = { 0, 0, 0 };
 
 static float dt;
 
-//for debugging only:
-static int puk2 = 0;
-static float czas_trwania_petli = 0;
-
 void acro() {
-	czas_trwania_petli = get_Global_Time();
+
 	static float time_flag2_1;
 	static float time_flag2_2;
 
@@ -51,7 +47,7 @@ void acro() {
 
 	if ((get_Global_Time() - time_flag2_2) >= 1. / FREQUENCY_TELEMETRY_UPDATE) {
 		time_flag2_2 = get_Global_Time();
-		puk2++;
+
 		//wypisywanie korekcji pitch P I D i roll P I D; k¹tów; zadanych wartosci
 		table_to_send[0] = P_PIDF.P * err.pitch   + 1000;
 		table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
@@ -68,7 +64,6 @@ void acro() {
 		table_to_send[12] = channels[1] - 500;
 		table_to_send[13] = channels[0] - 500;
 
-		czas_trwania_petli = get_Global_Time() - czas_trwania_petli;
 		New_data_to_send = 1;
 	}
 
@@ -80,9 +75,9 @@ static ThreeF corrections() {
 	static Three last_channels = { 0, 0, 0 };
 	static Three last_measurement = { 0, 0, 0 };
 
-	err.roll = (channels[0] - 1500) / 500. - Gyro_Acc[0] *0.0305185f/ Rates.roll;
-	err.pitch = (channels[1] - 1500) / 500. - Gyro_Acc[1] *0.0305185f/ Rates.pitch;
-	err.yaw = (channels[3] - 1500) / 500. - Gyro_Acc[2] *0.0305185f/ Rates.yaw;
+	err.roll = (channels[0] - 1500) / 500. - Gyro_Acc[0] *GYRO_TO_DPS/ Rates.roll;
+	err.pitch = (channels[1] - 1500) / 500. - Gyro_Acc[1] *GYRO_TO_DPS/ Rates.pitch;
+	err.yaw = (channels[3] - 1500) / 500. - Gyro_Acc[2] *GYRO_TO_DPS/ Rates.yaw;
 
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;

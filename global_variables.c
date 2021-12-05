@@ -12,7 +12,7 @@
 volatile double Global_Time = 0;
 volatile uint8_t Tim_7_flag=0;
 
-uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
+uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 2000, 1000, 1000,
 		1000, 1000, 1000, 1000, 1000, };
 
 int16_t Throttle = 1000;
