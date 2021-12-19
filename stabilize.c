@@ -100,7 +100,7 @@ static Quaternion acc_angles(Quaternion q_position) {
 	gravity_estimated.pitch /= norm;
 	gravity_estimated.yaw /= norm;
 
-	double acc_filter_rate = 0.1; // modification: it is basically a weighted average (it gives much more smooth acc_reading)
+	double acc_filter_rate = 0.9; // modification: it is basically a weighted average (it gives much more smooth acc_reading)
 	if (gravity_estimated.yaw >= 0) {
 		q_position.w = (1 - acc_filter_rate) * q_acc.w
 				+ acc_filter_rate * sqrtf(0.5 * (gravity_estimated.yaw + 1));
@@ -493,7 +493,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 			quaternion_conjugate(position_quaternion),
 			quaternion_conjugate(set_position_quaternion));
 
-#elif defined(MAGDWICK_NEW)
+#elif defined(MAGDWICK_NEW)||defined( STABILIZE_FILTER_MAHONY ) || defined(STABILIZE_FILTER_COMPLEMENTARY)
 
 	//to achieve the shortest path it is required to choose between q and -q, so at first check cos(alfa) between quaternions:
 	if (quaternions_skalar_multiplication(position_quaternion,

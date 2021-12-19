@@ -106,3 +106,5 @@ void print(uint16_t x[], uint8_t data_to_send) {
 	DMA2_Stream6->CR |= DMA_SxCR_EN;			//DMA option
 	//USART6->CR1 |= USART_CR1_TXEIE;			//Interrupt option
 }
+
+

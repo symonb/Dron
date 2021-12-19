@@ -12,10 +12,14 @@
 volatile double Global_Time = 0;
 volatile uint8_t Tim_7_flag=0;
 
-uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 2000, 1000, 1000,
+uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
 		1000, 1000, 1000, 1000, 1000, };
 
 int16_t Throttle = 1000;
+
+ThreeF global_euler_angles={ 0, 0, 0 };
+
+ThreeF global_angles={ 0, 0, 0 };
 
 //motor's values set by PID's:
 uint16_t motor_1_value;
@@ -66,6 +70,14 @@ uint16_t MOTOR_OFF= 2000;
 
 #endif
 
-ThreeF global_euler_angles={ 0, 0, 0 };
+uint8_t USB_detected=0;
 
-ThreeF global_angles={ 0, 0, 0 };
+uint8_t flash_write_buffer[259];
+uint16_t flash_write_counter=0;
+uint8_t flash_read_buffer[259];
+uint16_t flash_read_counter=0;
+
+
+
+
+

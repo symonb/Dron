@@ -47,6 +47,10 @@ extern uint16_t channels[];
 
 extern int16_t Throttle;
 
+extern ThreeF global_euler_angles;
+
+extern ThreeF global_angles;
+
 extern uint16_t motor_1_value;
 extern uint16_t motor_2_value;
 extern uint16_t motor_3_value;
@@ -82,8 +86,15 @@ extern uint8_t failsafe_type;
 
 extern uint16_t MOTOR_OFF;
 
-extern ThreeF global_euler_angles;
+extern uint8_t USB_detected;
 
-extern ThreeF global_angles;
+
+extern uint8_t flash_write_buffer[];
+extern uint16_t flash_write_counter;
+extern uint8_t flash_read_buffer[];
+extern uint16_t flash_read_counter;
+
+
+
 
 #endif /* GLOBAL_VARIABLES_H_ */

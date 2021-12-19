@@ -18,8 +18,8 @@ static void setup_gyro();
 static void setup_acc();
 static void SPI1_enable();
 static void SPI1_disable();
-static void CS_enable();
-static void CS_disable();
+static void CS_IMU_enable();
+static void CS_IMU_disable();
 static void SPI_transmit(uint8_t*data, int size);
 static void SPI_receive(uint8_t address_of_register, uint8_t*data, int size);
 static void failsafe_CONF();
@@ -147,11 +147,11 @@ static void SPI1_disable() {
 
 }
 
-static void CS_enable() {
+static void CS_IMU_enable() {
 	GPIOA->BSRR |= GPIO_BSRR_BR4;
 }
 
-static void CS_disable() {
+static void CS_IMU_disable() {
 	GPIOA->BSRR |= GPIO_BSRR_BS4;
 }
 
@@ -248,17 +248,17 @@ void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value) {
 	uint8_t data[2];
 	data[0] = adress_of_register & 0x7F; //first bit of 1 byte has to be write (0) or read(1)
 	data[1] = value;
-	CS_enable();
+	CS_IMU_enable();
 	SPI_transmit(data, 2);
-	CS_disable();
+	CS_IMU_disable();
 }
 
 void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t *memory_adress,
 		int number_of_bytes) {
 	adress_of_register |= 0x80; //first bit of 1 byte has to be write (0) or read(1)
-	CS_enable();
+	CS_IMU_enable();
 	SPI_receive(adress_of_register, memory_adress, number_of_bytes);
-	CS_disable();
+	CS_IMU_disable();
 }
 
 //-------main MPU6000 setting-----------

@@ -141,7 +141,7 @@ void update_motors() {
 //	DMA1_Stream2->CR |= DMA_SxCR_EN;
 //	DMA1_Stream6->CR |= DMA_SxCR_EN;
 
-#elif defined(ESC_PROTOCOL_ONESHOT125)
+#elif defined(ESC_PROTOCOL_ONESHOT125)|| defined(ESC_PROTOCOL_ONESHOT_V1)
 
 	//	OneShot125 or OneShot125_v2:
 
@@ -177,6 +177,29 @@ void turn_OFF_RED_LED() {
 	GPIOB->BSRR |= GPIO_BSRR_BS4;
 }
 
+void EXTI9_5_IRQHandler() {
+	if ((EXTI->PR & EXTI_PR_PR5)) {
+		EXTI->PR |= EXTI_PR_PR5; // clear this bit setting it high
+
+
+		USB_detected= GPIOC->IDR & GPIO_IDR_ID5;
+
+	}
+	if ((EXTI->PR & EXTI_PR_PR6)) {
+		EXTI->PR |= EXTI_PR_PR6; // clear this bit setting it high
+	}
+	if ((EXTI->PR & EXTI_PR_PR7)) {
+		EXTI->PR |= EXTI_PR_PR7; // clear this bit setting it high
+	}
+	if ((EXTI->PR & EXTI_PR_PR8)) {
+		EXTI->PR |= EXTI_PR_PR8; // clear this bit setting it high
+	}
+	if ((EXTI->PR & EXTI_PR_PR9)) {
+		EXTI->PR |= EXTI_PR_PR9; // clear this bit setting it high
+	}
+}
+
+
 //FAILSAFE HANDLER:
 void EXTI15_10_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR10)) {
@@ -196,7 +219,7 @@ void EXTI15_10_IRQHandler() {
 	}
 	//FAILSAFEs
 	if ((EXTI->PR & EXTI_PR_PR15)) {
-		static uint16_t err_counter[6];
+		static uint16_t err_counter[10];
 		EXTI->PR |= EXTI_PR_PR15; // clear(setting 1) this bit (and at the same time bit SWIER15)
 
 		switch (failsafe_type) {
@@ -242,6 +265,10 @@ void EXTI15_10_IRQHandler() {
 			err_counter[5]++;
 			failsafe_type = 0;
 			break;
+		case 7:
+				err_counter[6]++;
+				failsafe_type = 0;
+				break;
 		}
 	}
 }
@@ -334,22 +361,7 @@ void DMA1_Stream4_IRQHandler(void) {
 		DMA1->HIFCR |= DMA_HIFCR_CTEIF4;
 	}
 }
-void DMA1_Stream5_IRQHandler(void) {
 
-	if (DMA1->HISR & DMA_HISR_TCIF5) {
-		DMA1->HIFCR |= DMA_HIFCR_CTCIF5;
-		DMA1_Stream5->CR &= ~DMA_SxCR_EN;
-	}
-	if (DMA1->HISR & DMA_HISR_HTIF5) {
-		DMA1->HIFCR |= DMA_HIFCR_CHTIF5;
-	}
-	if (DMA1->HISR & DMA_HISR_DMEIF5) {
-		DMA1->HIFCR |= DMA_HIFCR_CDMEIF5;
-	}
-	if (DMA1->HISR & DMA_HISR_TEIF5) {
-		DMA1->HIFCR |= DMA_HIFCR_CTEIF5;
-	}
-}
 
 
 uint16_t get_Dshot_checksum(uint16_t value) {

@@ -22,8 +22,8 @@ static void setup_HSE();
 static void setup_PLL();
 static void setup_FPU();
 static void setup_GPIOA(); // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1)
-static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 4 -  LED; pin 5 - blue LED; 10 - TX USART3)
-static void setup_GPIOC(); // GPIOC (pin 4 - EXTI (INT MPU6000); pin 6 - TX USART6; pin 7 - RX USART6)
+static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 10 - TX USART3)
+static void setup_GPIOC(); // GPIOC (pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM6(); 			// setup TIM6 global time
 static void setup_TIM7(); 			// setup TIM7 delay functions
 static void setup_PWM();			// if you use PWM for ESC
@@ -60,15 +60,16 @@ void setup() {
 	//setup_Dshot_burst();		// NIESKONCZONE NIE DZIALA
 #elif defined(ESC_PROTOCOL_ONESHOT125)
 	setup_OneShot125_v2();
-//setup_OneShot125(); 			//	DO POPRAWKI WYSTEPUJA DLU¯SZE PULSY prawdopodobnie zanim zostawnie wy³aczony timer juz wartosc skacze jako wysoka i w takiej sie zatrzaskuje az do kolejnego odblokowania timera
+#elif defined(ESC_PROTOCOL_ONESHOT_V1)
+	setup_OneShot125(); //	DO POPRAWKI WYSTEPUJA DLU¯SZE PULSY prawdopodobnie zanim zostawnie wy³aczony timer juz wartosc skacze jako wysoka i w takiej sie zatrzaskuje az do kolejnego odblokowania timera
 #endif
 	setup_USART1();
 	setup_USART3();
 	setup_USART6();
 	setup_SPI1();
-	setup_DMA();
 	setup_EXTI();
 	setup_FLASH();
+	setup_DMA();
 	setup_OSD();
 }
 
@@ -251,24 +252,43 @@ static void setup_GPIOC() {
 
 	GPIOC->MODER &= ~GPIO_MODER_MODER4;
 
+	GPIOC->MODER &= ~GPIO_MODER_MODER5;
+
 	GPIOC->MODER &= ~GPIO_MODER_MODER6;
 	GPIOC->MODER |= GPIO_MODER_MODER6_1;
 
 	GPIOC->MODER &= ~GPIO_MODER_MODER7;
 	GPIOC->MODER |= GPIO_MODER_MODER7_1;
 
+	GPIOC->MODER &= ~GPIO_MODER_MODER10;
+	GPIOC->MODER |= GPIO_MODER_MODER10_1;
+
+	GPIOC->MODER &= ~GPIO_MODER_MODER11;
+	GPIOC->MODER |= GPIO_MODER_MODER11_1;
+
+	GPIOC->MODER &= ~GPIO_MODER_MODER12;
+	GPIOC->MODER |= GPIO_MODER_MODER12_1;
+
 	//	set alternate functions:
 	GPIOC->AFR[0] &= ~0xFF000000;
 	GPIOC->AFR[0] |= 0x88000000;
+	GPIOC->AFR[1] &= ~0x000FFF00;
+	GPIOC->AFR[1] |= 0x00066600;
 
 	// (00 no pull down, no pull up; 10 pull-down ):
 	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD4_0 | GPIO_PUPDR_PUPD4_1);
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPD4_1;
+	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD5_0 | GPIO_PUPDR_PUPD5_1);
+	GPIOC->PUPDR |= GPIO_PUPDR_PUPD5_1;
 
 	//(11-max speed):
 	GPIOC->OSPEEDR |= ( GPIO_OSPEEDER_OSPEEDR4_1 | GPIO_OSPEEDER_OSPEEDR4_0 |
+	GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
 	GPIO_OSPEEDER_OSPEEDR6_1 | GPIO_OSPEEDER_OSPEEDR6_0 |
-	GPIO_OSPEEDER_OSPEEDR7_1 | GPIO_OSPEEDER_OSPEEDR7_0);
+	GPIO_OSPEEDER_OSPEEDR7_1 | GPIO_OSPEEDER_OSPEEDR7_0) |
+	GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0 |
+	GPIO_OSPEEDER_OSPEEDR11_1 | GPIO_OSPEEDER_OSPEEDR11_0 |
+	GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0;
 
 }
 
@@ -411,7 +431,7 @@ static void setup_Dshot() {
 	// PWM mode 1 and output compare 4 preload enable:
 	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
 
-	TIM3->PSC =84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM3->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
 	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
 
 	TIM3->DIER = 0x0;
@@ -575,7 +595,7 @@ static void setup_OneShot125() {
 }
 
 // JEZELI ONESHOT BEDZIE ZROBIONY NA OPCJI ONE PULSE to wtedy te 2 funkcje sa niepotrzebne:
-
+#if defined(ESC_PROTOCOL_ONESHOT_V1)
 void TIM3_IRQHandler() {
 	if (TIM_SR_UIF & TIM3->SR) {
 		TIM3->SR &= ~TIM_SR_UIF;
@@ -597,6 +617,7 @@ void TIM2_IRQHandler() {
 	}
 
 }
+#endif
 
 static void setup_OneShot125_v2() {
 
@@ -705,8 +726,9 @@ static void setup_SPI1() {
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
 	SPI1->CR1 |= SPI_CR1_BR_2 | SPI_CR1_BR_1; //APB2 is 84 [MHz] and max frequency of MPU6000 registers is 1 [MHz] (84/128<1 [MHz]) later (for sensors reading) it can be speed up to 20 [MHz] (84/8=10.5 [MHz])
-	SPI1->CR1 |= SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_MSTR | SPI_CR1_CPOL
-			| SPI_CR1_CPHA;
+	SPI1->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL
+			| SPI_CR1_CPHA; //NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
+
 	//SPI1->CR2 |= SPI_CR2_RXDMAEN;
 
 }
@@ -716,8 +738,34 @@ static void setup_DMA() {
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
 
-	// DSHOT:
+	// DMA for flash:
 
+#if defined(USE_FLASH_BLACKBOX)
+	//reading
+	DMA1_Stream0->CR = 0x0;
+	while (DMA1_Stream0->CR & DMA_SxCR_EN) {
+		; //wait
+	}
+	DMA1_Stream0->CR |=   DMA_SxCR_MINC | DMA_SxCR_TCIE
+	| DMA_SxCR_PL_0;//| DMA_SxCR_CIRC
+	DMA1_Stream0->PAR = (uint32_t) (&(SPI3->DR));
+	DMA1_Stream0->M0AR = (uint32_t) (flash_read_buffer);
+
+	// writing:
+	DMA1_Stream5->CR = 0x0;
+	while (DMA1_Stream5->CR & DMA_SxCR_EN) {
+		; //wait
+	}
+	DMA1_Stream5->CR |=  DMA_SxCR_MINC |DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+	| DMA_SxCR_PL_0;
+	DMA1_Stream5->PAR = (uint32_t) (&(SPI3->DR));
+	DMA1_Stream5->M0AR = (uint32_t) (flash_write_buffer);
+
+
+#endif
+
+	// DSHOT:
+#if defined(ESC_PROTOCOL_DSHOT)
 //	motor1:
 	DMA1_Stream6->CR = 0x0;
 	while (DMA1_Stream6->CR & DMA_SxCR_EN) {
@@ -760,7 +808,7 @@ static void setup_DMA() {
 		; //wait
 	}
 	DMA1_Stream1->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_1 | DMA_SxCR_MSIZE_1
-			| DMA_SxCR_PSIZE_1| DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+			| DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
 			| DMA_SxCR_PL_0;
 	DMA1_Stream1->PAR = (uint32_t) (&(TIM2->CCR3));
 	DMA1_Stream1->M0AR = (uint32_t) (dshot_buffer_4);
@@ -772,27 +820,36 @@ static void setup_DMA() {
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF7;
 //-----------------------------END NORMAL DSHOT------------------------------------
 
-	// DSHOT_BURST:
+// DSHOT_BURST:
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
+
 	//	motor 2 and 3:
 	DMA1_Stream4->CR = 0x0;
 	while (DMA1_Stream4->CR & DMA_SxCR_EN) {
 		;	//wait
 	}
 	DMA1_Stream4->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
-			| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
-			| DMA_SxCR_PL_1;
+	| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+	| DMA_SxCR_PL_1;
 	DMA1_Stream4->PAR = (uint32_t) (&(TIM3->DMAR));
 	DMA1_Stream4->M0AR = (uint32_t) (dshot_buffer_2_3);
 	DMA1_Stream4->NDTR = DSHOT_BUFFER_LENGTH * 2;
 
 	//	motor 4 and 1:
+
+
+	TRZEBA TO ZMIENIC NA INNY STREAM !!!! 5 jest zajeta przez SPI3 TX
+
+
+
 	DMA1_Stream5->CR = 0x0;
 	while (DMA1_Stream5->CR & DMA_SxCR_EN) {
 		;	//wait
 	}
+
 	DMA1_Stream5->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MSIZE_0
-			| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
-			| DMA_SxCR_PL_1;
+	| DMA_SxCR_PSIZE_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE
+	| DMA_SxCR_PL_1;
 	DMA1_Stream5->PAR = (uint32_t) (&(TIM2->DMAR));
 	DMA1_Stream5->M0AR = (uint32_t) (dshot_buffer_4_1);
 	DMA1_Stream5->NDTR = DSHOT_BUFFER_LENGTH * 2;
@@ -800,6 +857,7 @@ static void setup_DMA() {
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF5;
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF4;
 
+#endif
 //-----------------------------END DSHOT_BURST-------------------------------------
 
 	//USART6 telemetry TX (from memory to peripheral):
@@ -829,15 +887,18 @@ static void setup_EXTI() {
 
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
-	//set PC4 as EXTI
-	SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PC;
+	//set PC4,PC5 as EXTI
+	SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PC | SYSCFG_EXTICR2_EXTI5_PC;
 
-	//disable interrupts mask for IM4 and IM15
-	EXTI->IMR &= ~(EXTI_IMR_IM4 | EXTI_IMR_IM15);
-	EXTI->IMR |= EXTI_IMR_IM4 | EXTI_IMR_IM15;
+	//disable interrupts mask for IM4, IM5 and IM15
+	EXTI->IMR &= ~(EXTI_IMR_IM4 | EXTI_IMR_IM5 | EXTI_IMR_IM15);
+	EXTI->IMR |= EXTI_IMR_IM4 | EXTI_IMR_IM5 | EXTI_IMR_IM15;
 
-	//setting rising edge detection:
-	EXTI->RTSR |= EXTI_RTSR_TR4;
+	//setting rising edge detection for PC4, PC5:
+	EXTI->RTSR |= EXTI_RTSR_TR4 | EXTI_RTSR_TR5;
+	//setting falling edge detection for PC5:
+	EXTI->FTSR |= EXTI_FTSR_TR4 | EXTI_FTSR_TR5;
+
 }
 
 void setup_NVIC_1() {
@@ -870,13 +931,24 @@ void setup_NVIC_2() {
 	NVIC_EnableIRQ(EXTI4_IRQn);
 	NVIC_SetPriority(EXTI4_IRQn, 10);
 
+	//nvic interrupt enable (EXTI interrupt)
+	NVIC_EnableIRQ(EXTI9_5_IRQn);
+	NVIC_SetPriority(EXTI9_5_IRQn, 20);
+
 	// nvic DMA interrupt enable:
+#if defined(USE_FLASH_BLACKBOX)
+	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+#endif
 
 	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 	NVIC_SetPriority(DMA1_Stream1_IRQn, 16);
 
 	NVIC_EnableIRQ(DMA1_Stream2_IRQn);
 	NVIC_SetPriority(DMA1_Stream2_IRQn, 15);
+
+#if	defined(USE_FLASH_BLACKBOX)
+	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+#endif
 
 	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 	NVIC_SetPriority(DMA1_Stream6_IRQn, 14);
@@ -891,6 +963,7 @@ void setup_NVIC_2() {
 	NVIC_SetPriority(DMA2_Stream6_IRQn, 12);
 
 //if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
+#if defined(ESC_PROTOCOL_ONESHOT_V1)
 	// nvic interrupt enable (TIM3 interrupt);
 	NVIC_EnableIRQ(TIM3_IRQn);
 	NVIC_SetPriority(TIM3_IRQn, 13);
@@ -898,6 +971,6 @@ void setup_NVIC_2() {
 	// nvic interrupt enable (TIM2 interrupt);
 	NVIC_EnableIRQ(TIM2_IRQn);
 	NVIC_SetPriority(TIM2_IRQn, 13);
-
+#endif
 }
 
