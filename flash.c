@@ -18,8 +18,8 @@ static void CS_flash_enable();
 static void SPI3_enable();
 static void SPI3_disable();
 static void SPI_transmit(uint8_t*data, uint8_t size);
-static void SPI_transmit_DMA(uint8_t*data, uint8_t size);
-static void SPI_receive( uint8_t *data,uint8_t size);
+static void SPI_transmit_DMA(uint8_t*data, int size);
+static void SPI_receive( uint8_t *data,int size);
 static void flash_write_enable();
 static void failsafe_SPI();
 
@@ -69,7 +69,7 @@ void setup_FLASH() {
 static void setup_SPI3() {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
 
-	SPI3->CR1 |= SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2; //now it is 164 khz for debugging purpose then change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
+	SPI3->CR1 |=SPI_CR1_BR_2 ;// should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
 	SPI3->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL
 			| SPI_CR1_CPHA; //NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 
@@ -128,7 +128,7 @@ static void SPI_transmit(uint8_t *data, uint8_t size) {
 
 }
 
-static void SPI_transmit_DMA(uint8_t *data, uint8_t size) {
+static void SPI_transmit_DMA(uint8_t *data, int size) {
 
 	DMA1_Stream5->M0AR = (uint32_t) (data);
 	DMA1_Stream5->NDTR = size;
@@ -136,7 +136,7 @@ static void SPI_transmit_DMA(uint8_t *data, uint8_t size) {
 }
 
 static void SPI_receive( uint8_t *data,
-		uint8_t size) {
+		int size) {
 
 	while (size > 0) {
 
@@ -186,7 +186,7 @@ void flash_SPI_write(uint8_t instruction, uint8_t *data, uint8_t size) {
 
 }
 
-void flash_SPI_write_DMA(uint8_t instruction, uint8_t *data, uint8_t size) {
+void flash_SPI_write_DMA(uint8_t instruction, uint8_t *data, int size) {
 
 	//must be done before writing:
 	flash_write_enable();
@@ -200,7 +200,7 @@ void flash_SPI_write_DMA(uint8_t instruction, uint8_t *data, uint8_t size) {
 }
 
 void flash_SPI_read(uint8_t instruction, uint8_t *memory_address,
-		uint8_t number_of_bytes) {
+		int number_of_bytes) {
 
 	SPI3_enable();
 	CS_flash_enable();
@@ -314,7 +314,7 @@ static void failsafe_SPI() {
 	}
 }
 
-void flash_save_data(uint8_t instruction,uint32_t memory_address, uint8_t *data, uint8_t number_of_bytes){
+void flash_save_data(uint8_t instruction,uint32_t memory_address, uint8_t *data, int number_of_bytes){
 
 	uint8_t memory_address_tab[3]={(memory_address>>16)&0xFF,(memory_address>>8)&0xFF,(memory_address)&0xFF};
 
@@ -329,7 +329,7 @@ void flash_save_data(uint8_t instruction,uint32_t memory_address, uint8_t *data,
 		SPI_transmit_DMA(data, number_of_bytes);
 }
 
-void flash_read_data(uint8_t instruction,uint32_t memory_address, uint8_t *data, uint8_t number_of_bytes){
+void flash_read_data(uint8_t instruction,uint32_t memory_address, uint8_t *data,int number_of_bytes){
 
 	uint8_t memory_address_tab[3]={(memory_address>>16)&0xFF,(memory_address>>8)&0xFF,(memory_address)&0xFF};
 
@@ -344,6 +344,22 @@ void flash_read_data(uint8_t instruction,uint32_t memory_address, uint8_t *data,
 	SPI3_disable();
 }
 
+void flash_add_data_to_save(uint8_t data){
 
+flash_write_buffer[flash_write_counter]=data;
+
+flash_write_counter++;
+
+if(flash_write_counter==256){
+	flash_save_data(FLASH_PAGE_PROGRAM,flash_global_write_address,flash_write_buffer,256);
+	flash_global_write_address+=0x100;
+}
+else if(flash_write_counter==512){
+	flash_save_data(FLASH_PAGE_PROGRAM,flash_global_write_address,&flash_write_buffer[256],256);
+	flash_global_write_address+=0x100;
+	flash_write_counter=0;
+}
+
+}
 
 

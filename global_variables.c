@@ -70,14 +70,17 @@ uint16_t MOTOR_OFF= 2000;
 
 #endif
 
+//---------FLASH-----------
+
 uint8_t USB_detected=0;
 
-uint8_t flash_write_buffer[259];
+uint8_t flash_write_buffer[512];
 uint16_t flash_write_counter=0;
-uint8_t flash_read_buffer[259];
+
+uint8_t flash_read_buffer[512];
 uint16_t flash_read_counter=0;
 
-
-
+uint8_t blackbox_command=0; // 0 no saving, no reading; 1 saving to flash; 2 reading from flash and sending via uart
+uint32_t flash_global_write_address=0x0;
 
 

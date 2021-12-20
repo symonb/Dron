@@ -9,6 +9,7 @@
 #include "global_functions.h"
 #include "MPU6000.h"
 #include "quaternions.h"
+#include "flash.h"
 
 static Quaternion q_acc = { 1, 0, 0, 0 };
 static Quaternion q_gyro = { 1, 0, 0, 0 };
@@ -59,7 +60,7 @@ void stabilize() {
 	if ((get_Global_Time() - time_flag1_2) >= 1. / FREQUENCY_TELEMETRY_UPDATE) {
 		time_flag1_2 = get_Global_Time();
 
-//FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW NO ANGLES
+//FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW
 		table_to_send[0] = P_PIDF.P * err.pitch + 1000;
 		table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
 		table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;

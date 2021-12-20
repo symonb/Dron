@@ -42,6 +42,21 @@ void USART6_IRQHandler(void) {
 		static uint8_t i;
 
 		bufor[i] = USART6->DR;
+		switch (bufor[i]) {
+			case 0:
+				blackbox_command=0;
+			break;
+			case 1:
+				blackbox_command=1;
+			break;
+			case 2:
+				blackbox_command=2;
+			break;
+			default:
+			break;
+		}
+
+
 		i++;
 		if (i >= 50) {
 			i = 0;
@@ -50,7 +65,7 @@ void USART6_IRQHandler(void) {
 	if (USART6->SR & USART_SR_IDLE)
 	    {
 	        USART6->DR;                             //If not read usart will crush
-	        DMA2_Stream6->CR &= ~DMA_SxCR_EN;       /* Disable DMA on stream 6- trigers dma TC */
+	        DMA2_Stream6->CR &= ~DMA_SxCR_EN;       /* Disable DMA on stream 6 - trigers dma TC */
 	    }
 
 
@@ -102,6 +117,9 @@ void print(uint16_t x[], uint8_t data_to_send) {
 	txTransmitted = 0;
 	transmitting_is_Done = 0;
 	New_data_to_send = 0;
+
+	DMA2_Stream6->M0AR = (uint32_t) (table_of_bytes_to_sent);
+	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
 
 	DMA2_Stream6->CR |= DMA_SxCR_EN;			//DMA option
 	//USART6->CR1 |= USART_CR1_TXEIE;			//Interrupt option

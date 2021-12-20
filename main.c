@@ -61,39 +61,34 @@ flash_full_chip_erase();
 	delay_mili(1000);//wait for erasing flash
 	}
 
-	flash_save_data(FLASH_PAGE_PROGRAM,FLASH_READ_BLOCK_3,flash_write_buffer,20);
-
-	delay_mili(10);
-
-	flash_read_data(FLASH_READ_DATA,FLASH_READ_BLOCK_3,flash_write_buffer,20);
-
-	delay_mili(10);
-
-	flash_SPI_write_DMA(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
-
-	delay_mili(10);
-
-	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
-
-	flash_write_buffer[0]=(FLASH_READ_BLOCK_1>>16)&0xFF;
-	flash_write_buffer[1]=(FLASH_READ_BLOCK_1>>8)&0xFF;
-	flash_write_buffer[2]=(FLASH_READ_BLOCK_1)&0xFF;
-
-	delay_mili(10);
-
-	flash_SPI_write(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
-
-	delay_mili(10);
-
-	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
+//	flash_save_data(FLASH_PAGE_PROGRAM,FLASH_READ_BLOCK_3,flash_write_buffer,20);
+//
+//	delay_mili(10);
+//
+//	flash_read_data(FLASH_READ_DATA,FLASH_READ_BLOCK_3,flash_write_buffer,20);
+//
+//	delay_mili(10);
+//
+//	flash_SPI_write_DMA(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
+//
+//	delay_mili(10);
+//
+//	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
+//
+//	flash_write_buffer[0]=(FLASH_READ_BLOCK_1>>16)&0xFF;
+//	flash_write_buffer[1]=(FLASH_READ_BLOCK_1>>8)&0xFF;
+//	flash_write_buffer[2]=(FLASH_READ_BLOCK_1)&0xFF;
+//
+//	delay_mili(10);
+//
+//	flash_SPI_write(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
+//
+//	delay_mili(10);
+//
+//	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
 
 
 	//end of flash debugging
-
-
-
-
-
 
 	while (1) {
 		if ((get_Global_Time() - time_flag0_1) >= 30) {
@@ -138,14 +133,30 @@ flash_full_chip_erase();
 					pik++;
 				}
 
-				if(USB_detected){
-					while(USB_detected){
+				if(USB_detected||blackbox_command==2){
+
+					while(USB_detected||blackbox_command==2){
+					static uint32_t read_address=FLASH_READ_BLOCK_0;
+
 						turn_OFF_RED_LED();
 						turn_ON_BLUE_LED();
-						delay_mili(100);
+						if (0 != transmitting_is_Done && read_address<flash_global_write_address) {
+
+							//read data from flash:
+							flash_read_data(FLASH_READ_DATA,read_address,flash_read_buffer,256);
+							read_address+=0x100;
+							transmitting_is_Done = 0;
+							DMA2_Stream6->M0AR = (uint32_t) (flash_read_buffer);
+							DMA2_Stream6->NDTR =256;
+
+							DMA2_Stream6->CR |= DMA_SxCR_EN;
+							}
+						else{
+							delay_mili(10);
+						}
 						turn_OFF_BLUE_LED();
 						turn_ON_RED_LED();
-						delay_mili(100);
+
 					}
 				}
 	}

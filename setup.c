@@ -19,9 +19,9 @@
  */
 
 static void setup_HSE();
-static void setup_PLL();
+static void setup_PLL();	// clock setting
 static void setup_FPU();
-static void setup_GPIOA(); // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1)
+static void setup_GPIOA(); // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1; pin 11 - D- OTG_USB_FS; pin 12 - D+ OTG_USB_FS  )
 static void setup_GPIOB(); // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 10 - TX USART3)
 static void setup_GPIOC(); // GPIOC (pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM6(); 			// setup TIM6 global time
@@ -37,6 +37,9 @@ static void setup_USART6();	// USART for communication via (3Dradio or bluetooth
 static void setup_SPI1();			// SPI for communication with MPU6000
 static void setup_DMA();
 static void setup_EXTI();
+static void setup_OTG_USB_FS();
+
+
 
 extern uint8_t table_of_bytes_to_sent[2 * ALL_ELEMENTS_TO_SEND + 4];
 extern uint8_t read_write_tab[];
@@ -68,9 +71,11 @@ void setup() {
 	setup_USART6();
 	setup_SPI1();
 	setup_EXTI();
+	setup_OTG_USB_FS();
 	setup_FLASH();
 	setup_DMA();
 	setup_OSD();
+
 }
 
 static void setup_HSE() {
@@ -103,17 +108,21 @@ static void setup_PLL() {
 	/* (5) Wait until PLLRDY is cleared */
 	/* (6) Configure flash */
 	/* (7) Set HSE as PLL source */
-	/* (8) Set the PLLM to 4, PLLN to 168, PLLP to 2 */
+	/* (8) Set the PLLM to 4, PLLN to 168, PLLP to 2, PLLQ to 7 */
 	/* PLL_freq = PLL_clock_in / PLLM * PLLN / PLLP
+	 * PLL_48 =PLL_clock_in / PLLM * PLLN / PLLQ = 48 [MHz]
 	 * Important:
 	 * 2 <= PLLM <= 64;
-	 * 50 <= PLLN <=432;
-	 * PLLP ={2,4,6,8}
+	 * 50 <= PLLN <= 432;
+	 * PLLP = {2,4,6,8}
+	 * 2 <= PLLQ <= 15
 	 * In addition:
 	 * 	1  [MHz] <= PLL_clock_in / PLLM 		 	  <=  2  [MHz] but 2 [MHz] is preferred
 	 * 100 [MHz] <= PLL_clock_in / PLLM * PLLN 		  <= 432 [MHz]
 	 *  			PLL_clock_in / PLLM * PLLN / PLLP <= 168 [MHz]
-	 * So as I want receive max. freq. 168 [MHz] PLLP has to be 2 (VCO_out 336 [MHz]), PLLN = 336 [MHz]/2 [MHz]= 168 and PLLM is 4 since 8 [MHz]/PLLM = 2 [MHz] */
+	 * So as I want receive max. freq. 168 [MHz] PLLP has to be 2 (VCO_out 336 [MHz]), PLLN = 2 -> 336 [MHz]/PLLN = 168 [MHz] and PLLM is 4 since 8 [MHz]/PLLM = 2 [MHz]
+	 * Also PLL_48 has to be 48 [MHz] so PLLQ = 7 -> 336 [MHz] / 48 [MHz] = 7
+	 * */
 	/* (9) Enable the PLL */
 	/* (10) Wait until PLLRDY is set */
 	/* (11) Select PLL as system clock */
@@ -137,9 +146,10 @@ static void setup_PLL() {
 	RCC->PLLCFGR |= RCC_PLLCFGR_PLLSRC_HSE; /* (7) */
 
 	RCC->PLLCFGR = (RCC->PLLCFGR
-			& (~(RCC_PLLCFGR_PLLM | RCC_PLLCFGR_PLLN | RCC_PLLCFGR_PLLP)))
+			& (~(RCC_PLLCFGR_PLLM | RCC_PLLCFGR_PLLN | RCC_PLLCFGR_PLLP| RCC_PLLCFGR_PLLQ)))
 			| (RCC_PLLCFGR_PLLM_2 | RCC_PLLCFGR_PLLN_3 | RCC_PLLCFGR_PLLN_5
-					| RCC_PLLCFGR_PLLN_7); /* (8) */
+					| RCC_PLLCFGR_PLLN_7 | RCC_PLLCFGR_PLLQ_0 | RCC_PLLCFGR_PLLQ_1 | RCC_PLLCFGR_PLLQ_2); /* (8) */
+
 	RCC->CR |= RCC_CR_PLLON; /* (9) */
 	while ((RCC->CR & RCC_CR_PLLRDY) == 0) /* (10) */
 	{
@@ -182,11 +192,17 @@ static void setup_GPIOA() {
 	GPIOA->MODER &= ~GPIO_MODER_MODER10;
 	GPIOA->MODER |= GPIO_MODER_MODER10_1;
 
+	GPIOA->MODER &= ~GPIO_MODER_MODER11;
+	GPIOA->MODER |= GPIO_MODER_MODER11_1;
+
+	GPIOA->MODER &= ~GPIO_MODER_MODER12;
+	GPIOA->MODER |= GPIO_MODER_MODER12_1;
+
 	//	set alternate functions:
 	GPIOA->AFR[0] &= ~0xFFF0FF00;
 	GPIOA->AFR[0] |= 0x55501100;
-	GPIOA->AFR[1] &= ~0x00000F00;
-	GPIOA->AFR[1] |= 0x00000700;
+	GPIOA->AFR[1] &= ~0x000FFF00;
+	GPIOA->AFR[1] |= 0x00077700;
 
 	//pull up (01) pull down (10)
 	//GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;  // on PIN4 (SPI1 CS):
@@ -200,7 +216,9 @@ static void setup_GPIOA() {
 	GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
 	GPIO_OSPEEDER_OSPEEDR6_1 | GPIO_OSPEEDER_OSPEEDR6_0 |
 	GPIO_OSPEEDER_OSPEEDR7_1 | GPIO_OSPEEDER_OSPEEDR7_0 |
-	GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0);
+	GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0|
+	GPIO_OSPEEDER_OSPEEDR11_1 | GPIO_OSPEEDER_OSPEEDR11_0|
+	GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0);
 }
 
 static void setup_GPIOB() {
@@ -747,7 +765,7 @@ static void setup_DMA() {
 		; //wait
 	}
 	DMA1_Stream0->CR |=   DMA_SxCR_MINC | DMA_SxCR_TCIE
-	| DMA_SxCR_PL_0;//| DMA_SxCR_CIRC
+	| DMA_SxCR_PL_0;
 	DMA1_Stream0->PAR = (uint32_t) (&(SPI3->DR));
 	DMA1_Stream0->M0AR = (uint32_t) (flash_read_buffer);
 
@@ -862,7 +880,7 @@ static void setup_DMA() {
 
 	//USART6 telemetry TX (from memory to peripheral):
 	DMA2_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC
-			| DMA_SxCR_CIRC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+			 | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	DMA2_Stream6->PAR = (uint32_t) (&(USART6->DR));
 	DMA2_Stream6->M0AR = (uint32_t) (table_of_bytes_to_sent);
 	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
@@ -898,6 +916,14 @@ static void setup_EXTI() {
 	EXTI->RTSR |= EXTI_RTSR_TR4 | EXTI_RTSR_TR5;
 	//setting falling edge detection for PC5:
 	EXTI->FTSR |= EXTI_FTSR_TR4 | EXTI_FTSR_TR5;
+
+}
+
+static void setup_OTG_USB_FS(){
+
+	RCC->AHB2ENR |=RCC_AHB2ENR_OTGFSEN;
+
+
 
 }
 

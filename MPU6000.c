@@ -112,7 +112,7 @@ void I2C1_IRQHandler() {
 void EXTI4_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR4)) {
 		EXTI->PR |= EXTI_PR_PR4; // clear this bit setting it high
-static uint32_t counter;
+		static uint32_t counter;
 		//INSTRUCTIONS FOR READING IMU SENSORS:
 		imu_received = 0;
 		EXTI->IMR &= ~EXTI_IMR_IM4;
@@ -336,7 +336,7 @@ static void setup_acc() {
 	SPI1_disable();
 }
 
-void average_filters_setup(){
+void average_filters_setup() {
 
 	average_gyro_X.length = 5;
 	float value = 1. / average_gyro_X.length;
@@ -481,7 +481,24 @@ void rewrite_data() {
 				temporary[5] - ACC_YAW_OFFSET);
 		Gyro_Acc[6] = read_write_tab[6] << 8 | read_write_tab[7];
 
+		//Save data to flash:
+#if defined(USE_FLASH_BLACKBOX)
+
+		if (blackbox_command == 1) {
+
+//			for (uint8_t i = 0; i < 6; i++) {
+//				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
+//				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+//			}
+			for (uint8_t i = 0; i < 1; i++) {
+				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
+				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
+			}
+		}
+
+#endif
 		EXTI->IMR |= EXTI_IMR_IM4;
+
 	}
 }
 

@@ -9,14 +9,15 @@
 #define FLASH_H_
 
 void setup_FLASH();
-void flash_SPI_read(uint8_t, uint8_t *, uint8_t);
+void flash_SPI_read(uint8_t, uint8_t *, int);
 void flash_SPI_write(uint8_t , uint8_t * , uint8_t);
-void flash_SPI_write_DMA(uint8_t , uint8_t * , uint8_t);
-void flash_erase(uint8_t instruction, uint8_t *address);
+void flash_SPI_write_DMA(uint8_t , uint8_t * , int);
+void flash_erase(uint8_t , uint8_t *);
 void flash_full_chip_erase();
 uint8_t flash_read_status_register(uint8_t );
-void flash_save_data(uint8_t ,uint32_t , uint8_t *, uint8_t);
-void flash_read_data(uint8_t ,uint32_t , uint8_t *, uint8_t);
+void flash_save_data(uint8_t ,uint32_t , uint8_t *, int);
+void flash_read_data(uint8_t ,uint32_t , uint8_t *, int);
+void flash_add_data_to_save(uint8_t );
 
 //-------MACRO FOR FLASH W25Q128JV----------
 #define FLASH_WRITE_ENABLE 0x06
