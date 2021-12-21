@@ -10,7 +10,6 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "setup.h"
-#include "flash.h"
 #include "OSD.h"
 
 /* IMPORTANT:
@@ -35,6 +34,7 @@ static void setup_USART1(); 		// USART for radioreceiver
 static void setup_USART3();	// USART for communication via (3Dradio or bluetooth) - UNUSED
 static void setup_USART6();	// USART for communication via (3Dradio or bluetooth)
 static void setup_SPI1();			// SPI for communication with MPU6000
+static void setup_SPI3();			// SPI for FLASH
 static void setup_DMA();
 static void setup_EXTI();
 static void setup_OTG_USB_FS();
@@ -70,9 +70,9 @@ void setup() {
 	setup_USART3();
 	setup_USART6();
 	setup_SPI1();
+	setup_SPI3();
 	setup_EXTI();
 	setup_OTG_USB_FS();
-	setup_FLASH();
 	setup_DMA();
 	setup_OSD();
 
@@ -748,6 +748,17 @@ static void setup_SPI1() {
 			| SPI_CR1_CPHA; //NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 
 	//SPI1->CR2 |= SPI_CR2_RXDMAEN;
+
+}
+
+static void setup_SPI3() {
+	RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
+
+	SPI3->CR1 |=SPI_CR1_BR_2| SPI_CR1_BR_1;// should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
+	SPI3->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL
+			| SPI_CR1_CPHA; //NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
+
+	SPI3->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
 
 }
 

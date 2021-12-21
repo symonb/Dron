@@ -41,7 +41,7 @@ int main(void) {
 	static float time_flag0_3 = 0;
 
 	//for flash debugging:
-
+	static uint8_t debugging_buffor[30];
 
 	//first 3 bytes have to be address of memory to save data:
 	flash_write_buffer[0]=(FLASH_READ_BLOCK_0>>16)&0xFF;
@@ -61,31 +61,31 @@ flash_full_chip_erase();
 	delay_mili(1000);//wait for erasing flash
 	}
 
-//	flash_save_data(FLASH_PAGE_PROGRAM,FLASH_READ_BLOCK_3,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_read_data(FLASH_READ_DATA,FLASH_READ_BLOCK_3,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_SPI_write_DMA(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
-//
-//	flash_write_buffer[0]=(FLASH_READ_BLOCK_1>>16)&0xFF;
-//	flash_write_buffer[1]=(FLASH_READ_BLOCK_1>>8)&0xFF;
-//	flash_write_buffer[2]=(FLASH_READ_BLOCK_1)&0xFF;
-//
-//	delay_mili(10);
-//
-//	flash_SPI_write(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
+	flash_save_data(FLASH_PAGE_PROGRAM,FLASH_READ_BLOCK_3,flash_write_buffer,20);
+
+	delay_mili(10);
+
+	flash_read_data(FLASH_READ_DATA,FLASH_READ_BLOCK_3,debugging_buffor,20);
+
+	delay_mili(10);
+
+	flash_SPI_write_DMA(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
+
+	delay_mili(10);
+
+	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
+
+	flash_write_buffer[0]=(FLASH_READ_BLOCK_1>>16)&0xFF;
+	flash_write_buffer[1]=(FLASH_READ_BLOCK_1>>8)&0xFF;
+	flash_write_buffer[2]=(FLASH_READ_BLOCK_1)&0xFF;
+
+	delay_mili(10);
+
+	flash_SPI_write(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
+
+	delay_mili(10);
+
+	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
 
 
 	//end of flash debugging

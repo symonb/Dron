@@ -8,8 +8,8 @@
 #ifndef FLASH_H_
 #define FLASH_H_
 
-void setup_FLASH();
 void flash_SPI_read(uint8_t, uint8_t *, int);
+void flash_SPI_read_DMA(uint8_t, uint8_t *, int);
 void flash_SPI_write(uint8_t , uint8_t * , uint8_t);
 void flash_SPI_write_DMA(uint8_t , uint8_t * , int);
 void flash_erase(uint8_t , uint8_t *);

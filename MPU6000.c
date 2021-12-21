@@ -11,7 +11,9 @@
 #include "global_functions.h"
 #include "filters.h"
 #include <math.h>
+#include "flash.h"
 #include "MPU6000.h"
+
 
 static void setup_conf();
 static void setup_gyro();
