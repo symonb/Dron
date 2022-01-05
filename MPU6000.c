@@ -14,7 +14,6 @@
 #include "flash.h"
 #include "MPU6000.h"
 
-
 static void setup_conf();
 static void setup_gyro();
 static void setup_acc();
@@ -488,14 +487,75 @@ void rewrite_data() {
 
 		if (blackbox_command == 1) {
 
-//			for (uint8_t i = 0; i < 6; i++) {
-//				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
-//				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
-//			}
-			for (uint8_t i = 0; i < 1; i++) {
+
+#if	defined(BLACKBOX_SAVE_EULER_ANGLES)
+
+			flash_add_data_to_save(
+					((int16_t)(global_euler_angles.roll*500) >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) (global_euler_angles.roll*500) & 0xFF);
+
+			flash_add_data_to_save(
+					((int16_t) (global_euler_angles.pitch*500) >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) (global_euler_angles.pitch*500) & 0xFF);
+
+			flash_add_data_to_save(
+					((int16_t) (global_euler_angles.yaw*500) >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) (global_euler_angles.yaw*500) & 0xFF);
+#endif
+
+#if	defined(BLACKBOX_SAVE_SET_ANGLES)
+			for (uint8_t i = 0; i < 3; i++) {
+				flash_add_data_to_save(((int16_t) (global_variable_monitor[i]*500) >> 8) & 0xFF);
+				flash_add_data_to_save((int16_t) (global_variable_monitor[i]*500) & 0xFF);
+			}
+
+#endif
+
+
+#if defined(BLACKBOX_SAVE_FILTERED_GYRO_AND_ACC)
+			for (uint8_t i = 0; i < 6; i++) {
 				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
 				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
 			}
+#elif			defined(BLACKBOX_SAVE_FILTERED_GYRO)
+			for (uint8_t i = 0; i < 3; i++) {
+				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
+				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
+			}
+#elif			defined(BLACKBOX_SAVE_FILTERED_ACC)
+			for (uint8_t i = 3; i < 6; i++) {
+				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
+				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
+			}
+#endif
+
+#if	defined(BLACKBOX_SAVE_RAW_GYRO_AND_ACC)
+
+			for (uint8_t i = 0; i < 6; i++) {
+				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
+				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+			}
+#elif	defined(BLACKBOX_SAVE_RAW_GYRO)
+			for (uint8_t i = 0; i < 3; i++) {
+				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
+				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+			}
+#elif	defined(BLACKBOX_SAVE_RAW_ACC)
+			for (uint8_t i = 3; i < 6; i++) {
+				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
+				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+			}
+#endif
+
+#if	defined(BLACKBOX_SAVE_STICKS)
+			for (uint8_t i = 0; i < 2; i++) {
+				flash_add_data_to_save(((int16_t) channels[i] >> 8) & 0xFF);
+				flash_add_data_to_save((int16_t) channels[i] & 0xFF);
+			}
+			flash_add_data_to_save(((int16_t) channels[3] >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) channels[3] & 0xFF);
+#endif
+
 		}
 
 #endif

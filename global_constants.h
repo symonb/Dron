@@ -16,8 +16,8 @@
 #define MAX_NO_SIGNAL_TIME 0.5 			//[s]
 #define DISARM_VALUE 1600
 #define TIMEOUT_VALUE 0.005				//[s]
-#define MAX_ROLL_ANGLE 30
-#define MAX_PITCH_ANGLE 30
+#define MAX_ROLL_ANGLE 45
+#define MAX_PITCH_ANGLE 45
 
 #define DSHOT_MODE 600 		// 150 300 600 1200
 #define DSHOT_BUFFER_LENGTH 18 // 16 bits of Dshot and 2 for clearing
@@ -35,16 +35,33 @@
 #define FREQUENCY_IMU_READING 600 //[Hz]
 #define FREQUENCY_TELEMETRY_UPDATE 1 //[Hz]
 
+//--------------BLACKBOX-------------------
 #define USE_FLASH_BLACKBOX // USE_FLASH_BLACKBOX if you want BLACKBOX or NOT_USE_FLASH_BLACKBOX
+/*define which parameters you would like to save:
+ *
+ * BLACKBOX_SAVE_FILTERED_GYRO_AND_ACC 	- 6 values
+ * BLACKBOX_SAVE_FILTERED_GYRO 			- 3 values
+ * BLACKBOX_SAVE_FILTERED_ACC			- 3 values
+ * BLACKBOX_SAVE_RAW_GYRO_AND_ACC		- 6 values
+ * BLACKBOX_SAVE_RAW_GYRO				- 3 values
+ * BLACKBOX_SAVE_RAW_ACC				- 3 values
+ * BLACKBOX_SAVE_EULER_ANGLES			- 3 values
+ * BLACKBOX_SAVE_SET_ANGLES				- 3 values
+ * BLACKBOX_SAVE_STICKS					- 3 values
+ *
+ */
+#define BLACKBOX_SAVE_EULER_ANGLES
+#define BLACKBOX_SAVE_SET_ANGLES
+#define BLACKBOX_SAVE_FILTERED_GYRO
 
 // OFFSETS and CALIBRATIONS VALUE
 
 #define PITCH_OFFSET -7
 #define ROLL_OFFSET 0
 
-#define GYRO_ROLL_OFFSET -33
-#define GYRO_PITCH_OFFSET 32
-#define GYRO_YAW_OFFSET -7
+#define GYRO_ROLL_OFFSET 99
+#define GYRO_PITCH_OFFSET 8
+#define GYRO_YAW_OFFSET -9
 
 #define ACC_PITCH_OFFSET 125.6525f
 #define ACC_ROLL_OFFSET 2.862f

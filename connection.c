@@ -9,6 +9,7 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "connection.h"
+#include "flash.h"
 
 uint8_t table_of_bytes_to_sent[2 * ALL_ELEMENTS_TO_SEND + 4];
 static volatile int32_t txTransmitted;
@@ -43,31 +44,41 @@ void USART6_IRQHandler(void) {
 
 		bufor[i] = USART6->DR;
 		switch (bufor[i]) {
-			case 0:
-				blackbox_command=0;
+		case 0:
+			blackbox_command = 0;
 			break;
-			case 1:
-				blackbox_command=1;
+		case 1:
+			blackbox_command = 1;
 			break;
-			case 2:
-				blackbox_command=2;
+		case 2:
+			blackbox_command = 2;
 			break;
-			default:
+		case 3:
+			blackbox_command = 0;
+			flash_write_counter = 0;
+			flash_read_counter = 0;
+
+			break;
+		case 9:
+			blackbox_command = 0;
+			flash_full_chip_erase();
+			flash_write_counter = 0;
+			flash_read_counter = 0;
+			flash_global_write_address = 0x00;
+			break;
+		default:
 			break;
 		}
-
 
 		i++;
 		if (i >= 50) {
 			i = 0;
 		}
 	}
-	if (USART6->SR & USART_SR_IDLE)
-	    {
-	        USART6->DR;                             //If not read usart will crush
-	        DMA2_Stream6->CR &= ~DMA_SxCR_EN;       /* Disable DMA on stream 6 - trigers dma TC */
-	    }
-
+	if (USART6->SR & USART_SR_IDLE) {
+		USART6->DR;                             //If not read usart will crush
+		DMA2_Stream6->CR &= ~DMA_SxCR_EN; /* Disable DMA on stream 6 - trigers dma TC */
+	}
 
 //TRANSMISJA:
 
@@ -87,17 +98,14 @@ void USART6_IRQHandler(void) {
 	}
 }
 
-
 void USART3_IRQHandler(void) {
 
-	if (USART6->SR & USART_SR_IDLE)
-	    {
-	        USART3->DR;                             //If not read usart will crush
-	       // DMA1_StreamX->CR &= ~DMA_SxCR_EN;     // Disable DMA on stream X
-	    }
+	if (USART6->SR & USART_SR_IDLE) {
+		USART3->DR;                             //If not read usart will crush
+		// DMA1_StreamX->CR &= ~DMA_SxCR_EN;     // Disable DMA on stream X
+	}
 
 }
-
 
 void print(uint16_t x[], uint8_t data_to_send) {
 	uint16_t sum = 0;
@@ -125,4 +133,78 @@ void print(uint16_t x[], uint8_t data_to_send) {
 	//USART6->CR1 |= USART_CR1_TXEIE;			//Interrupt option
 }
 
+void print_flash(uint8_t data_pack_size) {
+
+	uint32_t read_address;
+	uint8_t temporary_array[512];
+	int16_t checksum;
+	int16_t i, j, k;
+
+	read_address = FLASH_READ_BLOCK_0;
+	checksum = 0;
+	i = 0;
+	j = 0;
+	k = 0;
+
+	while (USB_detected || blackbox_command == 2) {
+		if (0 != transmitting_is_Done
+				&& read_address < flash_global_write_address) {
+			turn_OFF_RED_LED();
+			turn_OFF_BLUE_LED();
+			//read data from flash:
+			flash_read_data(FLASH_READ_DATA, read_address, flash_read_buffer,
+					256);
+			read_address += 0x100;
+			transmitting_is_Done = 0;
+
+			if (data_pack_size == 1) {
+				//if you sending only 1 value (2 bytes) it is not worth to send frame with 6 byte
+
+				DMA2_Stream6->M0AR = (uint32_t) (flash_read_buffer);
+				DMA2_Stream6->NDTR = 256;
+				DMA2_Stream6->CR |= DMA_SxCR_EN;
+			}
+
+			else {
+
+				while (j < 256) {
+					if (k == 0) {
+						//header=32767 it is unlikely to have this value to transmit
+						temporary_array[i] = 0x7F;
+						temporary_array[i + 1] = 0xFF;
+						i += 2;
+					}
+					while (k < data_pack_size*2 && j < 256) {
+						checksum += flash_read_buffer[j];
+						temporary_array[i] = flash_read_buffer[j];
+						i++;
+						j++;
+						k++;
+					}
+					if (k >= data_pack_size*2) {
+						k = 0;
+						temporary_array[i] = (checksum >> 8) & 0xFF;
+						temporary_array[i + 1] = checksum & 0xFF;
+						checksum = 0;
+						i += 2;
+					}
+				}
+
+				DMA2_Stream6->M0AR = (uint32_t) (temporary_array);
+				DMA2_Stream6->NDTR = i + 1;
+				DMA2_Stream6->CR |= DMA_SxCR_EN;
+
+				j = 0;
+				i = 0;
+			}
+
+		} else {
+			delay_mili(100);
+			turn_ON_BLUE_LED();
+			turn_ON_RED_LED();
+
+		}
+
+	}
+}
 

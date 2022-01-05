@@ -8,6 +8,7 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
+#include "flash.h"
 #include "ibus.h"
 
 volatile uint8_t rxBuf[32];
@@ -143,6 +144,15 @@ void Ibus_save() {
 
 			failsafe_RX();
 			Throttle = channels[2];
+			if (channels[7]>=1400 && channels[7]<1700){
+				blackbox_command=1;
+			}
+			else if (channels[7]>=1700){
+				blackbox_command=0;
+						}
+			else{
+				blackbox_command=0;
+			}
 		}
 
 		//	unlock receiving new data from i-Bus:

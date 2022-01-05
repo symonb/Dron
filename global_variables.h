@@ -86,6 +86,7 @@ extern uint8_t failsafe_type;
 
 extern uint16_t MOTOR_OFF;
 
+
 //----------FLASH----------
 extern uint8_t USB_detected;
 
@@ -96,5 +97,8 @@ extern uint16_t flash_read_counter;
 
 extern uint8_t blackbox_command;
 extern uint32_t flash_global_write_address;
+
+extern float global_variable_monitor[];
+
 
 #endif /* GLOBAL_VARIABLES_H_ */

@@ -30,7 +30,7 @@ void DMA1_Stream0_IRQHandler(void) {
 
 	//if stream0 transfer is completed:
 	if (DMA1->LISR & DMA_LISR_TCIF0) {
-		DMA1->LIFCR |= DMA_LIFCR_CTCIF0;
+
 
 		time_flag5_1 = get_Global_Time();
 		while (!((SPI3->SR) & SPI_SR_TXE)) {
@@ -307,11 +307,7 @@ uint8_t flash_read_status_register(uint8_t instruction) {
 	while (!((SPI3->SR) & SPI_SR_TXE)) {
 		failsafe_SPI(); 			//wait
 	}
-//wait for BSY flag
-	time_flag5_1 = get_Global_Time();
-	while (((SPI3->SR) & SPI_SR_BSY)) {
-		failsafe_SPI();				//wait
-	}
+
 //read status:
 	status = SPI3->DR;
 	SPI3->SR;
@@ -358,9 +354,11 @@ void flash_read_data(uint8_t instruction, uint32_t memory_address,
 	CS_flash_enable();
 
 	SPI_transmit(&instruction, 1);
-	SPI_transmit(&memory_address_tab, 3);
-	SPI_receive_DMA(data,number_of_bytes);
+	SPI_transmit(memory_address_tab, 3);
+	SPI_receive(data,number_of_bytes);
 
+	CS_flash_disable();
+	SPI3_disable();
 }
 
 void flash_add_data_to_save(uint8_t data) {

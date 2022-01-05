@@ -754,7 +754,7 @@ static void setup_SPI1() {
 static void setup_SPI3() {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
 
-	SPI3->CR1 |=SPI_CR1_BR_2| SPI_CR1_BR_1;// should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
+	SPI3->CR1 |=SPI_CR1_BR_2;// should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
 	SPI3->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL
 			| SPI_CR1_CPHA; //NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 

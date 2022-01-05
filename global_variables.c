@@ -83,4 +83,5 @@ uint16_t flash_read_counter=0;
 uint8_t blackbox_command=0; // 0 no saving, no reading; 1 saving to flash; 2 reading from flash and sending via uart
 uint32_t flash_global_write_address=0x0;
 
+float global_variable_monitor[3];
 

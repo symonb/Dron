@@ -35,9 +35,9 @@ static ThreeF last_D_corr = { 0, 0, 0 };
 static Three Rates = { 400, 400, 400 };
 
 //4s
-static PIDF R_PIDF = { 200, 100, 0.2, 2.5 };
-static PIDF P_PIDF = { 200, 100, 0.2, 2.5 };
-static PIDF Y_PIDF = { 1000, 0.5, 50, 0 };
+static PIDF R_PIDF = { 260, 180, 0.26, 2.5 };
+static PIDF P_PIDF = { 260, 180, 0.26, 2.5 };
+static PIDF Y_PIDF = { 1200, 300, 200, 0 };
 
 void stabilize() {
 
@@ -86,7 +86,8 @@ void stabilize() {
 static Quaternion acc_angles(Quaternion q_position) {
 
 	static ThreeF gravity_estimated = { 0, 0, 0 };
-	ThreeF acc_vector = { Gyro_Acc[3]*ACC_TO_GRAVITY, Gyro_Acc[4]*ACC_TO_GRAVITY, Gyro_Acc[5]*ACC_TO_GRAVITY };
+	ThreeF acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4]
+			* ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
 	static double norm;
 
 	gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
@@ -149,12 +150,11 @@ static Quaternion gyro_angles(Quaternion q_position) {
 	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
 
 	q_prim = quaternion_multiply(
-		quaternions_multiplication( angular_velocity,q_position), -0.5f);
+			quaternions_multiplication(angular_velocity, q_position), -0.5f);
 	dt = get_Global_Time() - time_flag;
 	time_flag = get_Global_Time();
 
-	q_position = quaternions_sum(q_position,
-			quaternion_multiply(q_prim, dt));
+	q_position = quaternions_sum(q_position, quaternion_multiply(q_prim, dt));
 
 	//normalize quaternion:
 	q_position = quaternion_multiply(q_position,
@@ -211,40 +211,40 @@ static void madgwick_filter() {
 
 	//	compute values of error_function:
 	error_function[0] = 2
-			* (q_global_position.x * q_global_position.z
-					- q_global_position.w * q_global_position.y)
-			- acc_reading.x;
+	* (q_global_position.x * q_global_position.z
+			- q_global_position.w * q_global_position.y)
+	- acc_reading.x;
 	error_function[1] = 2
-			* (q_global_position.w * q_global_position.x
-					+ q_global_position.y * q_global_position.z)
-			- acc_reading.y;
+	* (q_global_position.w * q_global_position.x
+			+ q_global_position.y * q_global_position.z)
+	- acc_reading.y;
 	error_function[2] = 2
-			* (0.5f - q_global_position.x * q_global_position.x
-					- q_global_position.y * q_global_position.y)
-			- acc_reading.z;
+	* (0.5f - q_global_position.x * q_global_position.x
+			- q_global_position.y * q_global_position.y)
+	- acc_reading.z;
 
- // compute Jacobian^T*error_function:
+	// compute Jacobian^T*error_function:
 	static Quaternion delta_error_function;
 
 	delta_error_function.w = -2 * q_global_position.y * error_function[0]
-			+ 2 * q_global_position.x * error_function[1];
+	+ 2 * q_global_position.x * error_function[1];
 
 	delta_error_function.x = 2 * q_global_position.z * error_function[0]
-			+ 2 * q_global_position.w * error_function[1]
-			- 4 * q_global_position.x * error_function[2];
+	+ 2 * q_global_position.w * error_function[1]
+	- 4 * q_global_position.x * error_function[2];
 
 	delta_error_function.y = -2 * q_global_position.w * error_function[0]
-			+ 2 * q_global_position.z * error_function[1]
-			- 4 * q_global_position.y * error_function[2];
+	+ 2 * q_global_position.z * error_function[1]
+	- 4 * q_global_position.y * error_function[2];
 
 	delta_error_function.z = 2 * q_global_position.x * error_function[0]
-			+ 2 * q_global_position.y * error_function[1];
+	+ 2 * q_global_position.y * error_function[1];
 
 	//normalize the gradient
 	delta_error_function = quaternion_multiply(delta_error_function,
 			1.f / quaternion_norm(delta_error_function));
 
-	static float coefficient_Beta = 0.15;				//0.073 was
+	static float coefficient_Beta = 0.15;//0.073 was
 
 	q_global_position = quaternions_sum(q_global_position,
 			quaternion_multiply(
@@ -263,42 +263,42 @@ static void madgwick_filter() {
 #elif defined(MAGDWICK_NEW)
 	//teoretycznie poprawne dla kwaternionu transformacji z ukladu global do lokal:
 	q_prim = quaternion_multiply(
-			quaternions_multiplication(angular_velocity,q_global_position ),
+			quaternions_multiplication(angular_velocity, q_global_position),
 			-0.5f);
 
 //	compute values of error_function:
 	error_function[0] = 2
-	* (q_global_position.w * q_global_position.y
-			+ q_global_position.x * q_global_position.z)
-	- acc_reading.x;
+			* (q_global_position.w * q_global_position.y
+					+ q_global_position.x * q_global_position.z)
+			- acc_reading.x;
 	error_function[1] = 2
-	* (q_global_position.y * q_global_position.z
-			- q_global_position.w * q_global_position.x)
-	- acc_reading.y;
+			* (q_global_position.y * q_global_position.z
+					- q_global_position.w * q_global_position.x)
+			- acc_reading.y;
 	error_function[2] = 2
-	* (0.5f - q_global_position.x * q_global_position.x
-			- q_global_position.y * q_global_position.y)
-	- acc_reading.z;
+			* (0.5f - q_global_position.x * q_global_position.x
+					- q_global_position.y * q_global_position.y)
+			- acc_reading.z;
 
 //compute Jacobian^T*error_function:
 	static Quaternion delta_error_function;
 
 	delta_error_function.w = 2 * q_global_position.y * error_function[0]
-	- 2 * q_global_position.x * error_function[1];
+			- 2 * q_global_position.x * error_function[1];
 	delta_error_function.x = 2 * q_global_position.z * error_function[0]
-	- 2 * q_global_position.w * error_function[1]
-	- 4 * q_global_position.x * error_function[2];
+			- 2 * q_global_position.w * error_function[1]
+			- 4 * q_global_position.x * error_function[2];
 	delta_error_function.y = 2 * q_global_position.w * error_function[0]
-	+ 2 * q_global_position.z * error_function[1]
-	- 4 * q_global_position.y * error_function[2];
+			+ 2 * q_global_position.z * error_function[1]
+			- 4 * q_global_position.y * error_function[2];
 	delta_error_function.z = 2 * q_global_position.x * error_function[0]
-	+ 2 * q_global_position.y * error_function[1];
+			+ 2 * q_global_position.y * error_function[1];
 
 	//normalize the gradient
 	delta_error_function = quaternion_multiply(delta_error_function,
 			1.f / quaternion_norm(delta_error_function));
 
-	static float coefficient_Beta = 0.15;//0.073 was
+	static float coefficient_Beta = 0.15;				//0.073 was
 
 	q_global_position = quaternions_sum(q_global_position,
 			quaternion_multiply(
@@ -360,10 +360,9 @@ static void mahony_filter() {
 	gravity_q = quaternion_multiply(gravity_q,
 			1.f / quaternion_norm(gravity_q));
 
-
 	// calculate value of correction:
 	//* NOTE: multiplication of pure quaternions is not giving pure quaternion, but vector part is equal to vectors multiplication *
-	omega_corr = quaternions_multiplication(acc_reading,gravity_q);
+	omega_corr = quaternions_multiplication(acc_reading, gravity_q);
 
 	// integrate corrections:
 	sum_omega_corr.x += omega_corr.x * dt;
@@ -389,8 +388,8 @@ static void mahony_filter() {
 			quaternion_multiply(q_prim, dt));
 
 	//normalize quaternion:
-		q_global_position = quaternion_multiply(q_global_position,
-				1.f / quaternion_norm(q_global_position));
+	q_global_position = quaternion_multiply(q_global_position,
+			1.f / quaternion_norm(q_global_position));
 
 	// for debugging compute Euler angles from quaternion:
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
@@ -459,6 +458,8 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 	set_angles.pitch = (channels[1] - 1500) / 500.f * MAX_PITCH_ANGLE;
 	set_angles.yaw += (channels[3] - 1500) / 500.f * Rates.yaw * dt;
 
+
+
 	if (set_angles.yaw > 180) {
 		set_angles.yaw -= 360;
 	}
@@ -466,6 +467,13 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 	else if (set_angles.yaw < -180) {
 		set_angles.yaw += 360;
 	}
+
+
+#if defined(BLACKBOX_SAVE_SET_ANGLES)
+	global_variable_monitor[0] = set_angles.roll;
+	global_variable_monitor[1] = set_angles.pitch;
+	global_variable_monitor[2] = set_angles.yaw;
+#endif
 
 	//reset error for yaw after arming drone:
 
@@ -485,7 +493,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 
 	//to achieve the shortest path it is required to choose between q and -q, so at first check cos(alfa) between quaternions:
 	if (quaternions_skalar_multiplication(position_quaternion,
-			quaternion_conjugate(set_position_quaternion)) < 0) {
+					quaternion_conjugate(set_position_quaternion)) < 0) {
 		set_position_quaternion = quaternion_multiply(set_position_quaternion,
 				-1);
 	}
@@ -498,14 +506,14 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 
 	//to achieve the shortest path it is required to choose between q and -q, so at first check cos(alfa) between quaternions:
 	if (quaternions_skalar_multiplication(position_quaternion,
-					set_position_quaternion) < 0) {
+			set_position_quaternion) < 0) {
 		set_position_quaternion = quaternion_multiply(set_position_quaternion,
 				-1);
 	}
 
 	//compute error quaternion (quaternion by which actual position quaternion has to be multiplied to achieve desired position quaternion):
-	error_quaternion = quaternions_multiplication(position_quaternion
-			, quaternion_conjugate(set_position_quaternion));
+	error_quaternion = quaternions_multiplication(position_quaternion,
+			quaternion_conjugate(set_position_quaternion));
 
 #endif
 
