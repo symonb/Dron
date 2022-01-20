@@ -45,6 +45,8 @@ extern volatile uint8_t Tim_7_flag;
 
 extern uint16_t channels[];
 
+extern int8_t arming_status;
+
 extern int16_t Throttle;
 
 extern ThreeF global_euler_angles;

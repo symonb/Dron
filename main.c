@@ -54,38 +54,10 @@ int main(void) {
 	delay_mili(10);
 
 	flash_full_chip_erase();
-//	flash_erase(FLASH_BLOCK_ERASE_64KB, flash_write_buffer);
 	while (flash_read_status_register(FLASH_READ_STATUS_REGISTER_1) & 0x01) {
 		delay_mili(1000); //wait for erasing flash
 	}
 
-//	flash_save_data(FLASH_PAGE_PROGRAM,FLASH_READ_BLOCK_3,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_read_data(FLASH_READ_DATA,FLASH_READ_BLOCK_3,debugging_buffor,20);
-//
-//	delay_mili(10);
-//
-//	flash_SPI_write_DMA(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
-//
-//	flash_write_buffer[0]=(FLASH_READ_BLOCK_1>>16)&0xFF;
-//	flash_write_buffer[1]=(FLASH_READ_BLOCK_1>>8)&0xFF;
-//	flash_write_buffer[2]=(FLASH_READ_BLOCK_1)&0xFF;
-//
-//	delay_mili(10);
-//
-//	flash_SPI_write(FLASH_PAGE_PROGRAM,flash_write_buffer,20);
-//
-//	delay_mili(10);
-//
-//	flash_SPI_read(FLASH_READ_DATA,flash_write_buffer,17);
-
-//end of flash debugging
 
 	while (1) {
 		if ((get_Global_Time() - time_flag0_1) >= 30) {

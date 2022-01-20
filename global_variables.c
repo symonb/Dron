@@ -15,6 +15,8 @@ volatile uint8_t Tim_7_flag=0;
 uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
 		1000, 1000, 1000, 1000, 1000, };
 
+int8_t arming_status=0; // 1 - armed, 0 - prearmed, -1  disarmed, -2 - prearm error
+
 int16_t Throttle = 1000;
 
 ThreeF global_euler_angles={ 0, 0, 0 };

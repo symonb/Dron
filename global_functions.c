@@ -48,21 +48,21 @@ double get_Global_Time() {
 
 void anti_windup(ThreeF *sum_err, PIDF *R_PIDF, PIDF *P_PIDF, PIDF *Y_PIDF) {
 	if (channels[4] > 1600) {
-		int16_t max_I_correction = 300;
-		if ((sum_err->roll * R_PIDF->I ) > max_I_correction) {
-			sum_err->roll = max_I_correction / R_PIDF->I ;
-		} else if ((sum_err->roll * R_PIDF->I) < -max_I_correction) {
-			sum_err->roll = -max_I_correction / R_PIDF->I ;
+
+		if ((sum_err->roll * R_PIDF->I ) > MAX_I_CORRECTION) {
+			sum_err->roll = MAX_I_CORRECTION / R_PIDF->I ;
+		} else if ((sum_err->roll * R_PIDF->I) < -MAX_I_CORRECTION) {
+			sum_err->roll = -MAX_I_CORRECTION / R_PIDF->I ;
 		}
-		if ((sum_err->pitch * P_PIDF->I ) > max_I_correction) {
-			sum_err->pitch = max_I_correction / P_PIDF->I ;
-		} else if ((sum_err->pitch * P_PIDF->I ) < -max_I_correction) {
-			sum_err->pitch = -max_I_correction / P_PIDF->I ;
+		if ((sum_err->pitch * P_PIDF->I ) > MAX_I_CORRECTION) {
+			sum_err->pitch = MAX_I_CORRECTION / P_PIDF->I ;
+		} else if ((sum_err->pitch * P_PIDF->I ) < -MAX_I_CORRECTION) {
+			sum_err->pitch = -MAX_I_CORRECTION / P_PIDF->I ;
 		}
-		if ((sum_err->yaw * Y_PIDF->I) > max_I_correction) {
-			sum_err->yaw = max_I_correction / Y_PIDF->I ;
-		} else if ((sum_err->yaw * Y_PIDF->I ) < -max_I_correction) {
-			sum_err->yaw = -max_I_correction / Y_PIDF->I ;
+		if ((sum_err->yaw * Y_PIDF->I) > MAX_I_CORRECTION) {
+			sum_err->yaw = MAX_I_CORRECTION / Y_PIDF->I ;
+		} else if ((sum_err->yaw * Y_PIDF->I ) < -MAX_I_CORRECTION) {
+			sum_err->yaw = -MAX_I_CORRECTION / Y_PIDF->I ;
 		}
 	}
 
@@ -76,7 +76,7 @@ void anti_windup(ThreeF *sum_err, PIDF *R_PIDF, PIDF *P_PIDF, PIDF *Y_PIDF) {
 
 void set_motors(ThreeF corr) {
 	const uint16_t max_value = 4000;
-	const uint16_t idle_value = 2100;
+
 	//	Make corrections:
 	//	right back:
 	motor_1_value = Throttle * 2 - corr.roll + corr.pitch - corr.yaw;
@@ -86,20 +86,21 @@ void set_motors(ThreeF corr) {
 	motor_3_value = Throttle * 2  + corr.roll + corr.pitch + corr.yaw;
 	//	left front:
 	motor_4_value = Throttle * 2  + corr.roll - corr.pitch - corr.yaw;
-	if (motor_1_value < idle_value) {
-		motor_1_value = idle_value;
+
+	if (motor_1_value < IDLE_VALUE*2) {
+		motor_1_value = IDLE_VALUE*2;
 	} else if (motor_1_value > max_value)
 		motor_1_value = max_value;
-	if (motor_2_value < idle_value) {
-		motor_2_value = idle_value;
+	if (motor_2_value < IDLE_VALUE*2) {
+		motor_2_value = IDLE_VALUE*2;
 	} else if (motor_2_value > max_value)
 		motor_2_value = max_value;
-	if (motor_3_value < idle_value) {
-		motor_3_value = idle_value;
+	if (motor_3_value < IDLE_VALUE*2) {
+		motor_3_value = IDLE_VALUE*2;
 	} else if (motor_3_value > max_value)
 		motor_3_value = max_value;
-	if (motor_4_value < idle_value) {
-		motor_4_value = idle_value;
+	if (motor_4_value < IDLE_VALUE*2) {
+		motor_4_value = IDLE_VALUE*2;
 	} else if (motor_4_value > max_value)
 		motor_4_value = max_value;
 }

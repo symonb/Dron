@@ -19,7 +19,6 @@ static double gap_time;
 
 static void failsafe_RX();
 
-
 void DMA2_Stream5_IRQHandler(void) {
 	//if channel4 transfer is completed:
 
@@ -29,12 +28,12 @@ void DMA2_Stream5_IRQHandler(void) {
 		DMA2_Stream5->CR &= ~DMA_SxCR_EN;
 
 		ibus_received = 1;
-		if(imu_received==0){
-		EXTI->IMR |= EXTI_IMR_IM4; //unblock IMU reading
+		if (imu_received == 0) {
+			EXTI->IMR |= EXTI_IMR_IM4; //unblock IMU reading
 		}
 	}
 }
-	//for DMA:
+//for DMA:
 void USART1_IRQHandler(void) {
 	//RDR not empty flag:
 	static double time_flag5_1;
@@ -70,11 +69,11 @@ void USART1_IRQHandler(void) {
 	}
 //idle detection flag:
 	if (0 != (USART_SR_IDLE & USART1->SR)) {
-			 USART1->DR;
-				if (ibus_received == 0) {
-					USART1->CR1 |= USART_CR1_RXNEIE;
-					DMA2_Stream5->CR &= ~DMA_SxCR_EN;
-				}
+		USART1->DR;
+		if (ibus_received == 0) {
+			USART1->CR1 |= USART_CR1_RXNEIE;
+			DMA2_Stream5->CR &= ~DMA_SxCR_EN;
+		}
 	}
 }
 
@@ -121,7 +120,6 @@ void USART1_IRQHandler(void) {
 //		}
 //	}
 
-
 void Ibus_save() {
 	static double time_flag3_1;
 	if ((get_Global_Time() - time_flag3_1) >= MAX_NO_SIGNAL_TIME) {
@@ -144,14 +142,12 @@ void Ibus_save() {
 
 			failsafe_RX();
 			Throttle = channels[2];
-			if (channels[7]>=1400 && channels[7]<1700){
-				blackbox_command=1;
-			}
-			else if (channels[7]>=1700){
-				blackbox_command=0;
-						}
-			else{
-				blackbox_command=0;
+			if (channels[7] >= 1400 && channels[7] < 1700) {
+				blackbox_command = 1;
+			} else if (channels[7] >= 1700) {
+				blackbox_command = 0;
+			} else {
+				blackbox_command = 0;
 			}
 		}
 
@@ -162,12 +158,16 @@ void Ibus_save() {
 	}
 }
 static void failsafe_RX() {
-	// Arming switch - SA
-	if (channels[4] <= DISARM_VALUE) {
+#if defined(USE_PREARM)
+	// Arming switch:
+	if (channels[4] <= ARM_VALUE) {
 		failsafe_type = 1;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-	}
-	else if (channels[0] <= MIN_RX_SIGNAL || channels[0] >= MAX_RX_SIGNAL
+		arming_status = -1;
+		if (channels[8] > PREARM_VALUE ) {
+			arming_status = 0;
+		}
+	} else if (channels[0] <= MIN_RX_SIGNAL || channels[0] >= MAX_RX_SIGNAL
 			|| channels[1] <= MIN_RX_SIGNAL || channels[1] >= MAX_RX_SIGNAL
 			|| channels[2] <= MIN_RX_SIGNAL || channels[2] >= MAX_RX_SIGNAL
 			|| channels[3] <= MIN_RX_SIGNAL || channels[3] >= MAX_RX_SIGNAL) {
@@ -175,11 +175,35 @@ static void failsafe_RX() {
 		failsafe_type = 2;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 
-	} else {
+	} else if (arming_status == 0 || arming_status == 1) {
+		arming_status = 1;
+		motor_1_value_pointer = &motor_1_value;
+		motor_2_value_pointer = &motor_2_value;
+		motor_3_value_pointer = &motor_3_value;
+		motor_4_value_pointer = &motor_4_value;
+	}
+#else
+	// Arming switch:
+	if (channels[4] <= ARM_VALUE) {
+		failsafe_type = 1;
+		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+
+		}
+	 else if (channels[0] <= MIN_RX_SIGNAL || channels[0] >= MAX_RX_SIGNAL
+			|| channels[1] <= MIN_RX_SIGNAL || channels[1] >= MAX_RX_SIGNAL
+			|| channels[2] <= MIN_RX_SIGNAL || channels[2] >= MAX_RX_SIGNAL
+			|| channels[3] <= MIN_RX_SIGNAL || channels[3] >= MAX_RX_SIGNAL) {
+
+		failsafe_type = 2;
+		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+
+	} else  {
 
 		motor_1_value_pointer = &motor_1_value;
 		motor_2_value_pointer = &motor_2_value;
 		motor_3_value_pointer = &motor_3_value;
 		motor_4_value_pointer = &motor_4_value;
 	}
+#endif
 }
+

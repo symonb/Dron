@@ -35,8 +35,8 @@ static ThreeF last_D_corr = { 0, 0, 0 };
 static Three Rates = { 400, 400, 400 };
 
 //4s
-static PIDF R_PIDF = { 260, 180, 0.26, 2.5 };
-static PIDF P_PIDF = { 260, 180, 0.26, 2.5 };
+static PIDF R_PIDF = { 260, 180, 0.27, 2.5 };
+static PIDF P_PIDF = { 260, 180, 0.27, 2.5 };
 static PIDF Y_PIDF = { 1200, 300, 200, 0 };
 
 void stabilize() {
@@ -321,7 +321,7 @@ static void mahony_filter() {
 	static Quaternion angular_velocity;
 
 	static Quaternion acc_reading;
-	static PID mahony_omega_PI = { 1, 1, 0 };
+	static PID mahony_omega_PI = { 1, 0.001, 0 };
 	static Quaternion omega_corr;
 	static Quaternion sum_omega_corr;
 	static Quaternion gravity_q;
@@ -477,7 +477,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 
 	//reset error for yaw after arming drone:
 
-	if (channels[4] > DISARM_VALUE) {
+	if (channels[4] > ARM_VALUE) {
 		if (!drone_was_armed) {
 			drone_was_armed = 1;
 			set_angles.yaw = global_euler_angles.yaw;

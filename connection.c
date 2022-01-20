@@ -191,7 +191,7 @@ void print_flash(uint8_t data_pack_size) {
 				}
 
 				DMA2_Stream6->M0AR = (uint32_t) (temporary_array);
-				DMA2_Stream6->NDTR = i + 1;
+				DMA2_Stream6->NDTR = i ;
 				DMA2_Stream6->CR |= DMA_SxCR_EN;
 
 				j = 0;

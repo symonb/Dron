@@ -339,47 +339,50 @@ static void setup_acc() {
 
 void average_filters_setup() {
 
-	average_gyro_X.length = 5;
-	float value = 1. / average_gyro_X.length;
+	float value_gyro[6] = {0.135250,0.216229,0.234301,0.234301,0.216229,0.135250};
+
+	average_gyro_X.length = 6;
+
 	FIR_Filter_Init(&average_gyro_X);
 
 	for (uint8_t i = 0; i < average_gyro_X.length; i++) {
-		average_gyro_X.impulse_responce[i] = value;
+		average_gyro_X.impulse_responce[i] = value_gyro[i];
 	}
 
-	average_gyro_Y.length = 5;
-	value = 1. / average_gyro_Y.length;
+	average_gyro_Y.length = 6;
+
 	FIR_Filter_Init(&average_gyro_Y);
 	for (uint8_t i = 0; i < average_gyro_Y.length; i++) {
-		average_gyro_Y.impulse_responce[i] = value;
+		average_gyro_Y.impulse_responce[i] = value_gyro[i];
 	}
 
-	average_gyro_Z.length = 5;
-	value = 1. / average_gyro_Z.length;
+	average_gyro_Z.length = 6;
+
 	FIR_Filter_Init(&average_gyro_Z);
 	for (uint8_t i = 0; i < average_gyro_Z.length; i++) {
-		average_gyro_Z.impulse_responce[i] = value;
+		average_gyro_Z.impulse_responce[i] = value_gyro[i];
 	}
 
-	average_acc_X.length = 5;
-	value = 1. / average_acc_X.length;
-	FIR_Filter_Init(&average_acc_X);
+	float value_acc[6] = {0.135250,0.216229,0.234301,0.234301,0.216229,0.135250};
+
+	average_acc_X.length = 6;
+		FIR_Filter_Init(&average_acc_X);
 	for (uint8_t i = 0; i < average_acc_X.length; i++) {
-		average_acc_X.impulse_responce[i] = value;
+		average_acc_X.impulse_responce[i] = value_acc[i];
 	}
 
-	average_acc_Y.length = 5;
-	value = 1. / average_acc_Y.length;
+	average_acc_Y.length = 6;
+
 	FIR_Filter_Init(&average_acc_Y);
 	for (uint8_t i = 0; i < average_acc_Y.length; i++) {
-		average_acc_Y.impulse_responce[i] = value;
+		average_acc_Y.impulse_responce[i] = value_acc[i];
 	}
 
-	average_acc_Z.length = 5;
-	value = 1. / average_acc_Z.length;
+	average_acc_Z.length = 6;
+
 	FIR_Filter_Init(&average_acc_Z);
 	for (uint8_t i = 0; i < average_acc_Z.length; i++) {
-		average_acc_Z.impulse_responce[i] = value;
+		average_acc_Z.impulse_responce[i] = value_acc[i];
 	}
 
 }
@@ -532,18 +535,18 @@ void rewrite_data() {
 #if	defined(BLACKBOX_SAVE_RAW_GYRO_AND_ACC)
 
 			for (uint8_t i = 0; i < 6; i++) {
-				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
-				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+				flash_add_data_to_save(((int16_t) temporary[i] >> 8) & 0xFF);
+				flash_add_data_to_save((int16_t) temporary[i] & 0xFF);
 			}
 #elif	defined(BLACKBOX_SAVE_RAW_GYRO)
 			for (uint8_t i = 0; i < 3; i++) {
-				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
-				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+				flash_add_data_to_save(((int16_t) temporary[i] >> 8) & 0xFF);
+				flash_add_data_to_save((int16_t) temporary[i] & 0xFF);
 			}
 #elif	defined(BLACKBOX_SAVE_RAW_ACC)
 			for (uint8_t i = 3; i < 6; i++) {
-				flash_add_data_to_save(((uint16_t) temporary[i] >> 8) & 0xFF);
-				flash_add_data_to_save((uint16_t) temporary[i] & 0xFF);
+				flash_add_data_to_save(((int16_t) temporary[i] >> 8) & 0xFF);
+				flash_add_data_to_save((int16_t) temporary[i] & 0xFF);
 			}
 #endif
 
