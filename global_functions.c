@@ -10,17 +10,20 @@
 #include "global_variables.h"
 #include "global_functions.h"
 
+static uint8_t TIM_7_flag=0;
+
 void delay_micro(uint16_t time) {
 
 	TIM7->ARR = time-1;
 	TIM7->EGR |= TIM_EGR_UG;
 	TIM7->CR1 |= TIM_CR1_CEN;
 
-	while (Tim_7_flag != 1) {
+	while (TIM_7_flag != 1) {
 		; //wait for time [us]
 	}
-	Tim_7_flag = 0;
+	TIM_7_flag = 0;
 }
+
 void delay_mili(uint16_t time) {
 //wait for time [ms]
 	for (uint16_t i = 0; i < time; i++) {
@@ -34,11 +37,12 @@ void TIM6_DAC_IRQHandler() {
 		Global_Time += (TIM6->ARR+1) * 0.000001;
 	}
 }
+
 void TIM7_IRQHandler() {
 	if (TIM_SR_UIF & TIM7->SR) {
 		TIM7->SR &= ~TIM_SR_UIF;
 		TIM7->CR1 &= ~TIM_CR1_CEN;
-		Tim_7_flag = 1;
+		TIM_7_flag = 1;
 	}
 }
 
@@ -226,50 +230,54 @@ void EXTI15_10_IRQHandler() {
 		switch (failsafe_type) {
 		case 1://DISARM
 
-			motor_1_value_pointer = &MOTOR_OFF;
-			motor_2_value_pointer = &MOTOR_OFF;
-			motor_3_value_pointer = &MOTOR_OFF;
-			motor_4_value_pointer = &MOTOR_OFF;
+		motor_1_value_pointer = &MOTOR_OFF;
+		motor_2_value_pointer = &MOTOR_OFF;
+		motor_3_value_pointer = &MOTOR_OFF;
+		motor_4_value_pointer = &MOTOR_OFF;
 
-			err_counter[0]++;
-			failsafe_type = 0;
+		err_counter[0]++;
+		failsafe_type = 0;
 			break;
 		case 2://BAD_CHANNELS_VALUES
 
-			motor_1_value_pointer = &MOTOR_OFF;
-			motor_2_value_pointer = &MOTOR_OFF;
-			motor_3_value_pointer = &MOTOR_OFF;
-			motor_4_value_pointer = &MOTOR_OFF;
+		motor_1_value_pointer = &MOTOR_OFF;
+		motor_2_value_pointer = &MOTOR_OFF;
+		motor_3_value_pointer = &MOTOR_OFF;
+		motor_4_value_pointer = &MOTOR_OFF;
 
-			err_counter[1]++;
-			failsafe_type = 0;
+		err_counter[1]++;
+		failsafe_type = 0;
 			break;
 		case 3://RX_TIMEOUT
 
-			motor_1_value_pointer = &MOTOR_OFF;
-			motor_2_value_pointer = &MOTOR_OFF;
-			motor_3_value_pointer = &MOTOR_OFF;
-			motor_4_value_pointer = &MOTOR_OFF;
+		motor_1_value_pointer = &MOTOR_OFF;
+		motor_2_value_pointer = &MOTOR_OFF;
+		motor_3_value_pointer = &MOTOR_OFF;
+		motor_4_value_pointer = &MOTOR_OFF;
 
-			err_counter[2]++;
-			failsafe_type = 0;
+		err_counter[2]++;
+		failsafe_type = 0;
 			break;
 		case 4:
-			err_counter[3]++;
-			failsafe_type = 0;
+		err_counter[3]++;
+		failsafe_type = 0;
 			break;
 		case 5:
-			err_counter[4]++;
-			failsafe_type = 0;
+		err_counter[4]++;
+		failsafe_type = 0;
 			break;
 		case 6:
-			err_counter[5]++;
-			failsafe_type = 0;
+		err_counter[5]++;
+		failsafe_type = 0;
 			break;
 		case 7:
-				err_counter[6]++;
-				failsafe_type = 0;
-				break;
+		err_counter[6]++;
+		failsafe_type = 0;
+			break;
+		case 8:
+		err_counter[7]++;
+		failsafe_type = 0;
+			break;
 		}
 	}
 }

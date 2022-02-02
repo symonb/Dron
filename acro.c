@@ -22,6 +22,7 @@ static Three Rates = { 500, 500, 400 };
 static PIDF R_PIDF = { 200, 300, 1.25, 0.5 };
 static PIDF P_PIDF = {200,300, 2, 0.5 };
 static PIDF Y_PIDF = { 1000, 50, 0.5, 0.5 };
+
 // 3s
 //static PIDF R_PIDF = { 350, 400, 5, 5};
 //static PIDF P_PIDF = { 350, 400, 5, 5};
@@ -33,15 +34,7 @@ static ThreeF D_corr = { 0, 0, 0 };
 static ThreeF last_D_corr = { 0, 0, 0 };
 static ThreeF F_corr = { 0, 0, 0 };
 
-static float dt;
-
 void acro() {
-
-	static float time_flag2_1;
-	static float time_flag2_2;
-
-	dt = (get_Global_Time() - time_flag2_1);
-	time_flag2_1 = get_Global_Time();
 
 	set_motors(corrections());
 
@@ -72,7 +65,6 @@ void acro() {
 static ThreeF corrections() {
 
 	static ThreeF corr = { 0, 0, 0 };
-	static Three last_channels = { 0, 0, 0 };
 	static Three last_measurement = { 0, 0, 0 };
 
 	err.roll = (channels[0] - 1500) / 500. - Gyro_Acc[0] *GYRO_TO_DPS/ Rates.roll;
@@ -90,9 +82,9 @@ static ThreeF corrections() {
 	D_corr.pitch = (last_measurement.pitch - Gyro_Acc[1]) * 0.0305185f/Rates.pitch / dt;
 	D_corr.yaw = (last_measurement.yaw - Gyro_Acc[2]) * 0.0305185f /Rates.yaw/ dt;
 
-	F_corr.roll = (channels[0] - last_channels.roll)*0.002f / dt;
-	F_corr.pitch = (channels[1] - last_channels.pitch) *0.002f/ dt;
-	F_corr.yaw = (channels[3] - last_channels.yaw) *0.002f/ dt;
+	F_corr.roll = (channels[0] - channels_previous_values[0])*0.002f / dt;
+	F_corr.pitch = (channels[1] - channels_previous_values[1]) *0.002f/ dt;
+	F_corr.yaw = (channels[3] - channels_previous_values[3]) *0.002f/ dt;
 
 	anti_windup(&sum_err,&R_PIDF,&P_PIDF,&Y_PIDF);
 
@@ -113,10 +105,6 @@ static ThreeF corrections() {
 	last_D_corr.roll = D_corr.roll;
 	last_D_corr.pitch = D_corr.pitch;
 	last_D_corr.yaw = D_corr.yaw;
-
-	last_channels.roll = channels[0];
-	last_channels.pitch = channels[1];
-	last_channels.yaw = channels[3];
 
 	return corr;
 }

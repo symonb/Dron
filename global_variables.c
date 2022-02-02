@@ -9,10 +9,33 @@
 #include "global_constants.h"
 #include "global_variables.h"
 
+//----------TIME VARIABLES--------
 volatile double Global_Time = 0;
-volatile uint8_t Tim_7_flag=0;
+
+float dt=0;
+
+//main:
+
+float time_flag0_2 = 0;
+float time_flag0_3 = 0;
+//stabilize:
+
+float time_flag1_2=0;
+//acro:
+
+float time_flag2_2=0;
+//ibus:
+float time_flag3_1=0;
+//MPU:
+float time_flag4_1=0;
+//flash:
+float time_flag5_1=0;
+
+
 
 uint16_t channels[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
+		1000, 1000, 1000, 1000, 1000, };
+uint16_t channels_previous_values[14] = { 1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000, 1000,
 		1000, 1000, 1000, 1000, 1000, };
 
 int8_t arming_status=0; // 1 - armed, 0 - prearmed, -1  disarmed, -2 - prearm error
@@ -22,6 +45,8 @@ int16_t Throttle = 1000;
 ThreeF global_euler_angles={ 0, 0, 0 };
 
 ThreeF global_angles={ 0, 0, 0 };
+
+Quaternion q_global_position = { 1, 0, 0, 0 };
 
 //motor's values set by PID's:
 uint16_t motor_1_value;
@@ -59,6 +84,7 @@ uint16_t dshot_buffer_2_3[DSHOT_PWM_FRAME_LENGTH*2];
 uint8_t failsafe_type;
 /* 1-disarmed 2-incorrect channels values 3-RX timeout
  * 4-setup_error 5-I2C communication error 6-SPI communication error
+ * 7-SPI flash error 8-PID loop time too long
  */
 //uint16_t MOTOR_OFF= 1953;	//value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000)
 

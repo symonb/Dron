@@ -36,7 +36,6 @@ void DMA2_Stream5_IRQHandler(void) {
 //for DMA:
 void USART1_IRQHandler(void) {
 	//RDR not empty flag:
-	static double time_flag5_1;
 	if (0 != (USART_SR_RXNE & USART1->SR)) {
 		//check gap duration if bigger than 500 us brake
 
@@ -121,7 +120,8 @@ void USART1_IRQHandler(void) {
 //	}
 
 void Ibus_save() {
-	static double time_flag3_1;
+	uint16_t checksum=0xFFFF;
+
 	if ((get_Global_Time() - time_flag3_1) >= MAX_NO_SIGNAL_TIME) {
 		failsafe_type = 3;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
@@ -130,12 +130,13 @@ void Ibus_save() {
 	// checking checksum and rewriting rxBuf to channels:
 	if (ibus_received) {
 		time_flag3_1 = get_Global_Time();
-		uint16_t checksum = 0xFFFF;
+		checksum = 0xFFFF;
 		for (int8_t i = 0; i < 30; i++) {
 			checksum -= rxBuf[i];
 		}
 		if (checksum == ((rxBuf[31] << 8) + rxBuf[30])) {
 			for (int8_t i = 0; i < CHANNELS; i++) {
+				channels_previous_values[i]=channels[i];
 				channels[i] = (rxBuf[2 * (i + 1) + 1] << 8)
 						+ rxBuf[2 * (i + 1)];
 			}
@@ -193,6 +194,10 @@ static void failsafe_RX() {
 			|| channels[1] <= MIN_RX_SIGNAL || channels[1] >= MAX_RX_SIGNAL
 			|| channels[2] <= MIN_RX_SIGNAL || channels[2] >= MAX_RX_SIGNAL
 			|| channels[3] <= MIN_RX_SIGNAL || channels[3] >= MAX_RX_SIGNAL) {
+
+		 for(uint8_t i=0; i<CHANNELS;i++){
+			 channels[i]=channels_previous_values[i];
+		 }
 
 		failsafe_type = 2;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;

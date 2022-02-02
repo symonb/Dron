@@ -86,7 +86,6 @@ float M_rotacji[3][3] = { { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, 1 } };
 
 uint8_t read_write_tab[14];
 static volatile uint8_t read_write_quantity;
-static float time_flag4_1; //for SPI timeout detection
 
 static FIR_Filter average_gyro_X;
 static FIR_Filter average_gyro_Y;
@@ -494,22 +493,22 @@ void rewrite_data() {
 #if	defined(BLACKBOX_SAVE_EULER_ANGLES)
 
 			flash_add_data_to_save(
-					((int16_t)(global_euler_angles.roll*500) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) (global_euler_angles.roll*500) & 0xFF);
+					((int16_t)(global_euler_angles.roll*150) >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) (global_euler_angles.roll*150) & 0xFF);
 
 			flash_add_data_to_save(
-					((int16_t) (global_euler_angles.pitch*500) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) (global_euler_angles.pitch*500) & 0xFF);
+					((int16_t) (global_euler_angles.pitch*150) >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) (global_euler_angles.pitch*150) & 0xFF);
 
 			flash_add_data_to_save(
-					((int16_t) (global_euler_angles.yaw*500) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) (global_euler_angles.yaw*500) & 0xFF);
+					((int16_t) (global_euler_angles.yaw*150) >> 8) & 0xFF);
+			flash_add_data_to_save((int16_t) (global_euler_angles.yaw*150) & 0xFF);
 #endif
 
 #if	defined(BLACKBOX_SAVE_SET_ANGLES)
 			for (uint8_t i = 0; i < 3; i++) {
-				flash_add_data_to_save(((int16_t) (global_variable_monitor[i]*500) >> 8) & 0xFF);
-				flash_add_data_to_save((int16_t) (global_variable_monitor[i]*500) & 0xFF);
+				flash_add_data_to_save(((int16_t) (global_variable_monitor[i]*150) >> 8) & 0xFF);
+				flash_add_data_to_save((int16_t) (global_variable_monitor[i]*150) & 0xFF);
 			}
 
 #endif

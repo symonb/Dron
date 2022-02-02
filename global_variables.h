@@ -39,11 +39,44 @@ typedef struct {
 	int32_t yaw; // Z
 } Three;
 
+
+typedef struct {
+	float w;
+	float x;
+	float y;
+	float z;
+} Quaternion;
+
+//---------TIME VARIABLES-------------
+
 extern volatile double Global_Time;
 
-extern volatile uint8_t Tim_7_flag;
+float dt;
+
+//main:
+extern  float time_flag0_1;
+extern  float time_flag0_2;
+extern  float time_flag0_3;
+//stabilize:
+extern float time_flag1_1;
+extern float time_flag1_2;
+//acro:
+extern float time_flag2_1;
+extern float time_flag2_2;
+//ibus:
+extern float time_flag3_1;
+//MPU:
+extern float time_flag4_1;
+//flash:
+extern float time_flag5_1;
+
+
+
+//---------VARIABLES-----------
 
 extern uint16_t channels[];
+
+extern uint16_t channels_previous_values[];
 
 extern int8_t arming_status;
 
@@ -52,6 +85,8 @@ extern int16_t Throttle;
 extern ThreeF global_euler_angles;
 
 extern ThreeF global_angles;
+
+extern Quaternion q_global_position;
 
 extern uint16_t motor_1_value;
 extern uint16_t motor_2_value;

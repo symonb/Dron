@@ -8,12 +8,6 @@
 #ifndef QUATERNIONS_H_
 #define QUATERNIONS_H_
 
-typedef struct {
-	float w;
-	float x;
-	float y;
-	float z;
-} Quaternion;
 
 Quaternion quaternions_multiplication(Quaternion q1, Quaternion q2);
 Quaternion quaternion_multiply(Quaternion q1, float x);

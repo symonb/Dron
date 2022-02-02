@@ -13,8 +13,6 @@
 
 static Quaternion q_acc = { 1, 0, 0, 0 };
 static Quaternion q_gyro = { 1, 0, 0, 0 };
-static Quaternion q_global_position = { 1, 0, 0, 0 };
-static float dt;
 
 static Quaternion gyro_angles();
 static Quaternion acc_angles();
@@ -35,17 +33,18 @@ static ThreeF last_D_corr = { 0, 0, 0 };
 static Three Rates = { 400, 400, 400 };
 
 //4s
-static PIDF R_PIDF = { 260, 180, 0.27, 2.5 };
-static PIDF P_PIDF = { 260, 180, 0.27, 2.5 };
-static PIDF Y_PIDF = { 1200, 300, 200, 0 };
+// DRON DRUK 3D:
+//static PIDF R_PIDF = { 260, 180, 0.27, 2.5 };
+//static PIDF P_PIDF = { 260, 180, 0.27, 2.5 };
+//static PIDF Y_PIDF = { 1200, 300, 200, 0 };
+
+//DRON CARBON:
+static PIDF R_PIDF = {150 , 190, 0.175, 0.1 };
+static PIDF P_PIDF = { 200, 210, 0.225, 0.1 };
+static PIDF Y_PIDF = { 500, 200, 70, 0 };
+
 
 void stabilize() {
-
-	static double time_flag1_1;
-	static double time_flag1_2;
-
-	dt = (get_Global_Time() - time_flag1_1);
-	time_flag1_1 = get_Global_Time();
 
 #if defined(STABILIZE_FILTER_MAGDWICK)
 	madgwick_filter();
@@ -139,8 +138,6 @@ static Quaternion acc_angles(Quaternion q_position) {
 
 static Quaternion gyro_angles(Quaternion q_position) {
 
-	static float dt;
-	static float time_flag;
 	static Quaternion q_prim;
 	static Quaternion angular_velocity;
 
@@ -151,8 +148,6 @@ static Quaternion gyro_angles(Quaternion q_position) {
 
 	q_prim = quaternion_multiply(
 			quaternions_multiplication(angular_velocity, q_position), -0.5f);
-	dt = get_Global_Time() - time_flag;
-	time_flag = get_Global_Time();
 
 	q_position = quaternions_sum(q_position, quaternion_multiply(q_prim, dt));
 
@@ -397,7 +392,7 @@ static void mahony_filter() {
 
 static ThreeF corrections() {
 	static ThreeF corr;
-	static ThreeF last_channels;
+
 	err.roll = ((channels[0] - 1500) / 500.
 			- global_angles.roll / MAX_ROLL_ANGLE);
 	err.pitch = ((channels[1] - 1500) / 500.
@@ -415,8 +410,8 @@ static ThreeF corrections() {
 	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
 	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
 
-	F_corr.roll = (channels[0] - last_channels.roll) / 500.f / dt;
-	F_corr.pitch = (channels[1] - last_channels.pitch) / 500.f / dt;
+	F_corr.roll = (channels[0] - channels_previous_values[0])  *0.002f / dt;
+	F_corr.pitch = (channels[1] - channels_previous_values[1]) *0.002f / dt;
 	F_corr.yaw = 0;
 
 	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
@@ -438,10 +433,6 @@ static ThreeF corrections() {
 	last_D_corr.pitch = D_corr.pitch;
 	last_D_corr.yaw = D_corr.yaw;
 
-	last_channels.roll = channels[0];
-	last_channels.pitch = channels[1];
-	last_channels.yaw = channels[3];
-
 	return corr;
 }
 
@@ -449,7 +440,6 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 
 	static ThreeF corr;
 	static ThreeF set_angles;
-	static Three last_channels;
 	static Quaternion set_position_quaternion;
 	static Quaternion error_quaternion;
 	static uint8_t drone_was_armed = 0;
@@ -543,8 +533,8 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
 	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
 
-	F_corr.roll = (channels[0] - last_channels.roll) / 500.f / dt;
-	F_corr.pitch = (channels[1] - last_channels.pitch) / 500.f / dt;
+	F_corr.roll = (channels[0] - channels_previous_values[0]) *0.002f / dt;
+	F_corr.pitch = (channels[1] - channels_previous_values[1]) *0.002f / dt;
 	F_corr.yaw = 0;
 
 	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
@@ -565,10 +555,6 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 	last_D_corr.roll = D_corr.roll;
 	last_D_corr.pitch = D_corr.pitch;
 	last_D_corr.yaw = D_corr.yaw;
-
-	last_channels.roll = channels[0];
-	last_channels.pitch = channels[1];
-	last_channels.yaw = channels[3];
 
 	return corr;
 }

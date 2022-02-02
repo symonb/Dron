@@ -23,7 +23,7 @@ static void SPI_receive_DMA(uint8_t *data, int size);
 static void flash_write_enable();
 static void failsafe_SPI();
 
-float time_flag5_1;
+
 
 //RX:
 void DMA1_Stream0_IRQHandler(void) {
@@ -33,11 +33,11 @@ void DMA1_Stream0_IRQHandler(void) {
 
 
 		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_TXE)) {
+		while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 			failsafe_SPI(); 			//wait
 		}
 		time_flag5_1 = get_Global_Time();
-		while (((SPI3->SR) & SPI_SR_BSY)) {
+		while (((SPI3->SR) & SPI_SR_BSY)&& failsafe_type != 7) {
 			failsafe_SPI();				//wait
 		}
 		SPI3->DR;
@@ -58,11 +58,11 @@ void DMA1_Stream5_IRQHandler(void) {
 		DMA1->HIFCR |= DMA_HIFCR_CTCIF5;
 
 		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_TXE)) {
+		while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 			failsafe_SPI(); 			//wait
 		}
 		time_flag5_1 = get_Global_Time();
-		while (((SPI3->SR) & SPI_SR_BSY)) {
+		while (((SPI3->SR) & SPI_SR_BSY)&& failsafe_type != 7) {
 			failsafe_SPI();				//wait
 		}
 		SPI3->DR;
@@ -98,7 +98,7 @@ static void SPI_transmit(uint8_t *data, uint8_t size) {
 	int i = 0;
 
 	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE)) {
+	while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 	SPI3->DR = data[i]; //first data
@@ -106,7 +106,7 @@ static void SPI_transmit(uint8_t *data, uint8_t size) {
 
 	while (i < size) {
 		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_TXE)) {
+		while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 			failsafe_SPI(); 			//wait
 		}
 		SPI3->DR = data[i]; //second and following data sending as soon as TX flag is set
@@ -114,11 +114,11 @@ static void SPI_transmit(uint8_t *data, uint8_t size) {
 	}
 
 	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE)) {
+	while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 	time_flag5_1 = get_Global_Time();
-	while (((SPI3->SR) & SPI_SR_BSY)) {
+	while (((SPI3->SR) & SPI_SR_BSY)&& failsafe_type != 7) {
 		failsafe_SPI();				//wait
 	}
 	SPI3->DR;
@@ -138,12 +138,12 @@ static void SPI_receive(uint8_t *data, int size) {
 	while (size > 0) {
 
 		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_TXE) && failsafe_type != 6) {
+		while (!((SPI3->SR) & SPI_SR_TXE) && failsafe_type != 7) {
 			failsafe_SPI(); 			//wait
 		}
 		SPI3->DR = 0xFF; 			//send anything IMPORTANT!
 		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
+		while (!((SPI3->SR) & SPI_SR_RXNE) && failsafe_type != 7) {
 			failsafe_SPI(); 			//wait
 		}
 		*data++ = SPI3->DR;
@@ -153,12 +153,12 @@ static void SPI_receive(uint8_t *data, int size) {
 
 //wait for TXE flag
 	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE)) {
+	while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 //wait for BSY flag
 	time_flag5_1 = get_Global_Time();
-	while (((SPI3->SR) & SPI_SR_BSY)) {
+	while (((SPI3->SR) & SPI_SR_BSY)&& failsafe_type != 7) {
 		failsafe_SPI();				//wait
 	}
 
@@ -282,13 +282,13 @@ uint8_t flash_read_status_register(uint8_t instruction) {
 
 //wait for TXE flag before sending anything
 	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE) && failsafe_type != 6) {
+	while (!((SPI3->SR) & SPI_SR_TXE) && failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 // send first data - instruction for reading
 	SPI3->DR = instruction;
 //wait for TXE flag and send 2nd byte - anything
-	while (!((SPI3->SR) & SPI_SR_TXE) && failsafe_type != 6) {
+	while (!((SPI3->SR) & SPI_SR_TXE) && failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 // send 2nd byte:
@@ -296,7 +296,7 @@ uint8_t flash_read_status_register(uint8_t instruction) {
 
 // now start receiving status value:
 	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
+	while (!((SPI3->SR) & SPI_SR_RXNE) && failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 //read first byte this is rubbish:
@@ -304,7 +304,7 @@ uint8_t flash_read_status_register(uint8_t instruction) {
 
 //wait for TXE flag
 	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE)) {
+	while (!((SPI3->SR) & SPI_SR_TXE)&& failsafe_type != 7) {
 		failsafe_SPI(); 			//wait
 	}
 
