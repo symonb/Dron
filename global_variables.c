@@ -9,27 +9,32 @@
 #include "global_constants.h"
 #include "global_variables.h"
 
-//----------TIME VARIABLES--------
-volatile double Global_Time = 0;
 
-float dt=0;
+
+
+flight_mode_e flight_mode;
+
+//----------TIME VARIABLES--------
+volatile timeUs_t Global_Time = 0;
+
+timeUs_t dt_global=0;
 
 //main:
 
-float time_flag0_2 = 0;
-float time_flag0_3 = 0;
+timeUs_t time_flag0_2 = 0;
+timeUs_t time_flag0_3 = 0;
 //stabilize:
 
-float time_flag1_2=0;
+timeUs_t time_flag1_2=0;
 //acro:
 
-float time_flag2_2=0;
+timeUs_t time_flag2_2=0;
 //ibus:
-float time_flag3_1=0;
+timeUs_t time_flag3_1=0;
 //MPU:
-float time_flag4_1=0;
+timeUs_t time_flag4_1=0;
 //flash:
-float time_flag5_1=0;
+timeUs_t time_flag5_1=0;
 
 
 
@@ -81,13 +86,13 @@ uint32_t dshot_buffer_4[DSHOT_BUFFER_LENGTH];
 uint16_t dshot_buffer_4_1[DSHOT_PWM_FRAME_LENGTH*2];
 uint16_t dshot_buffer_2_3[DSHOT_PWM_FRAME_LENGTH*2];
 
-uint8_t failsafe_type;
+enum failsafe_type FailSafe_type;
 /* 1-disarmed 2-incorrect channels values 3-RX timeout
  * 4-setup_error 5-I2C communication error 6-SPI communication error
  * 7-SPI flash error 8-PID loop time too long
  */
-//uint16_t MOTOR_OFF= 1953;	//value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000)
 
+//value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000):
 #if defined(ESC_PROTOCOL_DSHOT)
 
 	uint16_t MOTOR_OFF= 1953;

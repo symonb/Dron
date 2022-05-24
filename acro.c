@@ -10,10 +10,13 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
-#include "acro.h"
 #include "MPU6000.h"
+#include "scheduler.h"
+#include "tasks.h"
+#include "acro.h"
 
-static ThreeF corrections();
+
+static ThreeF corrections(float);
 
 //---User defines maximum speed of spinning [deg/s]:
 static Three Rates = { 500, 500, 400 };
@@ -34,42 +37,25 @@ static ThreeF D_corr = { 0, 0, 0 };
 static ThreeF last_D_corr = { 0, 0, 0 };
 static ThreeF F_corr = { 0, 0, 0 };
 
-void acro() {
+void acro(timeUs_t time) {
 
-	set_motors(corrections());
+	static float dt;
 
-	if ((get_Global_Time() - time_flag2_2) >= 1. / FREQUENCY_TELEMETRY_UPDATE) {
-		time_flag2_2 = get_Global_Time();
+	dt = US_TO_SEC(time);
 
-		//wypisywanie korekcji pitch P I D i roll P I D; k¹tów; zadanych wartosci
-		table_to_send[0] = P_PIDF.P * err.pitch   + 1000;
-		table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
-		table_to_send[2] = P_PIDF.D * D_corr.pitch   + 1000;
-		table_to_send[3] = R_PIDF.P * err.roll  + 1000;
-		table_to_send[4] = R_PIDF.I * sum_err.roll  + 1000;
-		table_to_send[5] = R_PIDF.D * D_corr.roll  + 1000;
-		table_to_send[6] = (Gyro_Acc[0] / 32.768 / Rates.roll * 50) + 1000;
-		table_to_send[7] = (Gyro_Acc[1] / 32.768 / Rates.pitch * 50) + 1000;
-		table_to_send[8] = Y_PIDF.P * err.yaw   + 1000;
-		table_to_send[9] = Y_PIDF.I * sum_err.yaw  + 1000;
-		table_to_send[10] = Y_PIDF.D * D_corr.yaw  + 1000;
-		table_to_send[11] = (Gyro_Acc[2] / 32.768 / Rates.yaw * 50) + 1000;
-		table_to_send[12] = channels[1] - 500;
-		table_to_send[13] = channels[0] - 500;
-
-		New_data_to_send = 1;
-	}
+	set_motors(corrections(dt));
 
 }
 
-static ThreeF corrections() {
+
+static ThreeF corrections(float dt) {
 
 	static ThreeF corr = { 0, 0, 0 };
 	static Three last_measurement = { 0, 0, 0 };
 
-	err.roll = (channels[0] - 1500) / 500. - Gyro_Acc[0] *GYRO_TO_DPS/ Rates.roll;
-	err.pitch = (channels[1] - 1500) / 500. - Gyro_Acc[1] *GYRO_TO_DPS/ Rates.pitch;
-	err.yaw = (channels[3] - 1500) / 500. - Gyro_Acc[2] *GYRO_TO_DPS/ Rates.yaw;
+	err.roll = (channels[0] - 1500) / 500.f - Gyro_Acc[0] *GYRO_TO_DPS/ Rates.roll;
+	err.pitch = (channels[1] - 1500) / 500.f - Gyro_Acc[1] *GYRO_TO_DPS/ Rates.pitch;
+	err.yaw = (channels[3] - 1500) / 500.f - Gyro_Acc[2] *GYRO_TO_DPS/ Rates.yaw;
 
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;
@@ -94,7 +80,7 @@ static ThreeF corrections() {
 	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch
 			+ P_PIDF.D * D_corr.pitch + P_PIDF.F * F_corr.pitch)*2;
 	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw
-			+ Y_PIDF.D * D_corr.yaw + Y_PIDF.F * F_corr.yaw) *2;
+			+ Y_PIDF.D * D_corr.yaw + Y_PIDF.F * F_corr.yaw)*2;
 
 	//	set current measurements as last measurements:
 
@@ -107,5 +93,29 @@ static ThreeF corrections() {
 	last_D_corr.yaw = D_corr.yaw;
 
 	return corr;
+}
+void send_telemetry_acro(timeUs_t time){
+	//	probably this will be done by scheduler
+	if ((get_Global_Time() - time_flag2_2) >= SEC_TO_US(1. / FREQUENCY_TELEMETRY_UPDATE)) {
+		time_flag2_2 = get_Global_Time();
+
+		//send corrections pitch P I D i roll P I D; angle_ratio; set_values
+		table_to_send[0] = P_PIDF.P * err.pitch   + 1000;
+		table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
+		table_to_send[2] = P_PIDF.D * D_corr.pitch   + 1000;
+		table_to_send[3] = R_PIDF.P * err.roll  + 1000;
+		table_to_send[4] = R_PIDF.I * sum_err.roll  + 1000;
+		table_to_send[5] = R_PIDF.D * D_corr.roll  + 1000;
+		table_to_send[6] = (Gyro_Acc[0] / 32.768f / Rates.roll * 50) + 1000;
+		table_to_send[7] = (Gyro_Acc[1] / 32.768f / Rates.pitch * 50) + 1000;
+		table_to_send[8] = Y_PIDF.P * err.yaw   + 1000;
+		table_to_send[9] = Y_PIDF.I * sum_err.yaw  + 1000;
+		table_to_send[10] = Y_PIDF.D * D_corr.yaw  + 1000;
+		table_to_send[11] = (Gyro_Acc[2] / 32.768f / Rates.yaw * 50) + 1000;
+		table_to_send[12] = channels[1] - 500;
+		table_to_send[13] = channels[0] - 500;
+
+		New_data_to_send = 1;
+	}
 }
 

@@ -210,6 +210,7 @@ static void setup_GPIOA() {
 	//set high on PIN4 (SPI CS)
 	GPIOA->BSRR |= GPIO_BSRR_BS4;
 
+	// set speed:
 	GPIOA->OSPEEDR |= ( GPIO_OSPEEDER_OSPEEDR2_1 | GPIO_OSPEEDER_OSPEEDR2_0 |
 	GPIO_OSPEEDER_OSPEEDR3_1 | GPIO_OSPEEDER_OSPEEDR3_0 |
 	GPIO_OSPEEDER_OSPEEDR4_1 | GPIO_OSPEEDER_OSPEEDR4_0 |
@@ -253,6 +254,10 @@ static void setup_GPIOB() {
 	GPIOB->AFR[1] &= ~0x00000F00;
 	GPIOB->AFR[1] |= 0x00000700;
 
+	//set high on PIN3 (SPI3 CS)
+	GPIOB->BSRR |= GPIO_BSRR_BS3;
+
+	//set speed:
 	GPIOB->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR0_1 | GPIO_OSPEEDER_OSPEEDR0_0 |
 	GPIO_OSPEEDER_OSPEEDR1_1 | GPIO_OSPEEDER_OSPEEDR1_0 |
 	GPIO_OSPEEDER_OSPEEDR3_1 | GPIO_OSPEEDER_OSPEEDR3_0 |
@@ -260,6 +265,8 @@ static void setup_GPIOB() {
 	GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
 	GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0 |
 	GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0);
+
+
 }
 
 static void setup_GPIOC() {
@@ -310,6 +317,8 @@ static void setup_GPIOC() {
 
 }
 
+
+
 static void setup_TIM6() {
 	// enable TIM6 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
@@ -321,8 +330,8 @@ static void setup_TIM6() {
 
 	//	interrupt enable
 	TIM6->DIER |= TIM_DIER_UIE;
-	//	TIM6 enabling:
 
+	//	TIM6 enabling:
 	TIM6->EGR |= TIM_EGR_UG;
 	TIM6->CR1 |= TIM_CR1_CEN;
 }
@@ -754,7 +763,7 @@ static void setup_SPI1() {
 static void setup_SPI3() {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
 
-	SPI3->CR1 |=SPI_CR1_BR_2;// should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
+	SPI3->CR1 |= SPI_CR1_BR_1|SPI_CR1_BR_0;// should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz] but it is not working the highest is 42/16 [MHz]
 	SPI3->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL
 			| SPI_CR1_CPHA; //NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 

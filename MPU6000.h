@@ -11,7 +11,7 @@
 void setup_MPU6000();
 void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value);
 void MPU6000_SPI_read(uint8_t adress_of_register,uint8_t* memory_adress,int number_of_bytes);
-void rewrite_data();
+void rewrite_Gyro_Acc_data(timeUs_t time);
 void read_acc();
 void read_gyro();
 void read_temp();

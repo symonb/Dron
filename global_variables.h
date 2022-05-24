@@ -8,6 +8,7 @@
 #ifndef GLOBAL_VARIABLES_H_
 #define GLOBAL_VARIABLES_H_
 
+//---------GLOBAL NEW TYPES-------------
 
 typedef struct {
 	double roll; // X
@@ -47,28 +48,41 @@ typedef struct {
 	float z;
 } Quaternion;
 
+
+typedef enum
+{
+	FLIGHT_MODE_ACRO,
+    FLIGHT_MODE_STABLE,
+    FLIGHT_MODE_COUNT
+}flight_mode_e;
+
+typedef uint64_t timeUs_t;
+typedef uint32_t timeMs_t;
+
+extern flight_mode_e flight_mode;
+
 //---------TIME VARIABLES-------------
 
-extern volatile double Global_Time;
+extern volatile timeUs_t Global_Time;
 
-float dt;
+extern timeUs_t dt_global;
 
 //main:
-extern  float time_flag0_1;
-extern  float time_flag0_2;
-extern  float time_flag0_3;
+extern  timeUs_t time_flag0_1;
+extern  timeUs_t time_flag0_2;
+extern  timeUs_t time_flag0_3;
 //stabilize:
-extern float time_flag1_1;
-extern float time_flag1_2;
+extern timeUs_t time_flag1_1;
+extern timeUs_t time_flag1_2;
 //acro:
-extern float time_flag2_1;
-extern float time_flag2_2;
+extern timeUs_t time_flag2_1;
+extern timeUs_t time_flag2_2;
 //ibus:
-extern float time_flag3_1;
+extern timeUs_t time_flag3_1;
 //MPU:
-extern float time_flag4_1;
+extern timeUs_t time_flag4_1;
 //flash:
-extern float time_flag5_1;
+extern timeUs_t time_flag5_1;
 
 
 
@@ -119,7 +133,7 @@ extern uint32_t dshot_buffer_4[];
 extern uint16_t dshot_buffer_4_1[];
 extern uint16_t dshot_buffer_2_3[];
 
-extern uint8_t failsafe_type;
+extern enum failsafe_type FailSafe_type;
 
 extern uint16_t MOTOR_OFF;
 

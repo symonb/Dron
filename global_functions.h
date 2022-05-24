@@ -8,9 +8,12 @@
 #ifndef GLOBAL_FUNCTIONS_H_
 #define GLOBAL_FUNCTIONS_H_
 
-void delay_micro(uint16_t);
+void interrupts_LOCK();
+void interrupts_UNLOCK();
 void delay_mili(uint16_t);
-double get_Global_Time();
+void delay_micro(uint16_t);
+timeUs_t get_Global_Time();
+bool failsafe_PID_loop(timeUs_t *);
 void TIM6_DAC_IRQHandler();
 void TIM7_IRQHandler();
 void set_motors(ThreeF);

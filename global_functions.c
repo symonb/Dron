@@ -10,31 +10,128 @@
 #include "global_variables.h"
 #include "global_functions.h"
 
-static uint8_t TIM_7_flag=0;
 
-void delay_micro(uint16_t time) {
+static uint8_t TIM_7_flag = 0;
 
-	TIM7->ARR = time-1;
-	TIM7->EGR |= TIM_EGR_UG;
-	TIM7->CR1 |= TIM_CR1_CEN;
+void interrupts_LOCK() {
 
-	while (TIM_7_flag != 1) {
-		; //wait for time [us]
-	}
-	TIM_7_flag = 0;
+	//LOCK ALL INTERRUPTS:
+
+	// nvic interrupt enable (TIM6 interrupt);
+	NVIC_DisableIRQ(TIM6_DAC_IRQn);
+
+	// nvic interrupt enable (TIM7 interrupt);
+	NVIC_DisableIRQ(TIM7_IRQn);
+
+	// nvic EXTI interrupt enable:
+	NVIC_DisableIRQ(EXTI15_10_IRQn);
+
+	// nvic interrupt enable (USART6 interrupt):
+	NVIC_DisableIRQ(USART6_IRQn);
+
+	// nvic interrupt enable (USART1 interrupt):
+	NVIC_DisableIRQ(USART1_IRQn);
+
+	//nvic interrupt enable (EXTI interrupt)
+	NVIC_DisableIRQ(EXTI4_IRQn);
+
+	//nvic interrupt enable (EXTI interrupt)
+	NVIC_DisableIRQ(EXTI9_5_IRQn);
+
+	// nvic DMA interrupt enable:
+#if defined(USE_FLASH_BLACKBOX)
+	NVIC_DisableIRQ(DMA1_Stream0_IRQn);
+#endif
+
+	NVIC_DisableIRQ(DMA1_Stream1_IRQn);
+
+	NVIC_DisableIRQ(DMA1_Stream2_IRQn);
+
+#if	defined(USE_FLASH_BLACKBOX)
+	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+#endif
+
+	NVIC_DisableIRQ(DMA1_Stream6_IRQn);
+
+	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
+
+	NVIC_DisableIRQ(DMA2_Stream5_IRQn);
+
+	NVIC_DisableIRQ(DMA2_Stream6_IRQn);
+
+//if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
+#if defined(ESC_PROTOCOL_ONESHOT_V1)
+	// nvic interrupt enable (TIM3 interrupt);
+	NVIC_DisableIRQ(TIM3_IRQn);
+
+	// nvic interrupt enable (TIM2 interrupt);
+	NVIC_DisableIRQ(TIM2_IRQn);
+
+#endif
 }
 
-void delay_mili(uint16_t time) {
-//wait for time [ms]
-	for (uint16_t i = 0; i < time; i++) {
-		delay_micro(1000);
-	}
+void interrupts_UNLOCK() {
+
+	//UNLOCK ALL INTERRUPTS:
+
+	// nvic interrupt enable (TIM6 interrupt);
+	NVIC_EnableIRQ(TIM6_DAC_IRQn);
+
+	// nvic interrupt enable (TIM7 interrupt);
+	NVIC_EnableIRQ(TIM7_IRQn);
+
+	// nvic EXTI interrupt enable:
+	NVIC_EnableIRQ(EXTI15_10_IRQn);
+
+	// nvic interrupt enable (USART6 interrupt):
+	NVIC_EnableIRQ(USART6_IRQn);
+
+	// nvic interrupt enable (USART1 interrupt):
+	NVIC_EnableIRQ(USART1_IRQn);
+
+	//nvic interrupt enable (EXTI interrupt)
+	NVIC_EnableIRQ(EXTI4_IRQn);
+
+	//nvic interrupt enable (EXTI interrupt)
+	NVIC_EnableIRQ(EXTI9_5_IRQn);
+
+	// nvic DMA interrupt enable:
+#if defined(USE_FLASH_BLACKBOX)
+	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+#endif
+
+	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+
+	NVIC_EnableIRQ(DMA1_Stream2_IRQn);
+
+#if	defined(USE_FLASH_BLACKBOX)
+	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+#endif
+
+	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+
+	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+
+	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
+
+	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
+
+//if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
+#if defined(ESC_PROTOCOL_ONESHOT_V1)
+	// nvic interrupt enable (TIM3 interrupt);
+	NVIC_EnableIRQ(TIM3_IRQn);
+
+	// nvic interrupt enable (TIM2 interrupt);
+	NVIC_EnableIRQ(TIM2_IRQn);
+
+#endif
 }
+
 
 void TIM6_DAC_IRQHandler() {
 	if (TIM_SR_UIF & TIM6->SR) {
 		TIM6->SR &= ~TIM_SR_UIF;
-		Global_Time += (TIM6->ARR+1) * 0.000001;
+		Global_Time += (TIM6->ARR + 1);
 	}
 }
 
@@ -46,27 +143,58 @@ void TIM7_IRQHandler() {
 	}
 }
 
-double get_Global_Time() {
-	return (Global_Time + (TIM6->CNT) * 0.000001);
+void delay_mili(uint16_t time) {
+//wait for time [ms]
+	for (uint16_t i = 0; i < time; i++) {
+		delay_micro(1000);
+	}
+}
+
+void delay_micro(uint16_t time) {
+
+	TIM7->ARR = time - 1;
+	TIM7->EGR |= TIM_EGR_UG;
+	TIM7->CR1 |= TIM_CR1_CEN;
+
+	while (TIM_7_flag != 1) {
+		; //wait for time [us]
+	}
+	TIM_7_flag = 0;
+}
+
+timeUs_t get_Global_Time() {
+	//gives time in [us] with accuracy of 1 [us]
+	return (Global_Time + TIM6->CNT);
+}
+
+bool failsafe_PID_loop(timeUs_t *dt){
+
+	if (*dt>SEC_TO_US(2./FREQUENCY_PID_LOOP)){
+		*dt=SEC_TO_US(2./FREQUENCY_PID_LOOP);
+		FailSafe_type = PID_LOOP_TIMEOUT;
+		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		return true;
+	}
+	return false;
 }
 
 void anti_windup(ThreeF *sum_err, PIDF *R_PIDF, PIDF *P_PIDF, PIDF *Y_PIDF) {
 	if (channels[4] > 1600) {
 
-		if ((sum_err->roll * R_PIDF->I ) > MAX_I_CORRECTION) {
-			sum_err->roll = MAX_I_CORRECTION / R_PIDF->I ;
+		if ((sum_err->roll * R_PIDF->I) > MAX_I_CORRECTION) {
+			sum_err->roll = MAX_I_CORRECTION / R_PIDF->I;
 		} else if ((sum_err->roll * R_PIDF->I) < -MAX_I_CORRECTION) {
-			sum_err->roll = -MAX_I_CORRECTION / R_PIDF->I ;
+			sum_err->roll = -MAX_I_CORRECTION / R_PIDF->I;
 		}
-		if ((sum_err->pitch * P_PIDF->I ) > MAX_I_CORRECTION) {
-			sum_err->pitch = MAX_I_CORRECTION / P_PIDF->I ;
-		} else if ((sum_err->pitch * P_PIDF->I ) < -MAX_I_CORRECTION) {
-			sum_err->pitch = -MAX_I_CORRECTION / P_PIDF->I ;
+		if ((sum_err->pitch * P_PIDF->I) > MAX_I_CORRECTION) {
+			sum_err->pitch = MAX_I_CORRECTION / P_PIDF->I;
+		} else if ((sum_err->pitch * P_PIDF->I) < -MAX_I_CORRECTION) {
+			sum_err->pitch = -MAX_I_CORRECTION / P_PIDF->I;
 		}
 		if ((sum_err->yaw * Y_PIDF->I) > MAX_I_CORRECTION) {
-			sum_err->yaw = MAX_I_CORRECTION / Y_PIDF->I ;
-		} else if ((sum_err->yaw * Y_PIDF->I ) < -MAX_I_CORRECTION) {
-			sum_err->yaw = -MAX_I_CORRECTION / Y_PIDF->I ;
+			sum_err->yaw = MAX_I_CORRECTION / Y_PIDF->I;
+		} else if ((sum_err->yaw * Y_PIDF->I) < -MAX_I_CORRECTION) {
+			sum_err->yaw = -MAX_I_CORRECTION / Y_PIDF->I;
 		}
 	}
 
@@ -85,26 +213,26 @@ void set_motors(ThreeF corr) {
 	//	right back:
 	motor_1_value = Throttle * 2 - corr.roll + corr.pitch - corr.yaw;
 	//	right front:
-	motor_2_value = Throttle * 2  - corr.roll - corr.pitch + corr.yaw;
+	motor_2_value = Throttle * 2 - corr.roll - corr.pitch + corr.yaw;
 	//	left back:
-	motor_3_value = Throttle * 2  + corr.roll + corr.pitch + corr.yaw;
+	motor_3_value = Throttle * 2 + corr.roll + corr.pitch + corr.yaw;
 	//	left front:
-	motor_4_value = Throttle * 2  + corr.roll - corr.pitch - corr.yaw;
+	motor_4_value = Throttle * 2 + corr.roll - corr.pitch - corr.yaw;
 
-	if (motor_1_value < IDLE_VALUE*2) {
-		motor_1_value = IDLE_VALUE*2;
+	if (motor_1_value < IDLE_VALUE * 2) {
+		motor_1_value = IDLE_VALUE * 2;
 	} else if (motor_1_value > max_value)
 		motor_1_value = max_value;
-	if (motor_2_value < IDLE_VALUE*2) {
-		motor_2_value = IDLE_VALUE*2;
+	if (motor_2_value < IDLE_VALUE * 2) {
+		motor_2_value = IDLE_VALUE * 2;
 	} else if (motor_2_value > max_value)
 		motor_2_value = max_value;
-	if (motor_3_value < IDLE_VALUE*2) {
-		motor_3_value = IDLE_VALUE*2;
+	if (motor_3_value < IDLE_VALUE * 2) {
+		motor_3_value = IDLE_VALUE * 2;
 	} else if (motor_3_value > max_value)
 		motor_3_value = max_value;
-	if (motor_4_value < IDLE_VALUE*2) {
-		motor_4_value = IDLE_VALUE*2;
+	if (motor_4_value < IDLE_VALUE * 2) {
+		motor_4_value = IDLE_VALUE * 2;
 	} else if (motor_4_value > max_value)
 		motor_4_value = max_value;
 }
@@ -115,7 +243,10 @@ void update_motors() {
 
 	//	Dshot:
 
-	fill_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),prepare_Dshot_package(*motor_2_value_pointer),prepare_Dshot_package(*motor_3_value_pointer),prepare_Dshot_package(*motor_4_value_pointer));
+	fill_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),
+			prepare_Dshot_package(*motor_2_value_pointer),
+			prepare_Dshot_package(*motor_3_value_pointer),
+			prepare_Dshot_package(*motor_4_value_pointer));
 
 	DMA1_Stream6->PAR = (uint32_t) (&(TIM2->CCR4));
 	DMA1_Stream6->M0AR = (uint32_t) (dshot_buffer_1);
@@ -161,10 +292,10 @@ void update_motors() {
 
 	//	PWM:
 
-	TIM2->CCR4 = *motor_1_value_pointer; 			//value motor 1
-	TIM3->CCR3 = *motor_2_value_pointer; 			//value motor 2
-	TIM3->CCR4 = *motor_3_value_pointer; 			//value motor 3
-	TIM2->CCR3 = *motor_4_value_pointer; 			//value motor 4
+	TIM2->CCR4 = *motor_1_value_pointer;//value motor 1
+	TIM3->CCR3 = *motor_2_value_pointer;//value motor 2
+	TIM3->CCR4 = *motor_3_value_pointer;//value motor 3
+	TIM2->CCR3 = *motor_4_value_pointer;//value motor 4
 
 #endif
 }
@@ -186,8 +317,7 @@ void EXTI9_5_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR5)) {
 		EXTI->PR |= EXTI_PR_PR5; // clear this bit setting it high
 
-
-		USB_detected= GPIOC->IDR & GPIO_IDR_ID5;
+		USB_detected = GPIOC->IDR & GPIO_IDR_ID5;
 
 	}
 	if ((EXTI->PR & EXTI_PR_PR6)) {
@@ -203,7 +333,6 @@ void EXTI9_5_IRQHandler() {
 		EXTI->PR |= EXTI_PR_PR9; // clear this bit setting it high
 	}
 }
-
 
 //FAILSAFE HANDLER:
 void EXTI15_10_IRQHandler() {
@@ -227,56 +356,56 @@ void EXTI15_10_IRQHandler() {
 		static uint16_t err_counter[10];
 		EXTI->PR |= EXTI_PR_PR15; // clear(setting 1) this bit (and at the same time bit SWIER15)
 
-		switch (failsafe_type) {
-		case 1://DISARM
+		switch (FailSafe_type) {
+		case DISARMED: //DISARM
 
-		motor_1_value_pointer = &MOTOR_OFF;
-		motor_2_value_pointer = &MOTOR_OFF;
-		motor_3_value_pointer = &MOTOR_OFF;
-		motor_4_value_pointer = &MOTOR_OFF;
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
 
-		err_counter[0]++;
-		failsafe_type = 0;
+			err_counter[0]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 2://BAD_CHANNELS_VALUES
+		case INCORRECT_CHANNELS_VALUES: //BAD_CHANNELS_VALUES
 
-		motor_1_value_pointer = &MOTOR_OFF;
-		motor_2_value_pointer = &MOTOR_OFF;
-		motor_3_value_pointer = &MOTOR_OFF;
-		motor_4_value_pointer = &MOTOR_OFF;
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
 
-		err_counter[1]++;
-		failsafe_type = 0;
+			err_counter[1]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 3://RX_TIMEOUT
+		case RX_TIMEOUT: //RX_TIMEOUT
 
-		motor_1_value_pointer = &MOTOR_OFF;
-		motor_2_value_pointer = &MOTOR_OFF;
-		motor_3_value_pointer = &MOTOR_OFF;
-		motor_4_value_pointer = &MOTOR_OFF;
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
 
-		err_counter[2]++;
-		failsafe_type = 0;
+			err_counter[2]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 4:
-		err_counter[3]++;
-		failsafe_type = 0;
+		case SETUP_ERROR:
+			err_counter[3]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 5:
-		err_counter[4]++;
-		failsafe_type = 0;
+		case I2C_ERROR:
+			err_counter[4]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 6:
-		err_counter[5]++;
-		failsafe_type = 0;
+		case SPI_IMU_ERROR:
+			err_counter[5]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 7:
-		err_counter[6]++;
-		failsafe_type = 0;
+		case SPI_FLASH_ERROR:
+			err_counter[6]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
-		case 8:
-		err_counter[7]++;
-		failsafe_type = 0;
+		case PID_LOOP_TIMEOUT:
+			err_counter[7]++;
+			FailSafe_type = NO_FAILSAFE;
 			break;
 		}
 	}
@@ -353,7 +482,6 @@ void DMA1_Stream1_IRQHandler(void) {
 
 }
 
-
 void DMA1_Stream4_IRQHandler(void) {
 
 	if (DMA1->HISR & DMA_HISR_TCIF4) {
@@ -371,18 +499,16 @@ void DMA1_Stream4_IRQHandler(void) {
 	}
 }
 
-
-
 uint16_t get_Dshot_checksum(uint16_t value) {
-	value=value<<1;
+	value = value << 1;
 	return (value ^ (value >> 4) ^ (value >> 8)) & 0x0F;
 }
 
 uint16_t prepare_Dshot_package(uint16_t value) {
 	//value is in range of 2000-4000 so I need to transform it into Dshot range (48-2047)
 	value -= 1953;
-	if(value>0 && value<48){
-		value=48;
+	if (value > 0 && value < 48) {
+		value = 48;
 	}
 	return ((value << 5) | get_Dshot_checksum(value));
 
@@ -392,36 +518,36 @@ void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
 		uint16_t m4_value) {
 
 	for (uint8_t i = 2; i < DSHOT_BUFFER_LENGTH; i++) {
-		if ((1 << (i-2)) & m1_value) {
+		if ((1 << (i - 2)) & m1_value) {
 			dshot_buffer_1[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_1_LENGTH;
 		} else {
 			dshot_buffer_1[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_0_LENGTH;
 		}
-		if ((1 << (i-2)) & m2_value) {
+		if ((1 << (i - 2)) & m2_value) {
 			dshot_buffer_2[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_1_LENGTH;
 		} else {
 			dshot_buffer_2[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_0_LENGTH;
 		}
-		if ((1 << (i-2)) & m3_value) {
+		if ((1 << (i - 2)) & m3_value) {
 			dshot_buffer_3[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_1_LENGTH;
 		} else {
 			dshot_buffer_3[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_0_LENGTH;
 		}
-		if ((1 << (i-2)) & m4_value) {
+		if ((1 << (i - 2)) & m4_value) {
 			dshot_buffer_4[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_1_LENGTH;
 		} else {
 			dshot_buffer_4[DSHOT_BUFFER_LENGTH - 1 - i] = DSHOT_0_LENGTH;
 		}
 	}
 	// make 0 pulse after Dshot frame:
-	dshot_buffer_1[DSHOT_BUFFER_LENGTH - 1]=0;
-	dshot_buffer_1[DSHOT_BUFFER_LENGTH - 2]=0;
-	dshot_buffer_2[DSHOT_BUFFER_LENGTH - 1]=0;
-	dshot_buffer_2[DSHOT_BUFFER_LENGTH - 2]=0;
-	dshot_buffer_3[DSHOT_BUFFER_LENGTH - 1]=0;
-	dshot_buffer_3[DSHOT_BUFFER_LENGTH - 2]=0;
-	dshot_buffer_4[DSHOT_BUFFER_LENGTH - 1]=0;
-	dshot_buffer_4[DSHOT_BUFFER_LENGTH - 2]=0;
+	dshot_buffer_1[DSHOT_BUFFER_LENGTH - 1] = 0;
+	dshot_buffer_1[DSHOT_BUFFER_LENGTH - 2] = 0;
+	dshot_buffer_2[DSHOT_BUFFER_LENGTH - 1] = 0;
+	dshot_buffer_2[DSHOT_BUFFER_LENGTH - 2] = 0;
+	dshot_buffer_3[DSHOT_BUFFER_LENGTH - 1] = 0;
+	dshot_buffer_3[DSHOT_BUFFER_LENGTH - 2] = 0;
+	dshot_buffer_4[DSHOT_BUFFER_LENGTH - 1] = 0;
+	dshot_buffer_4[DSHOT_BUFFER_LENGTH - 2] = 0;
 }
 
 void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,
@@ -430,28 +556,28 @@ void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,
 // buffer array looks like this [first bit motor1; first bit motor2 ;...; last bit motor1;last bit motor2]
 
 	for (int i = 2; i < DSHOT_BUFFER_LENGTH; i++) {
-		if ((1 << (i-2)) & m4_value) {
-			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i-1] =
+		if ((1 << (i - 2)) & m4_value) {
+			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i - 1] =
 			DSHOT_1_LENGTH;
 		} else {
-			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i-1] =
+			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i - 1] =
 			DSHOT_0_LENGTH;
 		}
-		if ((1 << (i-2)) & m1_value ){
-			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i ] =
+		if ((1 << (i - 2)) & m1_value) {
+			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i] =
 			DSHOT_1_LENGTH;
 		} else {
 			dshot_buffer_4_1[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i] =
 			DSHOT_0_LENGTH;
 		}
-		if ((1 << (i-2)) & m2_value) {
-			dshot_buffer_2_3[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i-1] =
+		if ((1 << (i - 2)) & m2_value) {
+			dshot_buffer_2_3[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i - 1] =
 			DSHOT_1_LENGTH;
 		} else {
-			dshot_buffer_2_3[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i-1] =
+			dshot_buffer_2_3[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i - 1] =
 			DSHOT_0_LENGTH;
 		}
-		if ((1 << (i-2)) & m3_value) {
+		if ((1 << (i - 2)) & m3_value) {
 			dshot_buffer_2_3[DSHOT_BUFFER_LENGTH * 2 - 1 - 2 * i] =
 			DSHOT_1_LENGTH;
 		} else {
@@ -460,25 +586,18 @@ void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,
 		}
 
 	}
-	dshot_buffer_4_1[2*DSHOT_BUFFER_LENGTH - 1]=0;
-	dshot_buffer_4_1[2*DSHOT_BUFFER_LENGTH - 2]=0;
-	dshot_buffer_2_3[2*DSHOT_BUFFER_LENGTH - 1]=0;
-	dshot_buffer_2_3[2*DSHOT_BUFFER_LENGTH - 2]=0;
+	dshot_buffer_4_1[2 * DSHOT_BUFFER_LENGTH - 1] = 0;
+	dshot_buffer_4_1[2 * DSHOT_BUFFER_LENGTH - 2] = 0;
+	dshot_buffer_2_3[2 * DSHOT_BUFFER_LENGTH - 1] = 0;
+	dshot_buffer_2_3[2 * DSHOT_BUFFER_LENGTH - 2] = 0;
 }
 
 void prepare_OneShot_PWM() {
 
-	TIM2->CCR4 = 3500-*motor_1_value_pointer * 0.875f+1; 			//value motor 1
-	TIM3->CCR3 = 3500-*motor_2_value_pointer * 0.875f+1; 			//value motor 2
-	TIM3->CCR4 = 3500-*motor_3_value_pointer * 0.875f+1; 			//value motor 3
-	TIM2->CCR3 = 3500-*motor_4_value_pointer * 0.875f+1; 			//value motor 4
+	TIM2->CCR4 = 3500 - *motor_1_value_pointer * 0.875f + 1; 	//value motor 1
+	TIM3->CCR3 = 3500 - *motor_2_value_pointer * 0.875f + 1; 	//value motor 2
+	TIM3->CCR4 = 3500 - *motor_3_value_pointer * 0.875f + 1; 	//value motor 3
+	TIM2->CCR3 = 3500 - *motor_4_value_pointer * 0.875f + 1; 	//value motor 4
 
 }
-
-
-
-
-
-
-
 

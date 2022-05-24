@@ -10,18 +10,20 @@
 #include "MPU6000.h"
 #include "quaternions.h"
 #include "flash.h"
+#include "scheduler.h"
+#include "stabilize.h"
 
 static Quaternion q_acc = { 1, 0, 0, 0 };
 static Quaternion q_gyro = { 1, 0, 0, 0 };
 
-static Quaternion gyro_angles();
+static Quaternion gyro_angles(Quaternion q_position, float dt);
 static Quaternion acc_angles();
-static void complementary_filter();
-static void madgwick_filter();
-static void mahony_filter();
+static void complementary_filter(float dt);
+static void madgwick_filter(float dt);
+static void mahony_filter(float dt);
 
-static ThreeF corrections();
-static ThreeF corrections_from_quaternion(Quaternion position_quaternion);
+static ThreeF corrections(float dt);
+static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt);
 
 // err values - difference between set value and measured value:
 static ThreeF err = { 0, 0, 0 };
@@ -39,46 +41,55 @@ static Three Rates = { 400, 400, 400 };
 //static PIDF Y_PIDF = { 1200, 300, 200, 0 };
 
 //DRON CARBON:
-static PIDF R_PIDF = {150 , 190, 0.175, 0.1 };
-static PIDF P_PIDF = { 200, 210, 0.225, 0.1 };
+static PIDF R_PIDF = {150 , 190, 0.175, 0.2 };
+static PIDF P_PIDF = { 200, 210, 0.225, 0.25 };
 static PIDF Y_PIDF = { 500, 200, 70, 0 };
 
 
-void stabilize() {
+void stabilize(timeUs_t time) {
+
+	static float dt;
+
+	dt = US_TO_SEC(time);
 
 #if defined(STABILIZE_FILTER_MAGDWICK)
-	madgwick_filter();
+	madgwick_filter(dt);
 #elif defined(STABILIZE_FILTER_MAHONY)
-	mahony_filter();
+	mahony_filter(dt);
 #elif defined(STABILIZE_FILTER_COMPLEMENTARY)
-	complementary_filter();
+	complementary_filter(dt);
 #endif
 
-	set_motors(corrections_from_quaternion(q_global_position));
+	set_motors(corrections_from_quaternion(q_global_position,dt));
 
-	if ((get_Global_Time() - time_flag1_2) >= 1. / FREQUENCY_TELEMETRY_UPDATE) {
+	if ((get_Global_Time() - time_flag1_2) >= SEC_TO_US(1.f / FREQUENCY_TELEMETRY_UPDATE)) {
 		time_flag1_2 = get_Global_Time();
 
-//FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW
-		table_to_send[0] = P_PIDF.P * err.pitch + 1000;
-		table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
-		table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;
-		table_to_send[3] = R_PIDF.P * err.roll + 1000;
-		table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
-		table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
-		table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50)
-				+ 1000;
-		table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50)
-				+ 1000;
-		table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
-		table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
-		table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
-		table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
-		table_to_send[12] = channels[1] - 500;
-		table_to_send[13] = channels[0] - 500;
-
-		New_data_to_send = 1;
+		//send_telemetry_stabilize(time_flag1_2);
 	}
+
+}
+
+static Quaternion gyro_angles(Quaternion q_position, float dt) {
+
+	static Quaternion q_prim;
+	static Quaternion angular_velocity;
+
+	angular_velocity.w = 0;
+	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
+	angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
+	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
+
+	q_prim = quaternion_multiply(
+			quaternions_multiplication(angular_velocity, q_position), -0.5f);
+
+	q_position = quaternions_sum(q_position, quaternion_multiply(q_prim, dt));
+
+	//normalize quaternion:
+	q_position = quaternion_multiply(q_position,
+			1.f / quaternion_norm(q_position));
+
+	return q_position;
 
 }
 
@@ -101,10 +112,10 @@ static Quaternion acc_angles(Quaternion q_position) {
 	gravity_estimated.pitch /= norm;
 	gravity_estimated.yaw /= norm;
 
-	double acc_filter_rate = 0.9; // modification: it is basically a weighted average (it gives much more smooth acc_reading)
+	double acc_filter_rate = 0.9f; // modification: it is basically a weighted average (it gives much more smooth acc_reading)
 	if (gravity_estimated.yaw >= 0) {
 		q_position.w = (1 - acc_filter_rate) * q_acc.w
-				+ acc_filter_rate * sqrtf(0.5 * (gravity_estimated.yaw + 1));
+				+ acc_filter_rate * sqrtf(0.5f * (gravity_estimated.yaw + 1));
 
 		q_position.x = (1 - acc_filter_rate) * q_acc.x
 				+ acc_filter_rate
@@ -121,7 +132,7 @@ static Quaternion acc_angles(Quaternion q_position) {
 						* (-gravity_estimated.pitch
 								/ sqrtf(2 * (1 - gravity_estimated.yaw)));
 		q_position.x = (1 - acc_filter_rate) * q_acc.x
-				+ acc_filter_rate * sqrtf(0.5 * (1 - gravity_estimated.yaw));
+				+ acc_filter_rate * sqrtf(0.5f * (1 - gravity_estimated.yaw));
 		q_position.y = 0;
 		q_position.z = (1 - acc_filter_rate) * q_acc.z
 				+ acc_filter_rate
@@ -130,37 +141,16 @@ static Quaternion acc_angles(Quaternion q_position) {
 	}
 	//after LERP it is needed to normalize q_acc:
 	q_position = quaternion_multiply(q_position,
-			1 / quaternion_norm(q_position));
+			1.f / quaternion_norm(q_position));
 
 	return q_position;
 
 }
 
-static Quaternion gyro_angles(Quaternion q_position) {
 
-	static Quaternion q_prim;
-	static Quaternion angular_velocity;
 
-	angular_velocity.w = 0;
-	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
-	angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
-	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
-
-	q_prim = quaternion_multiply(
-			quaternions_multiplication(angular_velocity, q_position), -0.5f);
-
-	q_position = quaternions_sum(q_position, quaternion_multiply(q_prim, dt));
-
-	//normalize quaternion:
-	q_position = quaternion_multiply(q_position,
-			1 / quaternion_norm(q_position));
-
-	return q_position;
-
-}
-
-static void complementary_filter() {
-	q_gyro = gyro_angles(q_global_position);
+static void complementary_filter(float dt) {
+	q_gyro = gyro_angles(q_global_position, dt);
 	q_acc = acc_angles(q_gyro);
 
 	// to accomplish complementary filter q_acc need to have, a little effect so it need to be reduce by combining with identity quaternion =[1,0,0,0] which was multiplied with (1-ACC_PART) so:
@@ -169,14 +159,14 @@ static void complementary_filter() {
 	delta_q_acc = quaternions_sum(IDENTITY_QUATERNION,
 			quaternion_multiply(q_acc, ACC_PART));
 	delta_q_acc = quaternion_multiply(delta_q_acc,
-			1 / quaternion_norm(delta_q_acc));
+			1.f / quaternion_norm(delta_q_acc));
 
 	q_global_position = quaternions_multiplication(delta_q_acc, q_gyro);
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
 
 }
 
-static void madgwick_filter() {
+static void madgwick_filter(float dt) {
 
 	static Quaternion q_prim;
 	static Quaternion angular_velocity;
@@ -310,7 +300,7 @@ static void madgwick_filter() {
 
 }
 
-static void mahony_filter() {
+static void mahony_filter(float dt) {
 
 	static Quaternion q_prim;
 	static Quaternion angular_velocity;
@@ -390,7 +380,7 @@ static void mahony_filter() {
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
 }
 
-static ThreeF corrections() {
+static ThreeF corrections(float dt) {
 	static ThreeF corr;
 
 	err.roll = ((channels[0] - 1500) / 500.
@@ -436,7 +426,7 @@ static ThreeF corrections() {
 	return corr;
 }
 
-static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
+static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt) {
 
 	static ThreeF corr;
 	static ThreeF set_angles;
@@ -559,3 +549,24 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion) {
 	return corr;
 }
 
+void send_telemetry_stabilize(timeUs_t time){
+	//FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW
+			table_to_send[0] = P_PIDF.P * err.pitch + 1000;
+			table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
+			table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;
+			table_to_send[3] = R_PIDF.P * err.roll + 1000;
+			table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
+			table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
+			table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50)
+					+ 1000;
+			table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50)
+					+ 1000;
+			table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
+			table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
+			table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
+			table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
+			table_to_send[12] = channels[1] - 500;
+			table_to_send[13] = channels[0] - 500;
+
+			New_data_to_send = 1;
+}

@@ -13,7 +13,7 @@
 #include "OSD.h"
 
 static void CS_OSD_disable();
-static void CS_OSD_ensable();
+static void CS_OSD_enable();
 
 void setup_OSD(){
 	CS_OSD_disable();

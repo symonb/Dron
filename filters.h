@@ -37,4 +37,7 @@ float FIR_Filter_filtering(FIR_Filter *fir, float input);
 void IIR_Filter_Init(IIR_Filter *fir);
 float IIR_Filter_filtering(IIR_Filter *fir, float input);
 
+void Gyro_Acc_average_filters_setup();
+void Gyro_Acc_filtering(float*temporary);
+
 #endif /* FILTERS_H_ */

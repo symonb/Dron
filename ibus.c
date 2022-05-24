@@ -13,9 +13,9 @@
 
 volatile uint8_t rxBuf[32];
 static uint8_t rxindex = 0;
-static double current_time;
-static double last_time;
-static double gap_time;
+//static double current_time;
+//static double last_time;
+//static double gap_time;
 
 static void failsafe_RX();
 
@@ -40,7 +40,7 @@ void USART1_IRQHandler(void) {
 		//check gap duration if bigger than 500 us brake
 
 //tu jest coœ Ÿle przy zakomenntowanym dzia³a porawinie a jesli to odkomentujê przerwa wynosi oko³o 0.065[s] a to czas trwania 10 ramek ibusa bez sensu
-//		if ( (get_Global_Time() - time_flag5_1) > 0.0005) {
+//		if ( (get_Global_Time() - time_flag5_1) > SEC_TOUS(0.0005)) {
 //			rxindex = 0;
 //		}
 //
@@ -89,7 +89,7 @@ void USART1_IRQHandler(void) {
 //		gap_time = current_time - last_time;
 //		last_time = current_time;
 //		//check if gap is bigger than 0.5 [ms]
-//		if (gap_time > 0.5) {
+//		if (gap_time > SEC_TO_US(0.5)) {
 //			rxindex = 0;
 //		}
 //		rxBuf[rxindex] = USART1->DR;
@@ -122,8 +122,8 @@ void USART1_IRQHandler(void) {
 void Ibus_save() {
 	uint16_t checksum=0xFFFF;
 
-	if ((get_Global_Time() - time_flag3_1) >= MAX_NO_SIGNAL_TIME) {
-		failsafe_type = 3;
+	if ((get_Global_Time() - time_flag3_1) >= SEC_TO_US(MAX_NO_SIGNAL_TIME)) {
+		FailSafe_type = RX_TIMEOUT;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 	}
 
@@ -143,6 +143,14 @@ void Ibus_save() {
 
 			failsafe_RX();
 			Throttle = channels[2];
+
+			if(channels[6] < 1400){
+				flight_mode=FLIGHT_MODE_ACRO;
+			}
+			else if(channels[6]>1450){
+				flight_mode=FLIGHT_MODE_STABLE;
+			}
+
 			if (channels[7] >= 1400 && channels[7] < 1700) {
 				blackbox_command = 1;
 			} else if (channels[7] >= 1700) {
@@ -159,10 +167,11 @@ void Ibus_save() {
 	}
 }
 static void failsafe_RX() {
+
 #if defined(USE_PREARM)
 	// Arming switch:
 	if (channels[4] <= ARM_VALUE) {
-		failsafe_type = 1;
+		FailSafe_type = DISARMED;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		arming_status = -1;
 		if (channels[8] > PREARM_VALUE ) {
@@ -173,7 +182,7 @@ static void failsafe_RX() {
 			|| channels[2] <= MIN_RX_SIGNAL || channels[2] >= MAX_RX_SIGNAL
 			|| channels[3] <= MIN_RX_SIGNAL || channels[3] >= MAX_RX_SIGNAL) {
 
-		failsafe_type = 2;
+		FailSafe_type = INCORRECT_CHANNELS_VALUES;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 
 	} else if (arming_status == 0 || arming_status == 1) {
@@ -186,7 +195,7 @@ static void failsafe_RX() {
 #else
 	// Arming switch:
 	if (channels[4] <= ARM_VALUE) {
-		failsafe_type = 1;
+		FailSafe_type = DISARMED;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 
 		}
@@ -199,7 +208,7 @@ static void failsafe_RX() {
 			 channels[i]=channels_previous_values[i];
 		 }
 
-		failsafe_type = 2;
+		FailSafe_type = INCORRECT_CHANNELS_VALUES;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 
 	} else  {

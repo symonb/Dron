@@ -4,8 +4,20 @@
  *  Created on: 24.09.2021
  *      Author: symon
  */
-
+#include "stm32f4xx.h"
+#include "global_constants.h"
+#include "global_variables.h"
+#include "global_functions.h"
 #include "filters.h"
+
+
+static FIR_Filter average_gyro_X;
+static FIR_Filter average_gyro_Y;
+static FIR_Filter average_gyro_Z;
+static FIR_Filter average_acc_X;
+static FIR_Filter average_acc_Y;
+static FIR_Filter average_acc_Z;
+
 
 void FIR_Filter_Init(FIR_Filter *fir) {
 
@@ -137,3 +149,66 @@ float IIR_Filter_filtering(IIR_Filter *iir, float input) {
 	return iir->output;
 }
 
+void Gyro_Acc_average_filters_setup() {
+
+	float value_gyro[6] = {0.135250,0.216229,0.234301,0.234301,0.216229,0.135250};
+
+	average_gyro_X.length = 6;
+
+	FIR_Filter_Init(&average_gyro_X);
+
+	for (uint8_t i = 0; i < average_gyro_X.length; i++) {
+		average_gyro_X.impulse_responce[i] = value_gyro[i];
+	}
+
+	average_gyro_Y.length = 6;
+
+	FIR_Filter_Init(&average_gyro_Y);
+	for (uint8_t i = 0; i < average_gyro_Y.length; i++) {
+		average_gyro_Y.impulse_responce[i] = value_gyro[i];
+	}
+
+	average_gyro_Z.length = 6;
+
+	FIR_Filter_Init(&average_gyro_Z);
+	for (uint8_t i = 0; i < average_gyro_Z.length; i++) {
+		average_gyro_Z.impulse_responce[i] = value_gyro[i];
+	}
+
+	float value_acc[6] = {0.135250,0.216229,0.234301,0.234301,0.216229,0.135250};
+
+	average_acc_X.length = 6;
+		FIR_Filter_Init(&average_acc_X);
+	for (uint8_t i = 0; i < average_acc_X.length; i++) {
+		average_acc_X.impulse_responce[i] = value_acc[i];
+	}
+
+	average_acc_Y.length = 6;
+
+	FIR_Filter_Init(&average_acc_Y);
+	for (uint8_t i = 0; i < average_acc_Y.length; i++) {
+		average_acc_Y.impulse_responce[i] = value_acc[i];
+	}
+
+	average_acc_Z.length = 6;
+
+	FIR_Filter_Init(&average_acc_Z);
+	for (uint8_t i = 0; i < average_acc_Z.length; i++) {
+		average_acc_Z.impulse_responce[i] = value_acc[i];
+	}
+}
+void Gyro_Acc_filtering(float*temporary){
+
+Gyro_Acc[0] = FIR_Filter_filtering(&average_gyro_X,
+		temporary[0] - GYRO_ROLL_OFFSET);
+Gyro_Acc[1] = FIR_Filter_filtering(&average_gyro_Y,
+		temporary[1] - GYRO_PITCH_OFFSET);
+Gyro_Acc[2] = FIR_Filter_filtering(&average_gyro_Z,
+		temporary[2] - GYRO_YAW_OFFSET);
+Gyro_Acc[3] = FIR_Filter_filtering(&average_acc_X,
+		temporary[3] - ACC_ROLL_OFFSET);
+Gyro_Acc[4] = FIR_Filter_filtering(&average_acc_Y,
+		temporary[4] - ACC_PITCH_OFFSET);
+Gyro_Acc[5] = FIR_Filter_filtering(&average_acc_Z,
+		temporary[5] - ACC_YAW_OFFSET);
+}

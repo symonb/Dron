@@ -29,39 +29,58 @@ int main(void) {
 	delay_mili(1000);
 	setup_MPU6000();
 	setup_NVIC_2();
+	delay_mili(500);
+	uint8_t debug=0;
 
-	while (flash_read_status_register(FLASH_READ_STATUS_REGISTER_1) & 0x01) {
-			delay_mili(500); //wait for erasing flash
-		}
-	flash_full_chip_erase();
-	while (flash_read_status_register(FLASH_READ_STATUS_REGISTER_1) & 0x01) {
-		delay_mili(500); //wait for erasing flash
+
+	while (is_flash_busy()) {
+			delay_mili(500); //wait
 	}
-	time_flag0_2=get_Global_Time();
+
+	flash_full_chip_erase();
+
+	while (is_flash_busy()) {
+		delay_mili(500); //wait for flash to erase
+	}
+	time_flag0_2 = get_Global_Time();
 
 	while (1) {
 
-		if ((get_Global_Time() - time_flag0_2) >= 1. / FREQUENCY_PID_LOOP) {
-			dt=get_Global_Time()-time_flag0_2;
-			time_flag0_2 +=dt;
+		static timeUs_t time_flag_debug;
+		static uint16_t tik;
+		static timeUs_t dt_test;
 
-			if (dt>2./FREQUENCY_PID_LOOP){
-				dt=2./FREQUENCY_PID_LOOP;
-				failsafe_type = 8;
-				EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		if(get_Global_Time()-time_flag_debug>=SEC_TO_US(10)){
+
+			time_flag_debug = get_Global_Time();
+			tik = 0;
+			dt_test=0;
+
+		}
+
+		if ((get_Global_Time() - time_flag0_2) >= SEC_TO_US(1. / FREQUENCY_PID_LOOP)) {
+			dt_global=get_Global_Time()-time_flag0_2;
+
+			time_flag0_2 +=dt_global;
+
+			if(failsafe_PID_loop(&dt_global)){
+			dt_test+=1	;
 			}
 
-			Ibus_save();
-			rewrite_data();
 
-			if (channels[6] < 1400) {
-				acro();
+			tik++;
+
+			Ibus_save();
+			rewrite_Gyro_Acc_data(dt_global);
+
+			if (flight_mode == FLIGHT_MODE_ACRO) {
+				acro(dt_global);
 				turn_OFF_RED_LED();
 				turn_ON_BLUE_LED();
 			}
 
-			else if (channels[6] > 1450) {
-				stabilize();
+			else if (flight_mode==FLIGHT_MODE_STABLE) {
+				stabilize(dt_global);
 				turn_OFF_BLUE_LED();
 				turn_ON_RED_LED();
 			}
@@ -75,7 +94,7 @@ int main(void) {
 
 		}
 
-		if ((get_Global_Time() - time_flag0_3) >= 1.f / FREQUENCY_ESC_UPDATE) {
+		if ((get_Global_Time() - time_flag0_3) >= SEC_TO_US(1.f / FREQUENCY_ESC_UPDATE)) {
 			time_flag0_3 = get_Global_Time();
 			update_motors();
 		}

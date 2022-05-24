@@ -8,6 +8,8 @@
 #ifndef ACRO_H_
 #define ACRO_H_
 
-void acro();
+
+void acro(timeUs_t time);
+void send_telemetry_acro(timeUs_t time);
 
 #endif /* ACRO_H_ */

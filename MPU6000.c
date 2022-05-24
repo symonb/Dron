@@ -5,12 +5,13 @@
  *
  */
 
+#include <math.h>
 #include "stm32f4xx.h"
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
 #include "filters.h"
-#include <math.h>
+#include "scheduler.h"
 #include "flash.h"
 #include "MPU6000.h"
 
@@ -23,10 +24,9 @@ static void CS_IMU_enable();
 static void CS_IMU_disable();
 static void SPI_transmit(uint8_t*data, int size);
 static void SPI_receive(uint8_t address_of_register, uint8_t*data, int size);
-static void failsafe_CONF();
-static void failsafe_I2C();
-static void failsafe_SPI();
-static void average_filters_setup();
+static bool failsafe_CONF();
+static bool failsafe_I2C();
+static bool failsafe_SPI();
 static void MPU6000_self_test_configuration();
 static void MPU6000_self_test_measurements();
 
@@ -87,14 +87,7 @@ float M_rotacji[3][3] = { { -1, 0, 0 }, { 0, -1, 0 }, { 0, 0, 1 } };
 uint8_t read_write_tab[14];
 static volatile uint8_t read_write_quantity;
 
-static FIR_Filter average_gyro_X;
-static FIR_Filter average_gyro_Y;
-static FIR_Filter average_gyro_Z;
-static FIR_Filter average_acc_X;
-static FIR_Filter average_acc_Y;
-static FIR_Filter average_acc_Z;
-//for debugging only:
-
+//NOT USED so far:
 void I2C1_IRQHandler() {
 	static uint8_t i = 0;
 	if (I2C1->SR1 |= I2C_SR1_RXNE) {
@@ -111,16 +104,18 @@ void I2C1_IRQHandler() {
 
 void EXTI4_IRQHandler() {
 	if ((EXTI->PR & EXTI_PR_PR4)) {
-		EXTI->PR |= EXTI_PR_PR4; // clear this bit setting it high
-		static uint32_t counter;
+		EXTI->PR |= EXTI_PR_PR4; // clear this bit by setting it high
+		EXTI->IMR &= ~EXTI_IMR_IM4; //lock interrupts from imu since they will be processed
+
 		//INSTRUCTIONS FOR READING IMU SENSORS:
 		imu_received = 0;
-		EXTI->IMR &= ~EXTI_IMR_IM4;
-		//block RX reading while IMU reading
+
+		//lock RX reading while IMU reading
 		USART1->CR1 &= ~USART_CR1_RXNEIE;
 		read_all();
-		counter++;
-		//unblock RX reading while IMU reading
+		imu_received = 1;
+
+		//unlock RX reading while IMU reading
 		USART1->CR1 |= USART_CR1_RXNEIE;
 	}
 }
@@ -130,7 +125,7 @@ void setup_MPU6000() {
 	setup_conf();
 	setup_gyro();
 	setup_acc();
-	average_filters_setup();
+	Gyro_Acc_average_filters_setup();
 	//change speed of SPI up to 10.5 [MHz] (only for reading sensors) IT DOESN T WORK
 //	SPI1->CR1 &= ~SPI_CR1_BR;
 //	SPI1->CR1 |=  SPI_CR1_BR_1|SPI_CR1_BR_0;
@@ -168,7 +163,9 @@ static void SPI_transmit(uint8_t *data, int size) {
 
 	time_flag4_1 = get_Global_Time();
 	while (!((SPI1->SR) & SPI_SR_TXE)) {
-		failsafe_SPI(); 			//wait
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	SPI1->DR = data[i]; //first data - usually  slave's Register which you're interested in
 	i++;
@@ -176,7 +173,9 @@ static void SPI_transmit(uint8_t *data, int size) {
 	while (i < size) {
 		time_flag4_1 = get_Global_Time();
 		while (!((SPI1->SR) & SPI_SR_TXE)) {
-			failsafe_SPI(); 			//wait
+			if (failsafe_SPI()) {
+				break; 			//wait
+			}
 		}
 		SPI1->DR = data[i]; //second and following data sending as soon as TX flag is set
 		i++;
@@ -184,11 +183,15 @@ static void SPI_transmit(uint8_t *data, int size) {
 
 	time_flag4_1 = get_Global_Time();
 	while (!((SPI1->SR) & SPI_SR_TXE)) {
-		failsafe_SPI(); 			//wait
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	time_flag4_1 = get_Global_Time();
 	while (((SPI1->SR) & SPI_SR_BSY)) {
-		failsafe_SPI();				//wait
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	SPI1->DR;
 	SPI1->SR;
@@ -205,41 +208,53 @@ static void SPI_receive(uint8_t address_of_register, uint8_t *data, int size) {
 	 * */
 
 	time_flag4_1 = get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type != 6) {
-		failsafe_SPI(); 			//wait
+	while (!((SPI1->SR) & SPI_SR_TXE)) {
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	SPI1->DR = address_of_register; //first data - usually  slave's Register which you're interested in
 
 	time_flag4_1 = get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type != 6) {
-		failsafe_SPI(); 			//wait
+	while (!((SPI1->SR) & SPI_SR_TXE)) {
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	SPI1->DR = 0xFF;	//send something - IMPORTANT!
 
 	time_flag4_1 = get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
-		failsafe_SPI(); 			//wait
+	while (!((SPI1->SR) & SPI_SR_RXNE)) {
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	SPI1->DR;	//first byte - rubbish
 
 	while (size > 1) {
 
 		time_flag4_1 = get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_TXE) && failsafe_type != 6) {
-			failsafe_SPI(); 			//wait
+		while (!((SPI1->SR) & SPI_SR_TXE)) {
+			if (failsafe_SPI()) {
+				break; 			//wait
+			}
 		}
 		SPI1->DR = 0xFF; 			//send anything IMPORTANT!
 		time_flag4_1 = get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
-			failsafe_SPI(); 			//wait
+		while (!((SPI1->SR) & SPI_SR_RXNE)) {
+			if (failsafe_SPI()) {
+				break; 			//wait
+			}
 		}
 		*data++ = SPI1->DR;
 		size--;
 	}
 
 	time_flag4_1 = get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_RXNE) && failsafe_type != 6) {
-		failsafe_SPI(); 			//wait
+	while (!((SPI1->SR) & SPI_SR_RXNE)) {
+		if (failsafe_SPI()) {
+			break; 			//wait
+		}
 	}
 	*data = SPI1->DR;
 }
@@ -336,67 +351,10 @@ static void setup_acc() {
 	SPI1_disable();
 }
 
-void average_filters_setup() {
-
-	float value_gyro[6] = {0.135250,0.216229,0.234301,0.234301,0.216229,0.135250};
-
-	average_gyro_X.length = 6;
-
-	FIR_Filter_Init(&average_gyro_X);
-
-	for (uint8_t i = 0; i < average_gyro_X.length; i++) {
-		average_gyro_X.impulse_responce[i] = value_gyro[i];
-	}
-
-	average_gyro_Y.length = 6;
-
-	FIR_Filter_Init(&average_gyro_Y);
-	for (uint8_t i = 0; i < average_gyro_Y.length; i++) {
-		average_gyro_Y.impulse_responce[i] = value_gyro[i];
-	}
-
-	average_gyro_Z.length = 6;
-
-	FIR_Filter_Init(&average_gyro_Z);
-	for (uint8_t i = 0; i < average_gyro_Z.length; i++) {
-		average_gyro_Z.impulse_responce[i] = value_gyro[i];
-	}
-
-	float value_acc[6] = {0.135250,0.216229,0.234301,0.234301,0.216229,0.135250};
-
-	average_acc_X.length = 6;
-		FIR_Filter_Init(&average_acc_X);
-	for (uint8_t i = 0; i < average_acc_X.length; i++) {
-		average_acc_X.impulse_responce[i] = value_acc[i];
-	}
-
-	average_acc_Y.length = 6;
-
-	FIR_Filter_Init(&average_acc_Y);
-	for (uint8_t i = 0; i < average_acc_Y.length; i++) {
-		average_acc_Y.impulse_responce[i] = value_acc[i];
-	}
-
-	average_acc_Z.length = 6;
-
-	FIR_Filter_Init(&average_acc_Z);
-	for (uint8_t i = 0; i < average_acc_Z.length; i++) {
-		average_acc_Z.impulse_responce[i] = value_acc[i];
-	}
-
-}
-
 void read_all() {
-//	uint8_t temp[117] = { 0 };
-//		//X:
-//		MPU6000_SPI_read(0x0D, temp, 117);
-//		read_write_tab[0] = temp[0];
-//		read_write_tab[1] = temp[1];
-
 	read_acc();
 	read_temp();
 	read_gyro();
-	imu_received = 1;
 }
 
 void read_acc() {
@@ -450,7 +408,7 @@ void read_gyro() {
 	SPI1_disable();
 }
 
-void rewrite_data() {
+void rewrite_Gyro_Acc_data(timeUs_t time) {
 	if (imu_received) {
 		for (int i = 0; i < 3; i++) {
 			//gyro:
@@ -470,124 +428,49 @@ void rewrite_data() {
 			}
 		}
 
-		Gyro_Acc[0] = FIR_Filter_filtering(&average_gyro_X,
-				temporary[0] - GYRO_ROLL_OFFSET);
-		Gyro_Acc[1] = FIR_Filter_filtering(&average_gyro_Y,
-				temporary[1] - GYRO_PITCH_OFFSET);
-		Gyro_Acc[2] = FIR_Filter_filtering(&average_gyro_Z,
-				temporary[2] - GYRO_YAW_OFFSET);
-		Gyro_Acc[3] = FIR_Filter_filtering(&average_acc_X,
-				temporary[3] - ACC_ROLL_OFFSET);
-		Gyro_Acc[4] = FIR_Filter_filtering(&average_acc_Y,
-				temporary[4] - ACC_PITCH_OFFSET);
-		Gyro_Acc[5] = FIR_Filter_filtering(&average_acc_Z,
-				temporary[5] - ACC_YAW_OFFSET);
+		Gyro_Acc_filtering(temporary);
+
+		//save temperature:
 		Gyro_Acc[6] = read_write_tab[6] << 8 | read_write_tab[7];
 
 		//Save data to flash:
-#if defined(USE_FLASH_BLACKBOX)
+		Gyro_Acc_save_to_flash(temporary);
 
-		if (blackbox_command == 1) {
-
-
-#if	defined(BLACKBOX_SAVE_EULER_ANGLES)
-
-			flash_add_data_to_save(
-					((int16_t)(global_euler_angles.roll*150) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) (global_euler_angles.roll*150) & 0xFF);
-
-			flash_add_data_to_save(
-					((int16_t) (global_euler_angles.pitch*150) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) (global_euler_angles.pitch*150) & 0xFF);
-
-			flash_add_data_to_save(
-					((int16_t) (global_euler_angles.yaw*150) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) (global_euler_angles.yaw*150) & 0xFF);
-#endif
-
-#if	defined(BLACKBOX_SAVE_SET_ANGLES)
-			for (uint8_t i = 0; i < 3; i++) {
-				flash_add_data_to_save(((int16_t) (global_variable_monitor[i]*150) >> 8) & 0xFF);
-				flash_add_data_to_save((int16_t) (global_variable_monitor[i]*150) & 0xFF);
-			}
-
-#endif
-
-
-#if defined(BLACKBOX_SAVE_FILTERED_GYRO_AND_ACC)
-			for (uint8_t i = 0; i < 6; i++) {
-				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
-				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
-			}
-#elif			defined(BLACKBOX_SAVE_FILTERED_GYRO)
-			for (uint8_t i = 0; i < 3; i++) {
-				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
-				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
-			}
-#elif			defined(BLACKBOX_SAVE_FILTERED_ACC)
-			for (uint8_t i = 3; i < 6; i++) {
-				flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
-				flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
-			}
-#endif
-
-#if	defined(BLACKBOX_SAVE_RAW_GYRO_AND_ACC)
-
-			for (uint8_t i = 0; i < 6; i++) {
-				flash_add_data_to_save(((int16_t) temporary[i] >> 8) & 0xFF);
-				flash_add_data_to_save((int16_t) temporary[i] & 0xFF);
-			}
-#elif	defined(BLACKBOX_SAVE_RAW_GYRO)
-			for (uint8_t i = 0; i < 3; i++) {
-				flash_add_data_to_save(((int16_t) temporary[i] >> 8) & 0xFF);
-				flash_add_data_to_save((int16_t) temporary[i] & 0xFF);
-			}
-#elif	defined(BLACKBOX_SAVE_RAW_ACC)
-			for (uint8_t i = 3; i < 6; i++) {
-				flash_add_data_to_save(((int16_t) temporary[i] >> 8) & 0xFF);
-				flash_add_data_to_save((int16_t) temporary[i] & 0xFF);
-			}
-#endif
-
-#if	defined(BLACKBOX_SAVE_STICKS)
-			for (uint8_t i = 0; i < 2; i++) {
-				flash_add_data_to_save(((int16_t) channels[i] >> 8) & 0xFF);
-				flash_add_data_to_save((int16_t) channels[i] & 0xFF);
-			}
-			flash_add_data_to_save(((int16_t) channels[3] >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t) channels[3] & 0xFF);
-#endif
-
-		}
-
-#endif
 		EXTI->IMR |= EXTI_IMR_IM4;
 
 	}
 }
 
-static void failsafe_CONF() {
+static bool failsafe_CONF() {
 	//	waiting as Data will be sent or failsafe if set time passed
-	if ((get_Global_Time() - time_flag4_1) >= TIMEOUT_VALUE) {
-		failsafe_type = 4;
+	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE)) {
+		FailSafe_type = SETUP_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		return true;
+	}
+	return false;
+}
 
-	}
-}
-static void failsafe_I2C() {
+static bool failsafe_I2C() {
 	//	waiting as Data will be sent or failsafe if set time passed
-	if ((get_Global_Time() - time_flag4_1) >= TIMEOUT_VALUE) {
-		failsafe_type = 5;
+	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE)) {
+		FailSafe_type = I2C_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		return true;
 	}
+	return false;
 }
-static void failsafe_SPI() {
+
+static bool failsafe_SPI() {
 	//	waiting as Data will be sent or failsafe if set time passed
-	if ((get_Global_Time() - time_flag4_1) >= TIMEOUT_VALUE) {
-		failsafe_type = 6;
+	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE)) {
+		FailSafe_type = SPI_IMU_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		return true;
 	}
+	return false;
 }
+#if defined(IMU_TEST)
 
 static void MPU6000_self_test_configuration() {
 	SPI1_enable();
@@ -605,6 +488,7 @@ static void MPU6000_self_test_configuration() {
 	SPI1_disable();
 
 }
+
 static void MPU6000_self_test_measurements(float temporary[]) {
 	static int i;
 	static float averagegyroX;
@@ -657,3 +541,4 @@ static void MPU6000_self_test_measurements(float temporary[]) {
 		i = 12345;	// end of measurements
 	}
 }
+#endif

@@ -8,6 +8,7 @@
 #ifndef STABILIZE_H_
 #define STABILIZE_H_
 
-void stabilize();
+void stabilize(timeUs_t time);
+void send_telemetry_stabilize(timeUs_t time);
 
 #endif /* STABILIZE_H_ */

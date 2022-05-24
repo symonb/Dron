@@ -15,9 +15,13 @@ void flash_SPI_write_DMA(uint8_t , uint8_t * , int);
 void flash_erase(uint8_t , uint8_t *);
 void flash_full_chip_erase();
 uint8_t flash_read_status_register(uint8_t );
+void flash_read_unique_ID(uint8_t*);
 void flash_save_data(uint8_t ,uint32_t , uint8_t *, int);
 void flash_read_data(uint8_t ,uint32_t , uint8_t *, int);
 void flash_add_data_to_save(uint8_t );
+void Gyro_Acc_save_to_flash(float*not_filtered);
+bool is_flash_busy();
+
 
 //-------MACRO FOR FLASH W25Q128JV----------
 #define FLASH_WRITE_ENABLE 0x06
@@ -46,7 +50,8 @@ void flash_add_data_to_save(uint8_t );
 #define FLASH_ENABLE_RESET 0x66
 #define FLASH_RESET_DEVICE 0x99
 
-#define FLASH_DUMMY_BYTE 0xF0
+#define FLASH_DUMMY_BYTE 0xBD
+#define FLASH_IS_BUSY_BIT 0x01
 
 #define FLASH_READ_BLOCK_0 0x000000
 #define FLASH_READ_BLOCK_1 0x010000
