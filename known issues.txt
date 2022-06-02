@@ -1,0 +1,1 @@
+1 SPI3 for flash communication should be able to work on even 1
