@@ -1,0 +1,7 @@
+C:/Users/symon/Documents/Projects/Drone/Dron/build/CMakeFiles/main.elf.dir
+C:/Users/symon/Documents/Projects/Drone/Dron/build/CMakeFiles/main.bin.dir
+C:/Users/symon/Documents/Projects/Drone/Dron/build/CMakeFiles/main.hex.dir
+C:/Users/symon/Documents/Projects/Drone/Dron/build/CMakeFiles/edit_cache.dir
+C:/Users/symon/Documents/Projects/Drone/Dron/build/CMakeFiles/rebuild_cache.dir
+C:/Users/symon/Documents/Projects/Drone/Dron/build/Src/CMakeFiles/edit_cache.dir
+C:/Users/symon/Documents/Projects/Drone/Dron/build/Src/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,4 @@
+{   
+    "cmake.generator": "MinGW Makefiles",
+    //"cortex-debug.stm32cubeprogrammer": "C:/Program Files/STMicroelectronics/STM32Cube/STM32CubeProgrammer"
+}
