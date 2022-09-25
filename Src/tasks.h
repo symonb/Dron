@@ -29,7 +29,8 @@ typedef enum
 	TASK_SYSTEM,
 	TASK_IBUS_SAVE,
 	TASK_GYRO_ACC_FILTER,
-	TASK_PID,
+	TASK_MAIN_LOOP,
+	TASK_STABILIZATION_LOOP,
 	TASK_UPDATE_MOTORS,
 	TASK_TELEMETRY,
 	TASKS_COUNT
@@ -57,9 +58,6 @@ typedef struct
 	float avg_execution_time;									   // average execution time of this task
 
 } task_t;
-
-void PID_fun(timeUs_t time);
-void telemetry_fun(timeUs_t time);
 
 extern task_t all_tasks[];
 

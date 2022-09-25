@@ -36,61 +36,11 @@ int main(void)
 	flash_init();
 	scheduler_initialization(&main_scheduler);
 
-	time_flag0_2 = get_Global_Time();
-
 	while (1)
 	{
-
-		static timeUs_t time_flag_debug;
-		static uint16_t tik;
-		static timeUs_t dt_test;
-
-		if (get_Global_Time() - time_flag_debug >= SEC_TO_US(10))
-		{
-
-			time_flag_debug = get_Global_Time();
-			tik = 0;
-			dt_test = 0;
-			debug_variable_1 = 0;
-		}
 		scheduler_execute(&main_scheduler);
 
-		// if ((get_Global_Time() - time_flag0_2) >= SEC_TO_US(1. / FREQUENCY_PID_LOOP))
-		// {
-		// 	dt_global = get_Global_Time() - time_flag0_2;
-
-		// 	time_flag0_2 += dt_global;
-
-		// 	if (failsafe_PID_loop(&dt_global))
-		// 	{
-		// 		dt_test += 1;
-		// 	}
-
-		// 	tik++;
-
-		// 	Ibus_save(dt_global);
-		// 	rewrite_Gyro_Acc_data(dt_global);
-
-		// 	PID_fun(dt_global);
-
-		// 	if (0 != transmitting_is_Done && 0 != New_data_to_send)
-		// 	{
-		// 		// Transmit data
-		// 		print(table_to_send, ALL_ELEMENTS_TO_SEND);
-		// 	}
-		// }
-		// else
-		// {
-		// 	delay_micro(10);
-		// }
-
-		// if ((get_Global_Time() - time_flag0_3) >= SEC_TO_US(1.f / FREQUENCY_ESC_UPDATE))
-		// {
-		// 	time_flag0_3 = get_Global_Time();
-		// 	update_motors(dt_global);
-		// }
-
-		if (USB_detected || blackbox_command == 2)
+		if (USB_detected || BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
 		{
 			turn_OFF_RED_LED();
 			turn_OFF_BLUE_LED();

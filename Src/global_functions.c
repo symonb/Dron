@@ -162,10 +162,10 @@ void delay_micro(uint16_t delay_time)
 bool failsafe_PID_loop(timeUs_t *dt)
 {
 
-	if (*dt > SEC_TO_US(2. / FREQUENCY_PID_LOOP))
+	if (*dt > SEC_TO_US(2. / FREQUENCY_MAIN_LOOP))
 	{
-		*dt = SEC_TO_US(2. / FREQUENCY_PID_LOOP);
-		FailSafe_type = PID_LOOP_TIMEOUT;
+		*dt = SEC_TO_US(2. / FREQUENCY_MAIN_LOOP);
+		FailSafe_status = PID_LOOP_TIMEOUT;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}
@@ -174,9 +174,9 @@ bool failsafe_PID_loop(timeUs_t *dt)
 
 void anti_windup(ThreeF *sum_err, PIDF *R_PIDF, PIDF *P_PIDF, PIDF *Y_PIDF)
 {
-	if (channels[4] > 1600)
+	if (ARMING_STATUS == ARMED)
 	{
-
+		//	limit I_corrections:
 		if ((sum_err->roll * R_PIDF->I) > MAX_I_CORRECTION)
 		{
 			sum_err->roll = MAX_I_CORRECTION / R_PIDF->I;
@@ -387,22 +387,14 @@ void EXTI15_10_IRQHandler()
 		static uint16_t err_counter[10];
 		EXTI->PR |= EXTI_PR_PR15; // clear(setting 1) this bit (and at the same time bit SWIER15)
 
-		switch (FailSafe_type)
+		switch (FailSafe_status)
 		{
 		case NO_FAILSAFE:
 			break;
 
-		case DISARMED: // DISARM
-
-			motor_1_value_pointer = &MOTOR_OFF;
-			motor_2_value_pointer = &MOTOR_OFF;
-			motor_3_value_pointer = &MOTOR_OFF;
-			motor_4_value_pointer = &MOTOR_OFF;
-
-			err_counter[0]++;
-			FailSafe_type = NO_FAILSAFE;
-			break;
 		case INCORRECT_CHANNELS_VALUES: // BAD_CHANNELS_VALUES
+
+			ARMING_STATUS = DISARMED;
 
 			motor_1_value_pointer = &MOTOR_OFF;
 			motor_2_value_pointer = &MOTOR_OFF;
@@ -410,9 +402,11 @@ void EXTI15_10_IRQHandler()
 			motor_4_value_pointer = &MOTOR_OFF;
 
 			err_counter[1]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		case RX_TIMEOUT: // RX_TIMEOUT
+
+			ARMING_STATUS = DISARMED;
 
 			motor_1_value_pointer = &MOTOR_OFF;
 			motor_2_value_pointer = &MOTOR_OFF;
@@ -420,27 +414,27 @@ void EXTI15_10_IRQHandler()
 			motor_4_value_pointer = &MOTOR_OFF;
 
 			err_counter[2]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		case SETUP_ERROR:
 			err_counter[3]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		case I2C_ERROR:
 			err_counter[4]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		case SPI_IMU_ERROR:
 			err_counter[5]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		case SPI_FLASH_ERROR:
 			err_counter[6]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		case PID_LOOP_TIMEOUT:
 			err_counter[7]++;
-			FailSafe_type = NO_FAILSAFE;
+			FailSafe_status = NO_FAILSAFE;
 			break;
 		}
 	}

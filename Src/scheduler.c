@@ -47,7 +47,8 @@ bool scheduler_initialization(scheduler_t *scheduler)
 
 	add_to_queue(&all_tasks[TASK_GYRO_ACC_FILTER], scheduler);
 	add_to_queue(&all_tasks[TASK_IBUS_SAVE], scheduler);
-	add_to_queue(&all_tasks[TASK_PID], scheduler);
+	add_to_queue(&all_tasks[TASK_MAIN_LOOP], scheduler);
+	add_to_queue(&all_tasks[TASK_STABILIZATION_LOOP], scheduler);
 	add_to_queue(&all_tasks[TASK_SYSTEM], scheduler);
 	add_to_queue(&all_tasks[TASK_TELEMETRY], scheduler);
 	add_to_queue(&all_tasks[TASK_UPDATE_MOTORS], scheduler);

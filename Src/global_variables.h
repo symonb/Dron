@@ -63,13 +63,15 @@ typedef enum
 	FLIGHT_MODE_COUNT
 } flight_mode_e;
 
+extern flight_mode_e flight_mode;
+
+extern enum arming_t ARMING_STATUS;
+
 typedef uint64_t timeUs_t;
 typedef uint32_t timeMs_t;
 
 // FOR DEBUG ONLY:
-extern int64_t debug_variable_1;
-
-extern flight_mode_e flight_mode;
+extern double debug_variable_1;
 
 //---------TIME VARIABLES-------------
 
@@ -100,8 +102,6 @@ extern uint16_t channels[];
 
 extern uint16_t channels_previous_values[];
 
-extern int8_t arming_status;
-
 extern int16_t Throttle;
 
 extern ThreeF global_euler_angles;
@@ -109,6 +109,8 @@ extern ThreeF global_euler_angles;
 extern ThreeF global_angles;
 
 extern Quaternion q_global_position;
+
+extern ThreeF desired_rotation_speed;
 
 extern uint16_t motor_1_value;
 extern uint16_t motor_2_value;
@@ -124,12 +126,41 @@ extern int16_t Gyro_Acc[];
 
 extern uint16_t table_to_send[];
 
-extern bool New_data_to_send;
-
 extern bool ibus_received;
 
 extern bool imu_received;
 
+//-------------------FILTERS--------------------
+#if defined(USE_FIR_FILTERS)
+extern const float GYRO_FILTER_X_COEF[];
+extern const float GYRO_FILTER_Y_COEF[];
+extern const float GYRO_FILTER_Z_COEF[];
+
+extern const float ACC_FILTER_X_COEF[];
+extern const float ACC_FILTER_Y_COEF[];
+extern const float ACC_FILTER_Z_COEF[];
+
+#elif defined(USE_IIR_FILTERS)
+
+extern const float GYRO_FILTER_X_FORW_COEF[];
+extern const float GYRO_FILTER_Y_FORW_COEF[];
+extern const float GYRO_FILTER_Z_FORW_COEF[];
+
+extern const float GYRO_FILTER_X_BACK_COEF[];
+extern const float GYRO_FILTER_Y_BACK_COEF[];
+extern const float GYRO_FILTER_Z_BACK_COEF[];
+
+extern const float ACC_FILTER_X_FORW_COEF[];
+extern const float ACC_FILTER_Y_FORW_COEF[];
+extern const float ACC_FILTER_Z_FORW_COEF[];
+
+extern const float ACC_FILTER_X_BACK_COEF[];
+extern const float ACC_FILTER_Y_BACK_COEF[];
+extern const float ACC_FILTER_Z_BACK_COEF[];
+
+#endif
+
+//--------------------I2C1----------------------
 extern uint8_t I2C1_read_write_flag;
 extern uint8_t I2C1_read_buffer[];
 
@@ -142,7 +173,7 @@ extern uint32_t dshot_buffer_4[];
 extern uint16_t dshot_buffer_4_1[];
 extern uint16_t dshot_buffer_2_3[];
 
-extern enum failsafe_type FailSafe_type;
+extern enum failsafe_t FailSafe_status;
 
 extern uint16_t MOTOR_OFF;
 
@@ -154,7 +185,7 @@ extern uint16_t flash_write_counter;
 extern uint8_t flash_read_buffer[];
 extern uint16_t flash_read_counter;
 
-extern uint8_t blackbox_command;
+extern enum blackbox_t BLACKBOX_STATUS;
 extern uint32_t flash_global_write_address;
 
 extern float global_variable_monitor[];

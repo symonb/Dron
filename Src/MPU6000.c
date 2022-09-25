@@ -131,8 +131,8 @@ void setup_MPU6000()
 	setup_conf();
 	setup_gyro();
 	setup_acc();
-	Gyro_Acc_average_filters_setup();
-	// change speed of SPI up to 10.5 [MHz] (only for reading sensors) IT DOESN T WORK
+	Gyro_Acc_filters_setup();
+	//	change speed of SPI up to 10.5 [MHz] (only for reading sensors) IT DOESN T WORK
 	//	SPI1->CR1 &= ~SPI_CR1_BR;
 	//	SPI1->CR1 |=  SPI_CR1_BR_1|SPI_CR1_BR_0;
 }
@@ -311,7 +311,6 @@ void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t *memory_adress,
 //-------main MPU6000 setting-----------
 static void setup_conf()
 {
-
 	// enable SPI1
 	SPI1_enable();
 
@@ -354,6 +353,7 @@ static void setup_conf()
 
 	SPI1_disable();
 }
+
 static void setup_gyro()
 {
 	//---------setting Gyro--------
@@ -369,6 +369,7 @@ static void setup_gyro()
 
 	SPI1_disable();
 }
+
 static void setup_acc()
 {
 	//---------setting Accelerometer-----------
@@ -487,7 +488,7 @@ static bool failsafe_CONF()
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
 	{
-		FailSafe_type = SETUP_ERROR;
+		FailSafe_status = SETUP_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}
@@ -499,7 +500,7 @@ static bool failsafe_SPI()
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
 	{
-		FailSafe_type = SPI_IMU_ERROR;
+		FailSafe_status = SPI_IMU_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}

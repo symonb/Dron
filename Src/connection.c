@@ -1,5 +1,5 @@
 /*
- * conection.c
+ * connection.c
  *
  *  Created on: 17.03.2021
  *      Author: symon
@@ -50,22 +50,24 @@ void USART6_IRQHandler(void)
 		switch (bufor[i])
 		{
 		case 0:
-			blackbox_command = 0;
+			BLACKBOX_STATUS = BLACKBOX_IDLE;
 			break;
 		case 1:
-			blackbox_command = 1;
+			BLACKBOX_STATUS = BLACKBOX_COLLECT_DATA;
 			break;
 		case 2:
-			blackbox_command = 2;
+			BLACKBOX_STATUS = BLACKBOX_SEND_DATA;
 			break;
 		case 3:
-			blackbox_command = 0;
+			//	go back to the beginning of the FLASH:
+			BLACKBOX_STATUS = BLACKBOX_IDLE;
 			flash_write_counter = 0;
 			flash_read_counter = 0;
 
 			break;
 		case 9:
-			blackbox_command = 0;
+			//	reset FLASH:
+			BLACKBOX_STATUS = BLACKBOX_IDLE;
 			flash_full_chip_erase();
 			flash_write_counter = 0;
 			flash_read_counter = 0;
@@ -136,7 +138,6 @@ void print(uint16_t x[], uint8_t data_to_send)
 
 	txTransmitted = 0;
 	transmitting_is_Done = 0;
-	New_data_to_send = 0;
 
 	DMA2_Stream6->M0AR = (uint32_t)(table_of_bytes_to_sent);
 	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
@@ -159,7 +160,7 @@ void print_flash(uint8_t data_pack_size)
 	j = 0;
 	k = 0;
 
-	while (USB_detected || blackbox_command == 2)
+	while (USB_detected || BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
 	{
 		if (0 != transmitting_is_Done && read_address < flash_global_write_address)
 		{

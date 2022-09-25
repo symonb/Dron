@@ -35,22 +35,18 @@ static ThreeF last_D_corr = {0, 0, 0};
 static Three Rates = {400, 400, 400};
 
 // 4s
-//  DRON DRUK 3D:
+//  DRONE 3D PRINT:
 // static PIDF R_PIDF = { 260, 180, 0.27, 2.5 };
 // static PIDF P_PIDF = { 260, 180, 0.27, 2.5 };
 // static PIDF Y_PIDF = { 1200, 300, 200, 0 };
 
-// DRON CARBON:
+// DRONE CARBON:
 static PIDF R_PIDF = {150, 190, 0.175, 0.2};
 static PIDF P_PIDF = {200, 210, 0.225, 0.25};
 static PIDF Y_PIDF = {500, 200, 70, 0};
 
 void stabilize(timeUs_t dt_us)
 {
-
-	turn_OFF_BLUE_LED();
-	turn_ON_RED_LED();
-
 	static float dt;
 
 	dt = US_TO_SEC(dt_us);
@@ -62,15 +58,8 @@ void stabilize(timeUs_t dt_us)
 #elif defined(STABILIZE_FILTER_COMPLEMENTARY)
 	complementary_filter(dt);
 #endif
-
-	set_motors(corrections_from_quaternion(q_global_position, dt));
-
-	if ((get_Global_Time() - time_flag1_2) >= SEC_TO_US(1.f / FREQUENCY_TELEMETRY_UPDATE))
-	{
-		time_flag1_2 = get_Global_Time();
-
-		// telemetry_fun(time_flag1_2);
-	}
+	// from correction calculated from angles we need to convert them into float <-1,1> as desired rotation speed for next PID controller:
+	desired_rotation_speed = corrections_from_quaternion(q_global_position, dt);
 }
 
 static Quaternion gyro_angles(Quaternion q_position, float dt)
@@ -457,17 +446,6 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 	err.pitch = error_quaternion.y;
 	err.yaw = error_quaternion.z;
 
-	// opcja 2 do doko�czenia !!! trzeba zmniejszyc PIDy
-	//	static ThreeF err_omega;
-	//	static float last_err_yaw;
-	//	err_omega.yaw = (err.yaw-last_err_yaw)/dt;
-	//
-	//	last_err_yaw = err.yaw;
-	//
-	//	err_omega.yaw= err_omega.yaw - Gyro_Acc[2] *0.0305185f/ Rates.yaw;
-	//
-	//	err.yaw=err_omega.yaw;
-
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;
 	sum_err.pitch += err.pitch * dt;
@@ -498,7 +476,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 	last_D_corr.pitch = D_corr.pitch;
 	last_D_corr.yaw = D_corr.yaw;
 
-	return corr;
+	return err;
 }
 
 void send_telemetry_stabilize(timeUs_t time)
@@ -519,5 +497,5 @@ void send_telemetry_stabilize(timeUs_t time)
 	table_to_send[12] = channels[1] - 500;
 	table_to_send[13] = channels[0] - 500;
 
-	New_data_to_send = 1;
+	print(table_to_send, ALL_ELEMENTS_TO_SEND);
 }

@@ -59,19 +59,19 @@
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_PID_LOOP 600		 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
-#define FREQUENCY_ESC_UPDATE 600	 //[Hz]
-#define FREQUENCY_IMU_READING 600	 //[Hz]
-#define FREQUENCY_RX_READING 200	 //[Hz]	set more than it is possible
-#define FREQUENCY_TELEMETRY_UPDATE 1 //[Hz]
-#define FREQUENCY_SYSTEM_CHECK 5	 //[Hz]
+#define FREQUENCY_MAIN_LOOP 600			 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_STABILIZATION_LOOP 150 //[Hz]
+#define FREQUENCY_ESC_UPDATE 600		 //[Hz]
+#define FREQUENCY_IMU_READING 600		 //[Hz]
+#define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible
+#define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
+#define FREQUENCY_SYSTEM_CHECK 5		 //[Hz]
 
 //------------FAILSAFE--------------------
 
-enum failsafe_type
+enum failsafe_t
 {
 	NO_FAILSAFE,
-	DISARMED,
 	INCORRECT_CHANNELS_VALUES,
 	RX_TIMEOUT,
 	SETUP_ERROR,
@@ -79,6 +79,13 @@ enum failsafe_type
 	SPI_IMU_ERROR,
 	SPI_FLASH_ERROR,
 	PID_LOOP_TIMEOUT
+};
+
+enum arming_t
+{
+	DISARMED,
+	ARMED,
+	PREARMED
 };
 
 //--------------BLACKBOX-------------------
@@ -100,9 +107,23 @@ enum failsafe_type
 #define BLACKBOX_SAVE_SET_ANGLES
 #define BLACKBOX_SAVE_FILTERED_GYRO
 
+enum blackbox_t
+{
+	BLACKBOX_IDLE,
+	BLACKBOX_COLLECT_DATA,
+	BLACKBOX_SEND_DATA
+};
+
 //-----------------I2C DEVICES----------------
 #define USE_I2C1
 #define I2C1_BUFFER_SIZE 10
+
+//-------------------FILTERS------------------
+#define USE_IIR_FILTERS // USE_FIR_FILTERS or USE_IIR_FILTERS
+#define GYRO_FILTERS_ORDER 2
+#define ACC_FILTERS_ORDER 2
+
+//	remember to define coefficients in global_variables.c
 
 //-----------OFFSETS and CALIBRATIONS VALUE----------
 #define PITCH_OFFSET -7

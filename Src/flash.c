@@ -448,7 +448,7 @@ static bool failsafe_SPI()
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag5_1) >= SEC_TO_US(TIMEOUT_VALUE))
 	{
-		FailSafe_type = SPI_FLASH_ERROR;
+		FailSafe_status = SPI_FLASH_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}
@@ -517,7 +517,7 @@ void Gyro_Acc_save_to_flash(float *not_filtered)
 {
 #if defined(USE_FLASH_BLACKBOX)
 
-	if (blackbox_command == 1)
+	if (BLACKBOX_STATUS == BLACKBOX_COLLECT_DATA)
 	{
 
 #if defined(BLACKBOX_SAVE_EULER_ANGLES)
