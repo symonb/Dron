@@ -18,7 +18,7 @@
 #define DEG_TO_RAD M_PI / 180
 #define GYRO_TO_RAD (1.f / 32.767f * DEG_TO_RAD)  // convert gyro register into rad per second unit
 #define ACC_TO_GRAVITY 1.f / 4096				  // convert acc register into gravity unit
-#define TIMEOUT_VALUE 0.5						  // time for SPI_failsafe activation [s]
+#define TIMEOUT_VALUE 0.5f						  // time for SPI_failsafe activation [s]
 #define TASK_PERIOD_KHZ(kHz) (1000000000 / (kHz)) // converts frequency in [kHz] into period in [us]
 #define TASK_PERIOD_HZ(Hz) (1000000 / (Hz))		  // converts frequency in [Hz] into [us]
 #define SEC_TO_US(s) ((s)*1000000)				  // converts [s] into [us]
@@ -59,10 +59,10 @@
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_MAIN_LOOP 600			 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
-#define FREQUENCY_STABILIZATION_LOOP 150 //[Hz]
-#define FREQUENCY_ESC_UPDATE 600		 //[Hz]
-#define FREQUENCY_IMU_READING 600		 //[Hz]
+#define FREQUENCY_MAIN_LOOP 900			 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_STABILIZATION_LOOP 200 //[Hz]
+#define FREQUENCY_ESC_UPDATE 900		 //[Hz]
+#define FREQUENCY_IMU_READING 900		 //[Hz]
 #define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 5		 //[Hz]

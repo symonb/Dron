@@ -33,7 +33,7 @@ int main(void)
 	setup_MPU6000();
 	setup_NVIC_2();
 	delay_mili(500);
-	flash_init();
+	// flash_init();
 	scheduler_initialization(&main_scheduler);
 
 	while (1)

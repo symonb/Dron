@@ -34,7 +34,7 @@ static timeUs_t idle_time_counter = 0;
 void task_system_fun(timeUs_t current_time)
 {
 	static timeUs_t last_time;
-	main_scheduler.system_load = 100 * (1 - (float)idle_time_counter / (current_time - last_time));
+	main_scheduler.system_load = main_scheduler.system_load * 0.9f + 10 * (1 - (float)(idle_time_counter) / (current_time - last_time));
 	idle_time_counter = 0;
 	last_time = current_time;
 }
@@ -58,7 +58,7 @@ bool scheduler_initialization(scheduler_t *scheduler)
 
 void scheduler_execute(scheduler_t *scheduler)
 {
-	static timeUs_t current_time;
+	static timeUs_t time_before_execution;
 
 	// reschedule scheduler to get next task:
 	scheduler_reschedule(scheduler);
@@ -66,13 +66,13 @@ void scheduler_execute(scheduler_t *scheduler)
 	// execute current task:
 	if (scheduler->current_task != NULL)
 	{
-		current_time = get_Global_Time();
+		time_before_execution = get_Global_Time();
 		// execute task function:
-		scheduler->current_task->task_fun(current_time);
+		scheduler->current_task->task_fun(time_before_execution);
 		// update task params:
-		scheduler->current_task->last_execution = current_time;
+		scheduler->current_task->last_execution = time_before_execution;
 		scheduler->current_task->dynamic_priority = 0;
-		scheduler->current_task->avg_execution_time += (get_Global_Time() - current_time - scheduler->current_task->avg_execution_time) / 100.f;
+		scheduler->current_task->avg_execution_time = scheduler->current_task->avg_execution_time * 0.95f + (get_Global_Time() - time_before_execution) * 0.05f;
 	}
 	// if nothing to do wait 10 [us]:
 	else
@@ -86,7 +86,6 @@ void scheduler_reschedule(scheduler_t *scheduler)
 {
 	//	reset variables:
 	timeUs_t current_time = get_Global_Time();
-	scheduler->system_load = 0;
 	bool real_time_task_lock = false;
 	scheduler->current_task = NULL;
 

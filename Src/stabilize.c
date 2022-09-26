@@ -250,7 +250,6 @@ static void madgwick_filter(float dt)
 
 static void mahony_filter(float dt)
 {
-
 	static Quaternion q_prim;
 	static Quaternion angular_velocity;
 
@@ -366,12 +365,10 @@ static ThreeF corrections(float dt)
 
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt)
 {
-
-	static ThreeF corr;
 	static ThreeF set_angles;
 	static Quaternion set_position_quaternion;
 	static Quaternion error_quaternion;
-	static uint8_t drone_was_armed = 0;
+	static bool drone_was_armed;
 
 	set_angles.roll = (channels[0] - 1500) / 500.f * MAX_ROLL_ANGLE;
 	set_angles.pitch = (channels[1] - 1500) / 500.f * MAX_PITCH_ANGLE;
@@ -395,17 +392,14 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 
 	// reset error for yaw after arming drone:
 
-	if (channels[4] > ARM_VALUE)
+	if (!drone_was_armed && ARMING_STATUS == ARMED)
 	{
-		if (!drone_was_armed)
-		{
-			drone_was_armed = 1;
-			set_angles.yaw = global_euler_angles.yaw;
-		}
+		drone_was_armed = true;
+		set_angles.yaw = global_euler_angles.yaw;
 	}
 	else
 	{
-		drone_was_armed = 0;
+		drone_was_armed = false;
 	}
 
 	// define quaternion of desired position (quaternion transformation from global to body frame):
@@ -445,36 +439,6 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 	err.roll = error_quaternion.x;
 	err.pitch = error_quaternion.y;
 	err.yaw = error_quaternion.z;
-
-	//	estimate Integral by sum (I term):
-	sum_err.roll += err.roll * dt;
-	sum_err.pitch += err.pitch * dt;
-	sum_err.yaw += err.yaw * dt;
-
-	// D correction will be divide for measurements and set-point corrections:
-	D_corr.roll = -Gyro_Acc[0] * 0.0305185f;
-	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
-	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
-
-	F_corr.roll = (channels[0] - channels_previous_values[0]) * 0.002f / dt;
-	F_corr.pitch = (channels[1] - channels_previous_values[1]) * 0.002f / dt;
-	F_corr.yaw = 0;
-
-	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
-
-	//	calculate corrections:
-	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll + R_PIDF.D * D_corr.roll + R_PIDF.F * F_corr.roll) * 2;
-	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch + P_PIDF.D * D_corr.pitch + P_PIDF.F * F_corr.pitch) * 2;
-	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw + Y_PIDF.D * D_corr.yaw + Y_PIDF.F * F_corr.yaw) * 2;
-
-	//	set current errors as last errors:
-	last_err.roll = err.roll;
-	last_err.pitch = err.pitch;
-	last_err.yaw = err.yaw;
-
-	last_D_corr.roll = D_corr.roll;
-	last_D_corr.pitch = D_corr.pitch;
-	last_D_corr.yaw = D_corr.yaw;
 
 	return err;
 }

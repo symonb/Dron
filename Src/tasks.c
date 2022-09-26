@@ -52,6 +52,11 @@ static void stabilization_fun(timeUs_t current_time)
 	static timeUs_t last_time;
 	static timeUs_t dt;
 	dt = current_time - last_time;
+	//	prevent too big dt (e.g first iteration after being inactive):
+	if (dt > 1.5f * TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP))
+	{
+		dt = TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP);
+	}
 	last_time = current_time;
 	stabilize(dt);
 }

@@ -20,9 +20,9 @@ static ThreeF corrections(float);
 static Three Rates = {500, 500, 400};
 
 // 4s
-static PIDF R_PIDF = {200, 300, 1.25, 0.5};
-static PIDF P_PIDF = {200, 300, 2, 0.5};
-static PIDF Y_PIDF = {1000, 50, 0.5, 0.5};
+static PIDF R_PIDF = {180, 300, 1.1, 1};
+static PIDF P_PIDF = {200, 300, 2, 1};
+static PIDF Y_PIDF = {1000, 50, 0.5, 1};
 
 // 3s
 // static PIDF R_PIDF = { 350, 400, 5, 5};
@@ -60,9 +60,9 @@ static ThreeF corrections(float dt)
 	else if (flight_mode == FLIGHT_MODE_STABLE)
 	{
 		// use rotation speed computed from desired angles:
-		err.roll = desired_rotation_speed.roll - Gyro_Acc[0] * GYRO_TO_DPS / Rates.roll;
-		err.pitch = desired_rotation_speed.pitch - Gyro_Acc[1] * GYRO_TO_DPS / Rates.pitch;
-		err.yaw = desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS / Rates.yaw;
+		err.roll = 1.5 * desired_rotation_speed.roll - Gyro_Acc[0] * GYRO_TO_DPS / Rates.roll;
+		err.pitch = 1.5 * desired_rotation_speed.pitch - Gyro_Acc[1] * GYRO_TO_DPS / Rates.pitch;
+		err.yaw = 2 * desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS / Rates.yaw;
 	}
 
 	//	estimate Integral by sum (I term):
