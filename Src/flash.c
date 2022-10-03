@@ -246,21 +246,6 @@ static void SPI_receive_DMA(uint8_t *data, int size)
 }
 #endif
 
-void flash_init()
-{
-	while (is_flash_busy())
-	{
-		delay_mili(500); // wait
-	}
-
-	flash_full_chip_erase();
-
-	while (is_flash_busy())
-	{
-		delay_mili(500); // wait for flash to erase
-	}
-}
-
 void flash_SPI_write(uint8_t instruction, uint8_t *data, uint8_t size)
 {
 

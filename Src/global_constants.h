@@ -25,14 +25,23 @@
 #define MS_TO_US(s) ((s)*1000)					  // converts [ms] into [us]
 #define US_TO_SEC(s) ((s) / 1000000.f)			  // converts [us] into [s]
 
+//-------------BATTERY------------
+#define BATTERY_SCALE 11
+#define ADC_REFERENCE_VOLTAGE 3.3f //	[V]
+
 //-----------RX_SETTINGS----------
 #define CHANNELS 10 // how many channels you want use (4 for steering; 14 is max)
 #define MAX_RX_SIGNAL 2050
 #define MIN_RX_SIGNAL 950
-#define MAX_NO_SIGNAL_TIME 1 // time after RX_failsafe occurs[s]
-#define ARM_VALUE 1600
-#define PREARM_VALUE 1600
-//#define USE_PREARM 			//if you want use PREARM define USE_PREARM
+#define MAX_NO_SIGNAL_TIME 1	  // time after RX_failsafe occurs[s]
+#define ARM_VALUE 1600			  //	value of arming switch to arm drone
+#define PREARM_VALUE 1600		  //	value of prearming switch to prearm drone
+#define MAX_ARM_THROTTLE_VAL 1100 //	maximum value of throttle that allow for arming
+#define USE_PREARM				  //	if you want use PREARM define USE_PREARM
+#define PREARM_CHANNEL 8		  //	and PREARM_CHANNEL
+#define ARM_CHANNEL 4
+#define FLIGHT_MODE_CHANNEL 6
+#define BLACKBOX_CHANNEL 7 //	switch to turn on blackbox data collection
 
 //------------ESC_PROTOCOLS----------
 #define ESC_PROTOCOL_DSHOT // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125, ESC_PROTOCOL_ONESHOT_V1 - bledy , ESC_PROTOCOL_DSHOT, ESC_PROTOCOL_DSHOT_BURST - nieskonczone
@@ -111,7 +120,8 @@ enum blackbox_t
 {
 	BLACKBOX_IDLE,
 	BLACKBOX_COLLECT_DATA,
-	BLACKBOX_SEND_DATA
+	BLACKBOX_SEND_DATA,
+	BLACKBOX_ERASE
 };
 
 //-----------------I2C DEVICES----------------

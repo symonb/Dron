@@ -116,6 +116,26 @@ CMakeFiles/main.elf.dir/Src/acro.c.obj: C:/Users/symon/Documents/Projects/Drone/
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/acro.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h
 
+CMakeFiles/main.elf.dir/Src/adc1.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.c \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/stm32f4xx.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cm4.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/stdint.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/_default_types.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/features.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_newlib_version.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_intsup.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_stdint.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmInstr.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmFunc.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmSimd.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/system_stm32f4xx.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_constants.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdbool.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_variables.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_functions.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.h
+
 CMakeFiles/main.elf.dir/Src/connection.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/connection.c \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/stm32f4xx.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cm4.h \
@@ -310,7 +330,8 @@ CMakeFiles/main.elf.dir/Src/main.c.obj: C:/Users/symon/Documents/Projects/Drone/
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/flash.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/i2c1.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.h
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.h
 
 CMakeFiles/main.elf.dir/Src/quaternions.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/quaternions.c \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/stm32f4xx.h \
@@ -345,26 +366,18 @@ CMakeFiles/main.elf.dir/Src/quaternions.c.obj: C:/Users/symon/Documents/Projects
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_ansi.h
 
 CMakeFiles/main.elf.dir/Src/scheduler.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.c \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_variables.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/stdint.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/_default_types.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/features.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_newlib_version.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_intsup.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_stdint.h \
-  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdbool.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/math.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/reent.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_ansi.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/newlib.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_newlib_version.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/config.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/ieeefp.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/features.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stddef.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_types.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/_types.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/_default_types.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/lock.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/cdefs.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_ansi.h \
@@ -372,15 +385,25 @@ CMakeFiles/main.elf.dir/Src/scheduler.c.obj: C:/Users/symon/Documents/Projects/D
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_locale.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/strings.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/string.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdbool.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/stm32f4xx.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cm4.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/stdint.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_intsup.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_stdint.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmInstr.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmFunc.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmSimd.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/system_stm32f4xx.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_constants.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_variables.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_functions.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.h
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/connection.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.h
 
 CMakeFiles/main.elf.dir/Src/setup.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.c \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/stm32f4xx.h \
@@ -400,8 +423,9 @@ CMakeFiles/main.elf.dir/Src/setup.c.obj: C:/Users/symon/Documents/Projects/Drone
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdbool.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_variables.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_functions.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/OSD.h
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/OSD.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.h
 
 CMakeFiles/main.elf.dir/Src/stabilize.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/stabilize.c \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/math.h \
@@ -572,6 +596,8 @@ C:/Users/symon/Documents/Projects/Drone/Dron/Src/ibus.c:
 
 C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdbool.h:
 
+C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.h:
+
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/OSD.c:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/filters.h:
@@ -579,6 +605,8 @@ C:/Users/symon/Documents/Projects/Drone/Dron/Src/filters.h:
 C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_locale.h:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/filters.c:
+
+C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.c:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/OSD.h:
 

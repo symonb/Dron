@@ -98,6 +98,10 @@ extern timeUs_t time_flag5_1;
 
 //---------VARIABLES-----------
 
+extern float battery_voltage;
+
+extern float MCU_temperature;
+
 extern uint16_t channels[];
 
 extern uint16_t channels_previous_values[];

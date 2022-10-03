@@ -22,6 +22,7 @@
 #include "tasks.h"
 #include "i2c1.h"
 #include "scheduler.h"
+#include "adc1.h"
 
 int main(void)
 {
@@ -33,36 +34,10 @@ int main(void)
 	setup_MPU6000();
 	setup_NVIC_2();
 	delay_mili(500);
-	// flash_init();
 	scheduler_initialization(&main_scheduler);
 
 	while (1)
 	{
 		scheduler_execute(&main_scheduler);
-
-		if (USB_detected || BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
-		{
-			turn_OFF_RED_LED();
-			turn_OFF_BLUE_LED();
-			delay_mili(3000);
-			turn_ON_RED_LED();
-			delay_mili(1000);
-			turn_ON_BLUE_LED();
-			delay_mili(1000);
-			turn_OFF_RED_LED();
-			turn_OFF_BLUE_LED();
-			delay_mili(1000);
-			turn_ON_RED_LED();
-			turn_ON_BLUE_LED();
-			delay_mili(1000);
-			turn_OFF_RED_LED();
-			turn_OFF_BLUE_LED();
-			delay_mili(1000);
-			turn_ON_RED_LED();
-			turn_ON_BLUE_LED();
-			delay_mili(2000);
-
-			print_flash(9);
-		}
 	}
 }

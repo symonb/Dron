@@ -11,6 +11,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/main.elf.dir/Src/OSD.c.obj.d"
   "CMakeFiles/main.elf.dir/Src/acro.c.obj"
   "CMakeFiles/main.elf.dir/Src/acro.c.obj.d"
+  "CMakeFiles/main.elf.dir/Src/adc1.c.obj"
+  "CMakeFiles/main.elf.dir/Src/adc1.c.obj.d"
   "CMakeFiles/main.elf.dir/Src/connection.c.obj"
   "CMakeFiles/main.elf.dir/Src/connection.c.obj.d"
   "CMakeFiles/main.elf.dir/Src/filters.c.obj"

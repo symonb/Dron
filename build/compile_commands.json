@@ -26,6 +26,11 @@
 },
 {
   "directory": "C:/Users/symon/Documents/Projects/Drone/Dron/build",
+  "command": "C:\\tools\\ARMGNU~1\\102021~1.10\\bin\\AR19DD~1.EXE  -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Src\\Std_Periph\\inc -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Src -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Drivers\\CMSIS\\Device\\ST\\STM32F4xx\\Include -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Drivers\\CMSIS\\Include -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb  -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -D__FPU_PRESENT -g -std=gnu17 -o CMakeFiles\\main.elf.dir\\Src\\adc1.c.obj -c C:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Src\\adc1.c",
+  "file": "C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.c"
+},
+{
+  "directory": "C:/Users/symon/Documents/Projects/Drone/Dron/build",
   "command": "C:\\tools\\ARMGNU~1\\102021~1.10\\bin\\AR19DD~1.EXE  -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Src\\Std_Periph\\inc -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Src -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Drivers\\CMSIS\\Device\\ST\\STM32F4xx\\Include -IC:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Drivers\\CMSIS\\Include -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb  -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -D__FPU_PRESENT -g -std=gnu17 -o CMakeFiles\\main.elf.dir\\Src\\connection.c.obj -c C:\\Users\\symon\\Documents\\Projects\\Drone\\Dron\\Src\\connection.c",
   "file": "C:/Users/symon/Documents/Projects/Drone/Dron/Src/connection.c"
 },

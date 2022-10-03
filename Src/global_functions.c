@@ -144,7 +144,7 @@ void delay_mili(uint16_t delay_time)
 {
 	// wait for time [ms]
 	uint64_t t = get_Global_Time();
-	while (get_Global_Time() - t < delay_time * 1000)
+	while ((get_Global_Time() - t) < (uint64_t)delay_time * 1000)
 	{
 		;
 	}
@@ -331,6 +331,14 @@ void turn_OFF_RED_LED()
 {
 	GPIOB->BSRRL |= GPIO_BSRR_BS_4;
 }
+void toggle_BLUE_LED()
+{
+	GPIOB->ODR ^= GPIO_ODR_ODR_5;
+}
+void toggle_RED_LED()
+{
+	GPIOB->ODR ^= GPIO_ODR_ODR_4;
+}
 
 void EXTI9_5_IRQHandler()
 {
@@ -393,8 +401,6 @@ void EXTI15_10_IRQHandler()
 			break;
 
 		case INCORRECT_CHANNELS_VALUES: // BAD_CHANNELS_VALUES
-
-			ARMING_STATUS = DISARMED;
 
 			motor_1_value_pointer = &MOTOR_OFF;
 			motor_2_value_pointer = &MOTOR_OFF;

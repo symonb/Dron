@@ -9,8 +9,9 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
-#include "setup.h"
 #include "OSD.h"
+#include "adc1.h"
+#include "setup.h"
 
 /* IMPORTANT:
  APB2 max frequency is 84 [MHz], 168 [MHz] only for timers
@@ -22,7 +23,7 @@ static void setup_PLL(); // clock setting
 static void setup_FPU();
 static void setup_GPIOA();		 // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1; pin 11 - D- OTG_USB_FS; pin 12 - D+ OTG_USB_FS  )
 static void setup_GPIOB();		 // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 6 - I2C1_SCL; pin 7 - I2C1_SDA; pin 10 - TX USART3)
-static void setup_GPIOC();		 // GPIOC (pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
+static void setup_GPIOC();		 // GPIOC (pin 0 - invert RX; pin 1 - battery voltage (ADC123_IN11) pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM5();		 // setup TIM5 global time and delay functions
 static void setup_PWM();		 // if you use PWM for ESC
 static void setup_Dshot();		 // if you use Dshot for ESC
@@ -34,6 +35,7 @@ static void setup_USART3(); // USART for communication via (3Dradio or bluetooth
 static void setup_USART6(); // USART for communication via (3Dradio or bluetooth)
 static void setup_SPI1();	// SPI for communication with MPU6000
 static void setup_SPI3();	// SPI for FLASH
+static void setup_ADC1();
 static void setup_DMA();
 static void setup_EXTI();
 static void setup_I2C1();
@@ -69,6 +71,7 @@ void setup()
 	setup_USART6();
 	setup_SPI1();
 	setup_SPI3();
+	setup_ADC1();
 	setup_EXTI();
 	setup_I2C1();
 	setup_OTG_USB_FS();
@@ -290,7 +293,13 @@ static void setup_GPIOC()
 	// enable GPIOC clock:
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
 
-	//	set mode ( 00-input; 01-output; 10-alternate):
+	//	set mode ( 00-input; 01-output; 10-alternate; 11-analog):
+
+	GPIOC->MODER &= ~GPIO_MODER_MODER0;
+	GPIOC->MODER |= GPIO_MODER_MODER0_0;
+
+	GPIOC->MODER &= ~GPIO_MODER_MODER1;
+	GPIOC->MODER |= GPIO_MODER_MODER1;
 
 	GPIOC->MODER &= ~GPIO_MODER_MODER4;
 
@@ -324,13 +333,15 @@ static void setup_GPIOC()
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR5_1;
 
 	//(11-max speed):
-	GPIOC->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR4_1 | GPIO_OSPEEDER_OSPEEDR4_0 |
-					   GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
-					   GPIO_OSPEEDER_OSPEEDR6_1 | GPIO_OSPEEDER_OSPEEDR6_0 |
-					   GPIO_OSPEEDER_OSPEEDR7_1 | GPIO_OSPEEDER_OSPEEDR7_0) |
-					  GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0 |
-					  GPIO_OSPEEDER_OSPEEDR11_1 | GPIO_OSPEEDER_OSPEEDR11_0 |
-					  GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0;
+	GPIOC->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR0 |
+					  GPIO_OSPEEDER_OSPEEDR1 |
+					  GPIO_OSPEEDER_OSPEEDR4 |
+					  GPIO_OSPEEDER_OSPEEDR5 |
+					  GPIO_OSPEEDER_OSPEEDR6 |
+					  GPIO_OSPEEDER_OSPEEDR7 |
+					  GPIO_OSPEEDER_OSPEEDR10 |
+					  GPIO_OSPEEDER_OSPEEDR11 |
+					  GPIO_OSPEEDER_OSPEEDR12;
 }
 
 static void setup_TIM5(void)
@@ -773,9 +784,38 @@ static void setup_SPI3()
 	SPI3->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
 }
 
+static void setup_ADC1()
+{
+	RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+	// set prescaler to 6 f_ADC = 84/6 = 14 [MHz] < 36 [MHz]:
+	ADC->CCR |= ADC_CCR_ADCPRE_1;
+	//	enable temperature sensor:
+	ADC->CCR |= ADC_CCR_TSVREFE;
+
+	//	use 12-bit resolution (default), SCAN mode on, overrun interrupt enable:
+	ADC1->CR1 |= ADC_CR1_SCAN | ADC_CR1_OVRIE;
+	//	EOC after each conversion, DMA on, DDS on:
+	ADC1->CR2 |= ADC_CR2_DMA | ADC_CR2_DDS;
+	// single conversion mode:
+	ADC1->CR2 &= ~ADC_CR2_CONT;
+	//	right data alignment:
+	ADC1->CR2 &= ~ADC_CR2_ALIGN;
+
+	//	sampling 3 cycles for channel11 (default):
+	ADC1->SMPR1 &= ~ADC_SMPR1_SMP11;
+	//	sampling 144 cycles for channel16:
+	ADC1->SMPR1 |= ADC_SMPR1_SMP16_1 | ADC_SMPR1_SMP16_2;
+
+	//	set 2 conversions in sequence:
+	ADC1->SQR1 |= ADC_SQR1_L_0;
+	//	define channels in sequence (IN11 - bat. volt., IN16 - temp.):
+	ADC1->SQR3 |= ADC_SQR3_SQ1_3 | ADC_SQR3_SQ1_1 | ADC_SQR3_SQ1_0 | ADC_SQR3_SQ2_4;
+
+	ADC1->CR2 |= ADC_CR2_ADON;
+}
+
 static void setup_DMA()
 {
-
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
 
@@ -903,11 +943,17 @@ static void setup_DMA()
 	DMA2_Stream5->M0AR = (uint32_t)(&rxBuf[1]);
 	DMA2_Stream5->NDTR = 31;
 
-	//	SPI1 - IMU reading:
+	//	SPI1 - IMU reading: not used
 	DMA2_Stream0->CR |= DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_PL_1;
 	DMA2_Stream0->PAR = (uint32_t)(&(SPI1->DR));
 	DMA2_Stream0->M0AR = (uint32_t)(read_write_tab);
 	DMA2_Stream0->NDTR = 14;
+
+	//	ADC1:
+	DMA2_Stream4->CR |= DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1;
+	DMA2_Stream4->PAR = (uint32_t)(&(ADC1->DR));
+	DMA2_Stream4->M0AR = (uint32_t)(ADC1_buffer);
+	DMA2_Stream4->NDTR = 2;
 
 // I2C1:
 #if defined(USE_I2C1)
@@ -988,36 +1034,39 @@ static void setup_OTG_USB_FS()
 
 void setup_NVIC_1()
 {
-
 	// Only basics interrupts (Global_Time; delay_functions(); failsafe_functions();)
 
-	// nvic interrupt enable (TIM5 interrupt);
+	//	nvic interrupt enable (TIM5 interrupt);
 	NVIC_EnableIRQ(TIM5_IRQn);
-	NVIC_SetPriority(TIM5_IRQn, 6);
+	NVIC_SetPriority(TIM5_IRQn, 7);
 
-	// nvic EXTI interrupt enable:
+	//	nvic EXTI interrupt enable:
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
 	NVIC_SetPriority(EXTI15_10_IRQn, 8);
 }
 void setup_NVIC_2()
 {
-	// nvic interrupt enable (USART6 interrupt):
+	//	nvic interrupt enable (USART6 interrupt):
 	NVIC_EnableIRQ(USART6_IRQn);
 	NVIC_SetPriority(USART6_IRQn, 17);
 
-	// nvic interrupt enable (USART1 interrupt):
+	//	nvic interrupt enable (USART1 interrupt):
 	NVIC_EnableIRQ(USART1_IRQn);
 	NVIC_SetPriority(USART1_IRQn, 9);
 
-	// nvic interrupt enable (EXTI interrupt)
+	//	nvic interrupt enable (EXTI interrupt)
 	NVIC_EnableIRQ(EXTI4_IRQn);
 	NVIC_SetPriority(EXTI4_IRQn, 10);
 
-	// nvic interrupt enable (EXTI interrupt)
+	//	nvic interrupt enable (EXTI interrupt)
 	NVIC_EnableIRQ(EXTI9_5_IRQn);
 	NVIC_SetPriority(EXTI9_5_IRQn, 20);
 
-	// nvic DMA interrupt enable:
+	//	nvic interrupt enable (ADC1 interrupt)
+	NVIC_DisableIRQ(ADC_IRQn);
+	NVIC_SetPriority(ADC_IRQn, 22);
+
+	//	nvic DMA interrupts enable:
 #if defined(USE_FLASH_BLACKBOX)
 	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
 #endif
@@ -1037,6 +1086,9 @@ void setup_NVIC_2()
 
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 	NVIC_SetPriority(DMA1_Stream7_IRQn, 13);
+
+	NVIC_EnableIRQ(DMA2_Stream4_IRQn);
+	NVIC_SetPriority(DMA2_Stream4_IRQn, 18);
 
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 	NVIC_SetPriority(DMA2_Stream5_IRQn, 11);

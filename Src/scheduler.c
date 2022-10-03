@@ -5,8 +5,6 @@
  *      Author: symon
  */
 
-#include "scheduler.h"
-
 #include <math.h>
 #include <string.h>
 #include <stdbool.h>
@@ -16,6 +14,9 @@
 #include "global_functions.h"
 #include "setup.h"
 #include "tasks.h"
+#include "adc1.h"
+#include "connection.h"
+#include "scheduler.h"
 
 bool scheduler_initialization(scheduler_t *scheduler);
 void scheduler_execute(scheduler_t *scheduler);
@@ -37,6 +38,13 @@ void task_system_fun(timeUs_t current_time)
 	main_scheduler.system_load = main_scheduler.system_load * 0.9f + 10 * (1 - (float)(idle_time_counter) / (current_time - last_time));
 	idle_time_counter = 0;
 	last_time = current_time;
+	//	read MCU temp. and battery voltage:
+	ADC1_start(current_time);
+	//	blackbox management:
+	if (BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
+	{
+		print_blackbox();
+	}
 }
 
 bool scheduler_initialization(scheduler_t *scheduler)

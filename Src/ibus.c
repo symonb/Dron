@@ -2,7 +2,6 @@
  * ibus.c
  *
  *  Created on: 25.01.2021
- *      Author: filip
  */
 #include "stm32f4xx.h"
 #include "global_constants.h"
@@ -164,28 +163,32 @@ bool Ibus_save(timeUs_t current_time)
 			failsafe_RX();
 			Throttle = channels[2];
 
-			if (channels[6] < 1400)
+			if (channels[FLIGHT_MODE_CHANNEL] < 1400)
 			{
 				flight_mode = FLIGHT_MODE_ACRO;
 				turn_OFF_RED_LED();
 				turn_ON_BLUE_LED();
 			}
-			else if (channels[6] > 1450)
+			else if (channels[FLIGHT_MODE_CHANNEL] > 1450)
 			{
 				flight_mode = FLIGHT_MODE_STABLE;
 				turn_OFF_BLUE_LED();
 				turn_ON_RED_LED();
 			}
 
-			if (channels[7] >= 1400 && channels[7] < 1700)
+			if (channels[BLACKBOX_CHANNEL] >= 1400 && channels[BLACKBOX_CHANNEL] < 1700)
 			{
 				BLACKBOX_STATUS = BLACKBOX_COLLECT_DATA;
 			}
-			else if (channels[7] >= 1700)
+			else if (channels[BLACKBOX_CHANNEL] >= 1700)
 			{
-				BLACKBOX_STATUS = BLACKBOX_IDLE;
+				if (BLACKBOX_STATUS != BLACKBOX_ERASE)
+				{
+					BLACKBOX_STATUS = BLACKBOX_ERASE;
+					flash_full_chip_erase();
+				}
 			}
-			else
+			else if (BLACKBOX_STATUS != BLACKBOX_SEND_DATA)
 			{
 				BLACKBOX_STATUS = BLACKBOX_IDLE;
 			}
@@ -205,66 +208,89 @@ static void failsafe_RX()
 {
 
 #if defined(USE_PREARM)
-	// Arming switch:
-	if (channels[4] <= ARM_VALUE)
+
+	if (ARMING_STATUS == DISARMED)
 	{
-		FailSafe_status = DISARMED;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-		arming_status = -1;
-		if (channels[8] > PREARM_VALUE)
+		//	if prearm switch is set, arming switch is off, throttle is low:
+		if (channels[PREARM_CHANNEL] >= PREARM_VALUE && channels[ARM_CHANNEL] < ARM_VALUE && Throttle <= MAX_ARM_THROTTLE_VAL)
 		{
-			arming_status = 0;
+			ARMING_STATUS = PREARMED;
 		}
 	}
-	else if (channels[0] <= MIN_RX_SIGNAL || channels[0] >= MAX_RX_SIGNAL || channels[1] <= MIN_RX_SIGNAL || channels[1] >= MAX_RX_SIGNAL || channels[2] <= MIN_RX_SIGNAL || channels[2] >= MAX_RX_SIGNAL || channels[3] <= MIN_RX_SIGNAL || channels[3] >= MAX_RX_SIGNAL)
-	{
 
-		FailSafe_status = INCORRECT_CHANNELS_VALUES;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-	}
-	else if (arming_status == 0 || arming_status == 1)
+	if (ARMING_STATUS == PREARMED)
 	{
-		arming_status = 1;
-		motor_1_value_pointer = &motor_1_value;
-		motor_2_value_pointer = &motor_2_value;
-		motor_3_value_pointer = &motor_3_value;
-		motor_4_value_pointer = &motor_4_value;
+		if (channels[ARM_CHANNEL] > ARM_VALUE)
+		{
+			ARMING_STATUS = ARMED;
+		}
+		else if (channels[PREARM_CHANNEL] < PREARM_VALUE || Throttle > MAX_ARM_THROTTLE_VAL)
+		{
+			ARMING_STATUS = DISARMED;
+		}
 	}
+
 #else
-	// Arming switch:
-	if (channels[4] <= ARM_VALUE)
+	if (ARMING_STATUS == DISARMED)
 	{
-		ARMING_STATUS = DISARMED;
-		motor_1_value_pointer = &MOTOR_OFF;
-		motor_2_value_pointer = &MOTOR_OFF;
-		motor_3_value_pointer = &MOTOR_OFF;
-		motor_4_value_pointer = &MOTOR_OFF;
-	}
-	else if (channels[0] <= MIN_RX_SIGNAL ||
-			 channels[0] >= MAX_RX_SIGNAL ||
-			 channels[1] <= MIN_RX_SIGNAL ||
-			 channels[1] >= MAX_RX_SIGNAL ||
-			 channels[2] <= MIN_RX_SIGNAL ||
-			 channels[2] >= MAX_RX_SIGNAL ||
-			 channels[3] <= MIN_RX_SIGNAL ||
-			 channels[3] >= MAX_RX_SIGNAL)
-	{
-
-		for (uint8_t i = 0; i < CHANNELS; i++)
+		if (Throttle <= MAX_ARM_THROTTLE_VAL && channels[ARM_CHANNEL] < ARM_VALUE)
 		{
-			channels[i] = channels_previous_values[i];
+			ARMING_STATUS = PREARMED;
 		}
-
-		FailSafe_status = INCORRECT_CHANNELS_VALUES;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		else
+		{
+			ARMING_STATUS = DISARMED;
+		}
 	}
-	else
+	if (ARMING_STATUS == PREARMED)
 	{
-		ARMING_STATUS = ARMED;
-		motor_1_value_pointer = &motor_1_value;
-		motor_2_value_pointer = &motor_2_value;
-		motor_3_value_pointer = &motor_3_value;
-		motor_4_value_pointer = &motor_4_value;
+		if (channels[ARM_CHANNEL] > ARM_VALUE)
+		{
+			ARMING_STATUS = ARMED;
+		}
+		else if (Throttle > MAX_ARM_THROTTLE_VAL)
+		{
+			ARMING_STATUS = DISARMED;
+		}
 	}
+
 #endif
+
+	else if (ARMING_STATUS == ARMED)
+	{
+		// Arming switch:
+		if (channels[4] < ARM_VALUE)
+		{
+			ARMING_STATUS = DISARMED;
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
+		}
+		else if (channels[0] <= MIN_RX_SIGNAL ||
+				 channels[0] >= MAX_RX_SIGNAL ||
+				 channels[1] <= MIN_RX_SIGNAL ||
+				 channels[1] >= MAX_RX_SIGNAL ||
+				 channels[2] <= MIN_RX_SIGNAL ||
+				 channels[2] >= MAX_RX_SIGNAL ||
+				 channels[3] <= MIN_RX_SIGNAL ||
+				 channels[3] >= MAX_RX_SIGNAL)
+		{
+
+			for (uint8_t i = 0; i < CHANNELS; i++)
+			{
+				channels[i] = channels_previous_values[i];
+			}
+
+			FailSafe_status = INCORRECT_CHANNELS_VALUES;
+			EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		}
+		else
+		{
+			motor_1_value_pointer = &motor_1_value;
+			motor_2_value_pointer = &motor_2_value;
+			motor_3_value_pointer = &motor_3_value;
+			motor_4_value_pointer = &motor_4_value;
+		}
+	}
 }

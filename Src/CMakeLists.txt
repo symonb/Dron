@@ -5,6 +5,7 @@ set(MAIN_SRC
     setup.c
 
     acro.c
+    adc1.c
     connection.c
     filters.c
     flash.c

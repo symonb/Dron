@@ -24,6 +24,8 @@ void turn_ON_BLUE_LED();
 void turn_OFF_BLUE_LED();
 void turn_ON_RED_LED();
 void turn_OFF_RED_LED();
+void toggle_BLUE_LED();
+void toggle_RED_LED();
 uint16_t get_Dshot_checksum(uint16_t value);
 uint16_t prepare_Dshot_package(uint16_t value);
 void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);

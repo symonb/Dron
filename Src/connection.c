@@ -57,6 +57,7 @@ void USART6_IRQHandler(void)
 			break;
 		case 2:
 			BLACKBOX_STATUS = BLACKBOX_SEND_DATA;
+
 			break;
 		case 3:
 			//	go back to the beginning of the FLASH:
@@ -160,12 +161,12 @@ void print_flash(uint8_t data_pack_size)
 	j = 0;
 	k = 0;
 
-	while (USB_detected || BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
+	while (BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
 	{
 		if (0 != transmitting_is_Done && read_address < flash_global_write_address)
 		{
-			turn_OFF_RED_LED();
-			turn_OFF_BLUE_LED();
+			toggle_RED_LED();
+			toggle_BLUE_LED();
 			// read data from flash:
 			flash_read_data(FLASH_READ_DATA, read_address, flash_read_buffer,
 							256);
@@ -219,11 +220,40 @@ void print_flash(uint8_t data_pack_size)
 				i = 0;
 			}
 		}
+		else if (read_address >= flash_global_write_address)
+		{
+			delay_mili(1000);
+			toggle_BLUE_LED();
+			toggle_RED_LED();
+		}
 		else
 		{
 			delay_mili(100);
-			turn_ON_BLUE_LED();
-			turn_ON_RED_LED();
 		}
 	}
+}
+
+void print_blackbox()
+{
+	turn_OFF_RED_LED();
+	turn_OFF_BLUE_LED();
+	delay_mili(3000);
+	turn_ON_RED_LED();
+	delay_mili(1000);
+	turn_ON_BLUE_LED();
+	delay_mili(1000);
+	turn_OFF_RED_LED();
+	turn_OFF_BLUE_LED();
+	delay_mili(1000);
+	turn_ON_RED_LED();
+	turn_ON_BLUE_LED();
+	delay_mili(1000);
+	turn_OFF_RED_LED();
+	turn_OFF_BLUE_LED();
+	delay_mili(1000);
+	turn_ON_RED_LED();
+	turn_ON_BLUE_LED();
+	delay_mili(2000);
+
+	print_flash(9);
 }

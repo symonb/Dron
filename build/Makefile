@@ -258,6 +258,30 @@ Src/acro.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/acro.c.s
 .PHONY : Src/acro.c.s
 
+Src/adc1.obj: Src/adc1.c.obj
+.PHONY : Src/adc1.obj
+
+# target to build an object file
+Src/adc1.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/adc1.c.obj
+.PHONY : Src/adc1.c.obj
+
+Src/adc1.i: Src/adc1.c.i
+.PHONY : Src/adc1.i
+
+# target to preprocess a source file
+Src/adc1.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/adc1.c.i
+.PHONY : Src/adc1.c.i
+
+Src/adc1.s: Src/adc1.c.s
+.PHONY : Src/adc1.s
+
+# target to generate assembly for a file
+Src/adc1.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/adc1.c.s
+.PHONY : Src/adc1.c.s
+
 Src/connection.obj: Src/connection.c.obj
 .PHONY : Src/connection.obj
 
@@ -594,6 +618,9 @@ help:
 	@echo ... Src/acro.obj
 	@echo ... Src/acro.i
 	@echo ... Src/acro.s
+	@echo ... Src/adc1.obj
+	@echo ... Src/adc1.i
+	@echo ... Src/adc1.s
 	@echo ... Src/connection.obj
 	@echo ... Src/connection.i
 	@echo ... Src/connection.s
