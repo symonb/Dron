@@ -282,6 +282,30 @@ Src/adc1.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/adc1.c.s
 .PHONY : Src/adc1.c.s
 
+Src/battery.obj: Src/battery.c.obj
+.PHONY : Src/battery.obj
+
+# target to build an object file
+Src/battery.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/battery.c.obj
+.PHONY : Src/battery.c.obj
+
+Src/battery.i: Src/battery.c.i
+.PHONY : Src/battery.i
+
+# target to preprocess a source file
+Src/battery.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/battery.c.i
+.PHONY : Src/battery.c.i
+
+Src/battery.s: Src/battery.c.s
+.PHONY : Src/battery.s
+
+# target to generate assembly for a file
+Src/battery.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/battery.c.s
+.PHONY : Src/battery.c.s
+
 Src/connection.obj: Src/connection.c.obj
 .PHONY : Src/connection.obj
 
@@ -621,6 +645,9 @@ help:
 	@echo ... Src/adc1.obj
 	@echo ... Src/adc1.i
 	@echo ... Src/adc1.s
+	@echo ... Src/battery.obj
+	@echo ... Src/battery.i
+	@echo ... Src/battery.s
 	@echo ... Src/connection.obj
 	@echo ... Src/connection.i
 	@echo ... Src/connection.s

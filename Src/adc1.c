@@ -3,6 +3,7 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
+#include "battery.h"
 #include "adc1.h"
 
 const float V_25 = 0.76f;    // [V]
@@ -21,7 +22,8 @@ void DMA2_Stream4_IRQHandler(void)
 void ADC1_start(timeUs_t current_time)
 {
     //  convert previous measurements:
-    battery_voltage = battery_voltage * 0.7f + (ADC1_buffer[0] * ADC_REFERENCE_VOLTAGE / 0xFFF * BATTERY_SCALE) * 0.3f;
+    main_battery.voltage = ADC1_buffer[0] * ADC_REFERENCE_VOLTAGE / 0xFFF * BATTERY_SCALE;
+    main_battery.voltage_filtered = main_battery.voltage_filtered * 0.9 + (ADC1_buffer[0] * ADC_REFERENCE_VOLTAGE / 0xFFF * BATTERY_SCALE) * 0.1;
     MCU_temperature = MCU_temperature * 0.7f + ((ADC1_buffer[1] * ADC_REFERENCE_VOLTAGE / 0xFFF - V_25) * AVG_SLOPE + 25) * 0.3f;
 
     //  turn on DMA:

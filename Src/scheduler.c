@@ -15,6 +15,7 @@
 #include "setup.h"
 #include "tasks.h"
 #include "adc1.h"
+#include "battery.h"
 #include "connection.h"
 #include "scheduler.h"
 
@@ -40,6 +41,7 @@ void task_system_fun(timeUs_t current_time)
 	last_time = current_time;
 	//	read MCU temp. and battery voltage:
 	ADC1_start(current_time);
+	battery_manage();
 	//	blackbox management:
 	if (BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
 	{

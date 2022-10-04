@@ -340,6 +340,19 @@ void toggle_RED_LED()
 	GPIOB->ODR ^= GPIO_ODR_ODR_4;
 }
 
+void turn_on_BUZZER()
+{
+	GPIOA->ODR |= GPIO_ODR_ODR_8;
+}
+void turn_off_BUZZER()
+{
+	GPIOA->ODR &= ~GPIO_ODR_ODR_8;
+}
+void toggle_BUZZER()
+{
+	GPIOA->ODR ^= GPIO_ODR_ODR_8;
+}
+
 void EXTI9_5_IRQHandler()
 {
 	if ((EXTI->PR & EXTI_PR_PR5))

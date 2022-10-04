@@ -38,9 +38,9 @@ timeUs_t time_flag5_1 = 0;
 
 //---------VARIABLES-----------
 
-float battery_voltage = 0;
-
 float MCU_temperature = 0;
+
+bool buzzer_active = false;
 
 uint16_t channels[14] = {
 	1500,

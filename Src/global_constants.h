@@ -27,7 +27,13 @@
 
 //-------------BATTERY------------
 #define BATTERY_SCALE 11
-#define ADC_REFERENCE_VOLTAGE 3.3f //	[V]
+#define ADC_REFERENCE_VOLTAGE 3.3f	  //	[V]
+#define BATTERY_CELL_MIN_VOLTAGE 3.5f //	[V]
+#define BATTERY_CELL_MAX_VOLTAGE 4.2f //	[V]
+
+//-------------BUZZER-------------
+#define BUZZER_TIME_ON 0.2	//	[s]
+#define BUZZER_TIME_OFF 0.8 //	[s]
 
 //-----------RX_SETTINGS----------
 #define CHANNELS 10 // how many channels you want use (4 for steering; 14 is max)
@@ -53,7 +59,6 @@
 #define DSHOT_0_LENGTH 13
 
 //----------MOTORS_AND_CORRECTIONS-------
-
 #define MAX_I_CORRECTION 300 // maximal I_corr for PIDs betwenn <0;4000>
 #define IDLE_VALUE 1050
 

@@ -27,6 +27,7 @@ static void ibus_save_enable(timeUs_t current_time);
 static bool ibus_saving_fun(timeUs_t current_time, timeUs_t delta_time);
 static void telemetry_fun(timeUs_t time);
 static void (*telemetry_fun_tab[FLIGHT_MODE_COUNT])(timeUs_t dt);
+static void buzzer_fun(timeUs_t time);
 
 // ------DEFINE ALL TASKS--------
 task_t all_tasks[TASKS_COUNT] =
@@ -36,7 +37,8 @@ task_t all_tasks[TASKS_COUNT] =
 	 [TASK_MAIN_LOOP] = DEFINE_TASK("MAIN LOOP", main_PID_fun, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
 	 [TASK_STABILIZATION_LOOP] = DEFINE_TASK("STABILIZATION LOOP", stabilization_fun, stabilization_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
 	 [TASK_UPDATE_MOTORS] = DEFINE_TASK("UPDATE MOTORS", update_motors, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_ESC_UPDATE)),
-	 [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE))};
+	 [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE)),
+	 [TASK_BUZZER] = DEFINE_TASK("BUZZER", buzzer_fun, NULL, TASK_PRIORITY_IDLE, TASK_PERIOD_HZ(10))};
 
 static void main_PID_fun(timeUs_t current_time)
 {
@@ -102,3 +104,18 @@ static void (*telemetry_fun_tab[FLIGHT_MODE_COUNT])(timeUs_t dt) =
 	{
 		[FLIGHT_MODE_STABLE] = send_telemetry_stabilize,
 		[FLIGHT_MODE_ACRO] = send_telemetry_acro};
+
+static void buzzer_fun(timeUs_t time)
+{
+	static timeUs_t previous_time;
+	if (time - previous_time >= BUZZER_TIME_ON)
+	{
+		turn_off_BUZZER();
+
+		if (time - previous_time >= (BUZZER_TIME_OFF + BUZZER_TIME_ON))
+		{
+			turn_on_BUZZER();
+			previous_time = time;
+		}
+	}
+}

@@ -27,6 +27,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/OSD.c" "CMakeFiles/main.elf.dir/Src/OSD.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/OSD.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/acro.c" "CMakeFiles/main.elf.dir/Src/acro.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/acro.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.c" "CMakeFiles/main.elf.dir/Src/adc1.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/adc1.c.obj.d"
+  "C:/Users/symon/Documents/Projects/Drone/Dron/Src/battery.c" "CMakeFiles/main.elf.dir/Src/battery.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/battery.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/connection.c" "CMakeFiles/main.elf.dir/Src/connection.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/connection.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/filters.c" "CMakeFiles/main.elf.dir/Src/filters.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/filters.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/flash.c" "CMakeFiles/main.elf.dir/Src/flash.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/flash.c.obj.d"

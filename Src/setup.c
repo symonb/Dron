@@ -21,7 +21,7 @@
 static void setup_HSE();
 static void setup_PLL(); // clock setting
 static void setup_FPU();
-static void setup_GPIOA();		 // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 10 - RX USART1; pin 11 - D- OTG_USB_FS; pin 12 - D+ OTG_USB_FS  )
+static void setup_GPIOA();		 // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 8 - BUZZER; pin 10 - RX USART1; pin 11 - D- OTG_USB_FS; pin 12 - D+ OTG_USB_FS  )
 static void setup_GPIOB();		 // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 6 - I2C1_SCL; pin 7 - I2C1_SDA; pin 10 - TX USART3)
 static void setup_GPIOC();		 // GPIOC (pin 0 - invert RX; pin 1 - battery voltage (ADC123_IN11) pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM5();		 // setup TIM5 global time and delay functions
@@ -192,6 +192,9 @@ static void setup_GPIOA()
 	GPIOA->MODER &= ~GPIO_MODER_MODER7;
 	GPIOA->MODER |= GPIO_MODER_MODER7_1;
 
+	GPIOA->MODER &= ~GPIO_MODER_MODER8;
+	GPIOA->MODER |= GPIO_MODER_MODER8_0;
+
 	GPIOA->MODER &= ~GPIO_MODER_MODER10;
 	GPIOA->MODER |= GPIO_MODER_MODER10_1;
 
@@ -220,6 +223,7 @@ static void setup_GPIOA()
 					   GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
 					   GPIO_OSPEEDER_OSPEEDR6_1 | GPIO_OSPEEDER_OSPEEDR6_0 |
 					   GPIO_OSPEEDER_OSPEEDR7_1 | GPIO_OSPEEDER_OSPEEDR7_0 |
+					   GPIO_OSPEEDER_OSPEEDR8_1 | GPIO_OSPEEDER_OSPEEDR8_0 |
 					   GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0 |
 					   GPIO_OSPEEDER_OSPEEDR11_1 | GPIO_OSPEEDER_OSPEEDR11_0 |
 					   GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0);

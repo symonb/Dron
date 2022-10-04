@@ -6,6 +6,7 @@ set(MAIN_SRC
 
     acro.c
     adc1.c
+    battery.c
     connection.c
     filters.c
     flash.c
