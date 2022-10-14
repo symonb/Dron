@@ -63,9 +63,14 @@ void battery_manage()
             }
         }
     }
-    else if (main_battery.BATTERY_STATUS == BATTERY_OK)
+    else if (main_battery.BATTERY_STATUS >= BATTERY_OK)
     {
         main_battery.cell_voltage = main_battery.voltage_filtered / main_battery.cells_number;
+        if (main_battery.cell_voltage < BATTERY_CELL_MIN_VOLTAGE)
+        {
+            main_battery.BATTERY_STATUS = BATTERY_LOW;
+        }
+
         //  if battery disconnected:
         if (main_battery.voltage_filtered < BATTERY_CELL_MIN_VOLTAGE)
         {

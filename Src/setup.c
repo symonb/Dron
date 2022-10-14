@@ -22,7 +22,7 @@ static void setup_HSE();
 static void setup_PLL(); // clock setting
 static void setup_FPU();
 static void setup_GPIOA();		 // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4 - CS_SPI1; pin 5 - SCLK_SPI1; pin 6 - MISO_SPI1; pin 7 MOSI1_SPI1; pin 8 - BUZZER; pin 10 - RX USART1; pin 11 - D- OTG_USB_FS; pin 12 - D+ OTG_USB_FS  )
-static void setup_GPIOB();		 // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 6 - I2C1_SCL; pin 7 - I2C1_SDA; pin 10 - TX USART3)
+static void setup_GPIOB();		 // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 6 - I2C1_SCL; pin 7 - I2C1_SDA; pin 10 - TX USART3, pin 12 - CS_SPI2, pin 13 - SCLK_SPI2, pin 14 - MISO_SPI2, pin 15 - MOSI_SPI2)
 static void setup_GPIOC();		 // GPIOC (pin 0 - invert RX; pin 1 - battery voltage (ADC123_IN11) pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM5();		 // setup TIM5 global time and delay functions
 static void setup_PWM();		 // if you use PWM for ESC
@@ -34,6 +34,7 @@ static void setup_USART1(); // USART for radioreceiver
 static void setup_USART3(); // USART for communication via (3Dradio or bluetooth) - UNUSED
 static void setup_USART6(); // USART for communication via (3Dradio or bluetooth)
 static void setup_SPI1();	// SPI for communication with MPU6000
+static void setup_SPI2();	//	SPI for OSD chip
 static void setup_SPI3();	// SPI for FLASH
 static void setup_ADC1();
 static void setup_DMA();
@@ -70,13 +71,13 @@ void setup()
 	setup_USART3();
 	setup_USART6();
 	setup_SPI1();
+	setup_SPI2();
 	setup_SPI3();
 	setup_ADC1();
 	setup_EXTI();
 	setup_I2C1();
 	setup_OTG_USB_FS();
 	setup_DMA();
-	setup_OSD();
 }
 
 static void setup_HSE()
@@ -262,14 +263,24 @@ static void setup_GPIOB()
 	GPIOB->MODER &= ~GPIO_MODER_MODER12;
 	GPIOB->MODER |= GPIO_MODER_MODER12_0;
 
+	GPIOB->MODER &= ~GPIO_MODER_MODER13;
+	GPIOB->MODER |= GPIO_MODER_MODER13_1;
+
+	GPIOB->MODER &= ~GPIO_MODER_MODER14;
+	GPIOB->MODER |= GPIO_MODER_MODER14_1;
+
+	GPIOB->MODER &= ~GPIO_MODER_MODER15;
+	GPIOB->MODER |= GPIO_MODER_MODER15_1;
+
 	// set alternate functions:
 	GPIOB->AFR[0] &= ~0xFF0000FF;
 	GPIOB->AFR[0] |= 0x44000022;
-	GPIOB->AFR[1] &= ~0x00000F00;
-	GPIOB->AFR[1] |= 0x00000700;
+	GPIOB->AFR[1] &= ~0xFFF00F00;
+	GPIOB->AFR[1] |= 0x55500700;
 
-	// set high on PIN3 (SPI3 CS)
+	// set high on PIN3 (SPI3 CS) and PIN12 (SPI2 CS):
 	GPIOB->BSRRL |= GPIO_BSRR_BS_3;
+	GPIOB->BSRRL |= GPIO_BSRR_BS_12;
 
 	// (00 no pull down, no pull up; 01 pull-up; 10 pull-down ):
 	// pull-up SDA and SCL lines
@@ -283,13 +294,16 @@ static void setup_GPIOB()
 	GPIOB->OTYPER |= GPIO_OTYPER_OT_6 | GPIO_OTYPER_OT_7;
 
 	// set speed:
-	GPIOB->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR0_1 | GPIO_OSPEEDER_OSPEEDR0_0 |
-					   GPIO_OSPEEDER_OSPEEDR1_1 | GPIO_OSPEEDER_OSPEEDR1_0 |
-					   GPIO_OSPEEDER_OSPEEDR3_1 | GPIO_OSPEEDER_OSPEEDR3_0 |
-					   GPIO_OSPEEDER_OSPEEDR4_1 | GPIO_OSPEEDER_OSPEEDR4_0 |
-					   GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
-					   GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0 |
-					   GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0);
+	GPIOB->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR0 |
+					   GPIO_OSPEEDER_OSPEEDR1 |
+					   GPIO_OSPEEDER_OSPEEDR3 |
+					   GPIO_OSPEEDER_OSPEEDR4 |
+					   GPIO_OSPEEDER_OSPEEDR5 |
+					   GPIO_OSPEEDER_OSPEEDR10 |
+					   GPIO_OSPEEDER_OSPEEDR12 |
+					   GPIO_OSPEEDER_OSPEEDR13 |
+					   GPIO_OSPEEDER_OSPEEDR14 |
+					   GPIO_OSPEEDER_OSPEEDR15);
 }
 
 static void setup_GPIOC()
@@ -776,6 +790,16 @@ static void setup_SPI1()
 	SPI1->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL | SPI_CR1_CPHA; // NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 
 	// SPI1->CR2 |= SPI_CR2_RXDMAEN;
+}
+
+static void setup_SPI2()
+{
+	RCC->APB1ENR |= RCC_APB1ENR_SPI2EN;
+
+	SPI2->CR1 |= SPI_CR1_BR_1;							   // APB1 is 42 [MHz] and max frequency of OSD registers is 10 [MHz] (42/8<10 [MHz])
+	SPI2->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR; // NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is low (CPOL not set); first (rising) edge data capture (CPHA not set)
+	//	enable SPI2:
+	SPI2->CR1 |= SPI_CR1_SPE;
 }
 
 static void setup_SPI3()

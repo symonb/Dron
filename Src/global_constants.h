@@ -80,6 +80,7 @@
 #define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 5		 //[Hz]
+#define FREQUENCY_OSD_UPDATE 5			 //[Hz]
 
 //------------FAILSAFE--------------------
 
@@ -88,11 +89,14 @@ enum failsafe_t
 	NO_FAILSAFE,
 	INCORRECT_CHANNELS_VALUES,
 	RX_TIMEOUT,
+	NO_PREARM,
 	SETUP_ERROR,
 	I2C_ERROR,
 	SPI_IMU_ERROR,
 	SPI_FLASH_ERROR,
-	PID_LOOP_TIMEOUT
+	SPI_OSD_ERROR,
+	PID_LOOP_TIMEOUT,
+	FAILSAFES_COUNTER
 };
 
 enum arming_t
@@ -128,6 +132,16 @@ enum blackbox_t
 	BLACKBOX_SEND_DATA,
 	BLACKBOX_ERASE
 };
+
+//---------------------OSD--------------------
+
+#define OSD_BATTERY_VOLTAGE_PLACEMENT 361
+#define OSD_BATTERY_CELL_VOLTAGE_PLACEMENT 370
+#define OSD_TIMER_PLACEMENT 380
+#define OSD_FLIGHT_MODE_PLACEMENT 23
+#define OSD_LOGO_PLACEMENT 123
+#define OSD_WARNING_PLACEMENT 315
+#define OSD_AUTO_NTSC_PAL //	options:	OSD_AUTO_NTSC_PAL/OSD_CAMERA_PAL/OSD_CAMERA_NTSC
 
 //-----------------I2C DEVICES----------------
 #define USE_I2C1

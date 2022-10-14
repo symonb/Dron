@@ -62,6 +62,8 @@ bool scheduler_initialization(scheduler_t *scheduler)
 	add_to_queue(&all_tasks[TASK_SYSTEM], scheduler);
 	add_to_queue(&all_tasks[TASK_TELEMETRY], scheduler);
 	add_to_queue(&all_tasks[TASK_UPDATE_MOTORS], scheduler);
+	add_to_queue(&all_tasks[TASK_BUZZER], scheduler);
+	add_to_queue(&all_tasks[TASK_OSD], scheduler);
 
 	return true;
 }

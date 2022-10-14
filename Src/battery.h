@@ -5,7 +5,7 @@ enum battery_s
 {
     BATTERY_NOT_CONNECTED,
     BATTERY_OK,
-    BATTERY_WARNING
+    BATTERY_LOW
 };
 
 typedef struct

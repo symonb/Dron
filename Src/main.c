@@ -24,7 +24,9 @@
 #include "scheduler.h"
 #include "adc1.h"
 
-int main(void)
+#include "OSD.h"
+
+void main(void)
 {
 
 	setup();
@@ -32,6 +34,7 @@ int main(void)
 	setup_NVIC_1();
 	delay_mili(1000);
 	setup_MPU6000();
+	setup_OSD();
 	setup_NVIC_2();
 	delay_mili(500);
 	scheduler_initialization(&main_scheduler);

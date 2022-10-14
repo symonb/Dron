@@ -14,6 +14,7 @@ set(MAIN_SRC
     global_variables.c
     i2c1.c
     ibus.c
+    motors.c
     MPU6000.c
     OSD.c
     quaternions.c

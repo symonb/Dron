@@ -498,6 +498,30 @@ Src/main.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/main.c.s
 .PHONY : Src/main.c.s
 
+Src/motors.obj: Src/motors.c.obj
+.PHONY : Src/motors.obj
+
+# target to build an object file
+Src/motors.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/motors.c.obj
+.PHONY : Src/motors.c.obj
+
+Src/motors.i: Src/motors.c.i
+.PHONY : Src/motors.i
+
+# target to preprocess a source file
+Src/motors.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/motors.c.i
+.PHONY : Src/motors.c.i
+
+Src/motors.s: Src/motors.c.s
+.PHONY : Src/motors.s
+
+# target to generate assembly for a file
+Src/motors.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/motors.c.s
+.PHONY : Src/motors.c.s
+
 Src/quaternions.obj: Src/quaternions.c.obj
 .PHONY : Src/quaternions.obj
 
@@ -672,6 +696,9 @@ help:
 	@echo ... Src/main.obj
 	@echo ... Src/main.i
 	@echo ... Src/main.s
+	@echo ... Src/motors.obj
+	@echo ... Src/motors.i
+	@echo ... Src/motors.s
 	@echo ... Src/quaternions.obj
 	@echo ... Src/quaternions.i
 	@echo ... Src/quaternions.s

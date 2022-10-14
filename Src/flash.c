@@ -278,7 +278,6 @@ void flash_SPI_write_DMA(uint8_t instruction, uint8_t *data, int size)
 void flash_SPI_read(uint8_t instruction, uint8_t *memory_address,
 					int number_of_bytes)
 {
-
 	SPI3_enable();
 	CS_flash_enable();
 
@@ -430,7 +429,7 @@ void flash_read_unique_ID(uint8_t *memory_address)
 static bool failsafe_SPI()
 {
 
-	//	waiting as Data will be sent or failsafe if set time passed
+	//	waiting as Data will be sent or failsafe (if set time passed)
 	if ((get_Global_Time() - time_flag5_1) >= SEC_TO_US(TIMEOUT_VALUE))
 	{
 		FailSafe_status = SPI_FLASH_ERROR;

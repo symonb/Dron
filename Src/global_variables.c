@@ -23,10 +23,9 @@ volatile timeUs_t Global_Time = 0;
 timeUs_t dt_global = 0;
 
 // main:
-timeUs_t time_flag0_2 = 0;
-timeUs_t time_flag0_3 = 0;
+timeUs_t time_flag0_1 = 0;
 // stabilize:
-timeUs_t time_flag1_2 = 0;
+timeUs_t time_flag1_1 = 0;
 // acro:
 timeUs_t time_flag2_2 = 0;
 // ibus:
@@ -35,6 +34,8 @@ timeUs_t time_flag3_1 = 0;
 timeUs_t time_flag4_1 = 0;
 // flash:
 timeUs_t time_flag5_1 = 0;
+//	OSD:
+timeUs_t time_flag6_1 = 0;
 
 //---------VARIABLES-----------
 

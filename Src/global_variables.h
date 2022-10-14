@@ -81,20 +81,18 @@ extern timeUs_t dt_global;
 
 // main:
 extern timeUs_t time_flag0_1;
-extern timeUs_t time_flag0_2;
-extern timeUs_t time_flag0_3;
 // stabilize:
 extern timeUs_t time_flag1_1;
-extern timeUs_t time_flag1_2;
 // acro:
 extern timeUs_t time_flag2_1;
-extern timeUs_t time_flag2_2;
 // ibus:
 extern timeUs_t time_flag3_1;
 // MPU:
 extern timeUs_t time_flag4_1;
 // flash:
 extern timeUs_t time_flag5_1;
+//	OSD:
+extern timeUs_t time_flag6_1;
 
 //---------VARIABLES-----------
 

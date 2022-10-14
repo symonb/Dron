@@ -216,6 +216,11 @@ static void failsafe_RX()
 		{
 			ARMING_STATUS = PREARMED;
 		}
+		else if (channels[ARM_CHANNEL] > ARM_VALUE)
+		{
+			FailSafe_status = NO_PREARM;
+			EXTI->SWIER |= EXTI_SWIER_SWIER15;
+		}
 	}
 
 	if (ARMING_STATUS == PREARMED)
