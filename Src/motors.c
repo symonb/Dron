@@ -13,7 +13,6 @@ static void prepare_OneShot_PWM();
 //	motor 1
 void DMA1_Stream6_IRQHandler(void)
 {
-
     if (DMA1->HISR & DMA_HISR_TCIF6)
     {
         DMA1->HIFCR |= DMA_HIFCR_CTCIF6;
@@ -101,8 +100,39 @@ void DMA1_Stream1_IRQHandler(void)
 
 void update_motors(timeUs_t current_time)
 {
+#if defined(ESC_PROTOCOL_BIDIRECTIONAL_DSHOT)
+    // prepare for sending
+    fill_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),
+                      prepare_Dshot_package(*motor_2_value_pointer),
+                      prepare_Dshot_package(*motor_3_value_pointer),
+                      prepare_Dshot_package(*motor_4_value_pointer));
 
-#if defined(ESC_PROTOCOL_DSHOT)
+    DMA1_Stream6->PAR = (uint32_t)(&(TIM2->CCR4));
+    DMA1_Stream6->M0AR = (uint32_t)(dshot_buffer_1);
+    DMA1_Stream6->NDTR = DSHOT_BUFFER_LENGTH;
+
+    DMA1_Stream7->PAR = (uint32_t)(&(TIM3->CCR3));
+    DMA1_Stream7->M0AR = (uint32_t)(dshot_buffer_2);
+    DMA1_Stream7->NDTR = DSHOT_BUFFER_LENGTH;
+
+    DMA1_Stream2->PAR = (uint32_t)(&(TIM3->CCR4));
+    DMA1_Stream2->M0AR = (uint32_t)(dshot_buffer_3);
+    DMA1_Stream2->NDTR = DSHOT_BUFFER_LENGTH;
+
+    DMA1_Stream1->PAR = (uint32_t)(&(TIM2->CCR3));
+    DMA1_Stream1->M0AR = (uint32_t)(dshot_buffer_4);
+    DMA1_Stream1->NDTR = DSHOT_BUFFER_LENGTH;
+    //  send:
+    DMA1_Stream1->CR |= DMA_SxCR_EN;
+    DMA1_Stream2->CR |= DMA_SxCR_EN;
+    DMA1_Stream6->CR |= DMA_SxCR_EN;
+    DMA1_Stream7->CR |= DMA_SxCR_EN;
+
+    // prepare for reception (25 [us] break in communication for that):
+
+    //  receive data:
+
+#elif defined(ESC_PROTOCOL_DSHOT)
 
     //	Dshot:
 
@@ -140,9 +170,9 @@ void update_motors(timeUs_t current_time)
     //	DMA1_Stream2->CR |= DMA_SxCR_EN;
     //	DMA1_Stream6->CR |= DMA_SxCR_EN;
 
-#elif defined(ESC_PROTOCOL_ONESHOT125) || defined(ESC_PROTOCOL_ONESHOT_V1)
+#elif defined(ESC_PROTOCOL_ONESHOT125)
 
-    //	OneShot125 or OneShot125_v2:
+    //	OneShot125:
 
     prepare_OneShot_PWM();
 

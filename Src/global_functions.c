@@ -59,16 +59,6 @@ void interrupts_LOCK()
 	NVIC_DisableIRQ(DMA2_Stream5_IRQn);
 
 	NVIC_DisableIRQ(DMA2_Stream6_IRQn);
-
-// if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
-#if defined(ESC_PROTOCOL_ONESHOT_V1)
-	// nvic interrupt enable (TIM3 interrupt);
-	NVIC_DisableIRQ(TIM3_IRQn);
-
-	// nvic interrupt enable (TIM2 interrupt);
-	NVIC_DisableIRQ(TIM2_IRQn);
-
-#endif
 }
 
 void interrupts_UNLOCK()
@@ -114,16 +104,6 @@ void interrupts_UNLOCK()
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
 	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
-
-// if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
-#if defined(ESC_PROTOCOL_ONESHOT_V1)
-	// nvic interrupt enable (TIM3 interrupt);
-	NVIC_EnableIRQ(TIM3_IRQn);
-
-	// nvic interrupt enable (TIM2 interrupt);
-	NVIC_EnableIRQ(TIM2_IRQn);
-
-#endif
 }
 
 void TIM5_IRQHandler()

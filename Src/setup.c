@@ -26,16 +26,16 @@ static void setup_GPIOB();		 // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3
 static void setup_GPIOC();		 // GPIOC (pin 0 - invert RX; pin 1 - battery voltage (ADC123_IN11) pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM5();		 // setup TIM5 global time and delay functions
 static void setup_PWM();		 // if you use PWM for ESC
+static void setup_BDshot();		 //	if you use Bidirectional DShot for ESC
 static void setup_Dshot();		 // if you use Dshot for ESC
 static void setup_Dshot_burst(); // if Dshot is capable of burst transfer
 static void setup_OneShot125();	 // if you use OneShot125 for ESC
-static void setup_OneShot125_v2();
-static void setup_USART1(); // USART for radioreceiver
-static void setup_USART3(); // USART for communication via (3Dradio or bluetooth) - UNUSED
-static void setup_USART6(); // USART for communication via (3Dradio or bluetooth)
-static void setup_SPI1();	// SPI for communication with MPU6000
-static void setup_SPI2();	//	SPI for OSD chip
-static void setup_SPI3();	// SPI for FLASH
+static void setup_USART1();		 // USART for radioreceiver
+static void setup_USART3();		 // USART for communication via (3Dradio or bluetooth) - UNUSED
+static void setup_USART6();		 // USART for communication via (3Dradio or bluetooth)
+static void setup_SPI1();		 // SPI for communication with MPU6000
+static void setup_SPI2();		 //	SPI for OSD chip
+static void setup_SPI3();		 // SPI for FLASH
 static void setup_ADC1();
 static void setup_DMA();
 static void setup_EXTI();
@@ -58,14 +58,14 @@ void setup()
 	setup_TIM5();
 #if defined(ESC_PROTOCOL_PWM)
 	setup_PWM();
+#elif defined(ESC_PROTOCOL_BDSHOT)
+	setup_BDshot();
 #elif defined(ESC_PROTOCOL_DSHOT)
 	setup_Dshot();
 #elif defined(ESC_PROTOCOL_DSHOT_BURST)
 	// setup_Dshot_burst();		// NIESKONCZONE NIE DZIALA
 #elif defined(ESC_PROTOCOL_ONESHOT125)
-	setup_OneShot125_v2();
-#elif defined(ESC_PROTOCOL_ONESHOT_V1)
-	setup_OneShot125(); //	DO POPRAWKI WYSTEPUJA DLU�SZE PULSY prawdopodobnie zanim zostawnie wy�aczony timer juz wartosc skacze jako wysoka i w takiej sie zatrzaskuje az do kolejnego odblokowania timera
+	setup_OneShot125();
 #endif
 	setup_USART1();
 	setup_USART3();
@@ -213,6 +213,11 @@ static void setup_GPIOA()
 
 	// pull up (01) pull down (10)
 	// GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;  // on PIN4 (SPI1 CS):
+	// pull down on timer outputs:
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR2);
+	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR2_1;
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR3);
+	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR3_1;
 
 	// set high on PIN4 (SPI CS)
 	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
@@ -288,6 +293,11 @@ static void setup_GPIOB()
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR6_0;
 	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR7);
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR7_0;
+	// pull down on timer output:
+	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR0_1;
+	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR1);
+	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR1_1;
 
 	//	output type (0 - push-pull, 1 - open-drain)
 	//	open-drain for SDA and SCL:
@@ -438,9 +448,8 @@ static void setup_PWM()
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
 
-static void setup_Dshot()
+static void setup_BDshot()
 {
-
 	//	TIM2:
 
 	// enable TIM2 clock:
@@ -456,6 +465,7 @@ static void setup_Dshot()
 	// PWM mode 1 and output compare 4 preload enable:
 	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
 
+	//	TIM2 is 84 [MHz]:
 	TIM2->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
 	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
 
@@ -487,6 +497,76 @@ static void setup_Dshot()
 	// PWM mode 1 and output compare 4 preload enable:
 	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
 
+	//	TIM3 is 84 [MHz]:
+	TIM3->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM3->DIER = 0x0;
+	TIM3->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+
+	TIM3->CCR3 = 10; //	PWM duration channel 3
+	TIM3->CCR4 = 10; //	PWM duration channel 4
+
+	// channel 3 output enable:
+	TIM3->CCER |= TIM_CCER_CC3E;
+	// channel 4 output enable:
+	TIM3->CCER |= TIM_CCER_CC4E;
+
+	//	TIM3 enabling:
+	TIM3->EGR |= TIM_EGR_UG;
+	TIM3->CR1 |= TIM_CR1_CEN;
+}
+
+static void setup_Dshot()
+{
+	//	TIM2:
+
+	// enable TIM2 clock:
+
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+	// register is buffered and update event disable:
+	TIM2->CR1 = 0x0;
+	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	//	TIM2 is 84 [MHz]:
+	TIM2->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+
+	TIM2->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+
+	TIM2->CCR3 = 10; //	PWM duration channel 3
+	TIM2->CCR4 = 10; //	PWM duration channel 4
+
+	// channel 3 output enable:
+	TIM2->CCER |= TIM_CCER_CC3E;
+	// channel 4 output enable:
+	TIM2->CCER |= TIM_CCER_CC4E;
+
+	//	TIM2 enabling:
+	TIM2->EGR |= TIM_EGR_UG;
+	TIM2->CR1 |= TIM_CR1_CEN;
+
+	//	TIM3:
+
+	// enable TIM3 clock:
+	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+	// register is buffered and update event disable:
+	TIM3->CR1 = 0x0;
+	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+
+	// PWM mode 1 and output compare 3 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
+	// PWM mode 1 and output compare 4 preload enable:
+	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+
+	//	TIM3 is 84 [MHz]:
 	TIM3->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
 	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
 
@@ -583,101 +663,6 @@ static void setup_Dshot_burst()
 }
 
 static void setup_OneShot125()
-{
-
-	//	TIM2:
-	// enable TIM2 clock:
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-	// register is buffered and only overflow generate interrupt:
-	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
-
-	// PWM mode 1 and output compare 3 preload enable:
-	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
-
-	// PWM mode 1 and output compare 4 preload enable:
-	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
-
-	// channel's polarity when channels are active: (we want low because after PWM there should be low signal)
-	TIM2->CCER |= TIM_CCER_CC3P;
-	TIM2->CCER |= TIM_CCER_CC4P;
-
-	// channel 3 output enable:
-	TIM2->CCER |= TIM_CCER_CC3E;
-	// channel 4 output enable:
-	TIM2->CCER |= TIM_CCER_CC4E;
-
-	//	 OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
-	TIM2->PSC = 84 / 14 - 1; // I can not make just normal PWM/8 so I make higher resolution and I will unified it in another function
-	TIM2->ARR = 3500 - 1;	 //	PWM frame length (250 [us])
-
-	TIM2->CCR3 = 1750; //	PWM duration channel 3
-	TIM2->CCR4 = 1750; //	PWM duration channel 4
-
-	//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. So there is interrupt after OneShot_PWM frame where it is turn off
-	TIM2->DIER |= TIM_DIER_UIE; //	Overflow will generate interrupt
-
-	//	TIM3:
-	// enable TIM3 clock:
-	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-
-	// register is buffered and only overflow generate interrupt:
-	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
-
-	// PWM mode 1 and output compare 3 preload enable:
-	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
-	// PWM mode 1 and output compare 4 preload enable:
-	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
-
-	// channel's polarity when channels are active: (we want low because after PWM there should be low signal)
-	TIM3->CCER |= TIM_CCER_CC3P;
-	TIM3->CCER |= TIM_CCER_CC4P;
-
-	// channel 3 enable:
-	TIM3->CCER |= TIM_CCER_CC3E;
-	// channel 4 enable:
-	TIM3->CCER |= TIM_CCER_CC4E;
-
-	//	 OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
-	TIM3->PSC = 84 / 14 - 1;
-	TIM3->ARR = 3500 - 1; //	PWM frame length (250 [us])
-
-	TIM3->CCR3 = 1750; //	PWM duration channel 3
-	TIM3->CCR4 = 1750; //	PWM duration channel 4
-
-	//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. So there is interrupt after OneShot_PWM frame where it is turn off
-	TIM3->DIER |= TIM_DIER_UIE; //	Overflow will generate interrupt
-}
-
-// JEZELI ONESHOT BEDZIE ZROBIONY NA OPCJI ONE PULSE to wtedy te 2 funkcje sa niepotrzebne:
-#if defined(ESC_PROTOCOL_ONESHOT_V1)
-void TIM3_IRQHandler()
-{
-	if (TIM_SR_UIF & TIM3->SR)
-	{
-		TIM3->SR &= ~TIM_SR_UIF;
-		// turn off PWM generating (turn off timer):
-		TIM3->CR1 &= ~TIM_CR1_CEN;
-	}
-}
-
-void TIM2_IRQHandler()
-{
-
-	if (TIM_SR_UIF & TIM2->SR)
-	{
-		TIM2->SR &= ~TIM_SR_UIF;
-		// turn off PWM generating (turn off timer):
-		TIM2->CR1 &= ~TIM_CR1_CEN;
-	}
-	if (TIM_SR_CC2IF & TIM2->SR)
-	{
-		TIM2->SR &= ~TIM_SR_CC2IF;
-	}
-}
-#endif
-
-static void setup_OneShot125_v2()
 {
 
 	//	TIM2:
@@ -1123,15 +1108,4 @@ void setup_NVIC_2()
 
 	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
 	NVIC_SetPriority(DMA2_Stream6_IRQn, 12);
-
-// if oneshot_v2 is ok these 2 nvics conf. are unnecessary:
-#if defined(ESC_PROTOCOL_ONESHOT_V1)
-	// nvic interrupt enable (TIM3 interrupt);
-	NVIC_EnableIRQ(TIM3_IRQn);
-	NVIC_SetPriority(TIM3_IRQn, 13);
-
-	// nvic interrupt enable (TIM2 interrupt);
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_SetPriority(TIM2_IRQn, 13);
-#endif
 }
