@@ -11,6 +11,7 @@
 #include "global_functions.h"
 #include "OSD.h"
 #include "adc1.h"
+#include "motors.h"
 #include "setup.h"
 
 /* IMPORTANT:
@@ -60,10 +61,11 @@ void setup()
 	setup_PWM();
 #elif defined(ESC_PROTOCOL_BDSHOT)
 	setup_BDshot();
+	preset_bb_Dshot_buffers();
 #elif defined(ESC_PROTOCOL_DSHOT)
 	setup_Dshot();
 #elif defined(ESC_PROTOCOL_DSHOT_BURST)
-	// setup_Dshot_burst();		// NIESKONCZONE NIE DZIALA
+	// setup_Dshot_burst();		// NIESKONCZONE _ NIE DZIALA
 #elif defined(ESC_PROTOCOL_ONESHOT125)
 	setup_OneShot125();
 #endif
@@ -213,11 +215,6 @@ static void setup_GPIOA()
 
 	// pull up (01) pull down (10)
 	// GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;  // on PIN4 (SPI1 CS):
-	// pull down on timer outputs:
-	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR2);
-	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR2_1;
-	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR3);
-	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR3_1;
 
 	// set high on PIN4 (SPI CS)
 	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
@@ -293,11 +290,6 @@ static void setup_GPIOB()
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR6_0;
 	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR7);
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR7_0;
-	// pull down on timer output:
-	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR0_1;
-	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR1);
-	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR1_1;
 
 	//	output type (0 - push-pull, 1 - open-drain)
 	//	open-drain for SDA and SCL:
@@ -387,14 +379,13 @@ static void setup_TIM5(void)
 	//	interrupt enable:
 	TIM5->DIER |= TIM_DIER_UIE;
 
-	//	TIM6 enabling:
+	//	TIM5 enabling:
 	TIM5->EGR |= TIM_EGR_UG;
 	TIM5->CR1 |= TIM_CR1_CEN;
 }
 
 static void setup_PWM()
 {
-
 	// enable TIM2 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
@@ -450,71 +441,80 @@ static void setup_PWM()
 
 static void setup_BDshot()
 {
-	//	TIM2:
+	//	TIM1 - only for generating time basement all outputs are set by GPIOs:
 
-	// enable TIM2 clock:
+	// enable TIM1 clock:
 
-	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+	RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
 
-	// register is buffered and update event disable:
-	TIM2->CR1 = 0x0;
-	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+	// register is buffered and overflow DMA request:
+	TIM1->CR1 = 0x0;
+	TIM1->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
-	// PWM mode 1 and output compare 3 preload enable:
-	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
-	// PWM mode 1 and output compare 4 preload enable:
-	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+// DMA request:
+#if defined(BIT_BANGING_V1)
+	TIM1->DIER |= TIM_DIER_CC1DE; // channel 1 request
 
-	//	TIM2 is 84 [MHz]:
-	TIM2->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
-	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+	TIM1->CCR1 = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS;
 
-	TIM2->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+	//	TIM1 is 168 [MHz]:
+	TIM1->PSC = 168000 / DSHOT_MODE / DSHOT_BB_FRAME_LENGTH - 1;
+	TIM1->ARR = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS - 1;
 
-	TIM2->CCR3 = 10; //	PWM duration channel 3
-	TIM2->CCR4 = 10; //	PWM duration channel 4
+#elif defined(BIT_BANGING_V2)
+	TIM1->DIER |= TIM_DIER_CC1DE; // channel 1 request
+	TIM1->DIER |= TIM_DIER_CC2DE; // channel 2 request
+	TIM1->DIER |= TIM_DIER_CC3DE; // channel 3 request
 
-	// channel 3 output enable:
-	TIM2->CCER |= TIM_CCER_CC3E;
-	// channel 4 output enable:
-	TIM2->CCER |= TIM_CCER_CC4E;
+	TIM1->CCR1 = 0;
+	TIM1->CCR2 = DSHOT_BB_0_LENGTH;
+	TIM1->CCR3 = DSHOT_BB_1_LENGTH;
 
-	//	TIM2 enabling:
-	TIM2->EGR |= TIM_EGR_UG;
-	TIM2->CR1 |= TIM_CR1_CEN;
+	//	TIM1 is 168 [MHz]:
+	TIM1->PSC = 168000 / DSHOT_MODE / DSHOT_BB_FRAME_LENGTH - 1;
+	TIM1->ARR = DSHOT_BB_FRAME_LENGTH - 1;
+#endif
 
-	//	TIM3:
+	//	TIM1 enable:
+	TIM1->EGR |= TIM_EGR_UG;
+	TIM1->CR1 |= TIM_CR1_CEN;
 
-	// enable TIM3 clock:
-	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+	//	TIM8 - only for generating time basement all outputs are set by GPIOs:
 
-	// register is buffered and update event disable:
-	TIM3->CR1 = 0x0;
-	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+	// enable TIM8 clock:
 
-	// PWM mode 1 and output compare 3 preload enable:
-	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
-	// PWM mode 1 and output compare 4 preload enable:
-	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
+	RCC->APB2ENR |= RCC_APB2ENR_TIM8EN;
 
-	//	TIM3 is 84 [MHz]:
-	TIM3->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
-	TIM3->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
+	// register is buffered and overflow DMA request:
+	TIM8->CR1 = 0x0;
+	TIM8->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
-	TIM3->DIER = 0x0;
-	TIM3->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+// DMA request:
+#if defined(BIT_BANGING_V1)
+	TIM8->DIER |= TIM_DIER_CC1DE; // channel 1 request
 
-	TIM3->CCR3 = 10; //	PWM duration channel 3
-	TIM3->CCR4 = 10; //	PWM duration channel 4
+	TIM8->CCR1 = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS;
 
-	// channel 3 output enable:
-	TIM3->CCER |= TIM_CCER_CC3E;
-	// channel 4 output enable:
-	TIM3->CCER |= TIM_CCER_CC4E;
+	//	TIM8 is 168 [MHz]:
+	TIM8->PSC = 168000 / DSHOT_MODE / DSHOT_BB_FRAME_LENGTH - 1;
+	TIM8->ARR = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS - 1;
 
-	//	TIM3 enabling:
-	TIM3->EGR |= TIM_EGR_UG;
-	TIM3->CR1 |= TIM_CR1_CEN;
+#elif defined(BIT_BANGING_V2)
+	TIM8->DIER |= TIM_DIER_CC1DE; // channel 1 request
+	TIM8->DIER |= TIM_DIER_CC2DE; // channel 2 request
+	TIM8->DIER |= TIM_DIER_CC3DE; // channel 3 request
+
+	TIM8->CCR1 = 0;
+	TIM8->CCR2 = DSHOT_BB_0_LENGTH;
+	TIM8->CCR3 = DSHOT_BB_1_LENGTH;
+
+	//	TIM8 is 168 [MHz]:
+	TIM8->PSC = 168000 / DSHOT_MODE / DSHOT_BB_FRAME_LENGTH - 1;
+	TIM8->ARR = DSHOT_BB_FRAME_LENGTH - 1;
+#endif
+	//	TIM8 enable:
+	TIM8->EGR |= TIM_EGR_UG;
+	TIM8->CR1 |= TIM_CR1_CEN;
 }
 
 static void setup_Dshot()
@@ -538,7 +538,7 @@ static void setup_Dshot()
 	TIM2->PSC = 84000 / DSHOT_MODE / DSHOT_PWM_FRAME_LENGTH - 1;
 	TIM2->ARR = DSHOT_PWM_FRAME_LENGTH - 1;
 
-	TIM2->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3 and 4 channel
+	TIM2->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC4DE; //	DMA request enable for 3rd and 4th channel
 
 	TIM2->CCR3 = 10; //	PWM duration channel 3
 	TIM2->CCR4 = 10; //	PWM duration channel 4
@@ -686,7 +686,7 @@ static void setup_OneShot125()
 	// channel 4 output enable:
 	TIM2->CCER |= TIM_CCER_CC4E;
 
-	//	So OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
+	//	So OneShot is 8x faster regular PWM. 1 step is 1/14 [us] (normally 1 [us]).
 	TIM2->PSC = 84 / 14 - 1;
 	TIM2->ARR = 3500 - 1; //	PWM frame length (250 [us])
 
@@ -721,7 +721,7 @@ static void setup_OneShot125()
 	// channel 4 enable:
 	TIM3->CCER |= TIM_CCER_CC4E;
 
-	// OneShot is 8x faster regular PWM. 1 step is 1/8 [us] (normally 1 [us]).
+	// OneShot is 8x faster regular PWM. 1 step is 1/14 [us] (normally 1 [us]).
 	TIM3->PSC = 84 / 14 - 1;
 	TIM3->ARR = 3500 - 1; //	PWM frame length (250 [us])
 
@@ -907,7 +907,26 @@ static void setup_DMA()
 	DMA1->LIFCR |= DMA_LIFCR_CTCIF2;
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF6;
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF7;
+
 //-----------------------------END NORMAL DSHOT------------------------------------
+// bidirectional DSHOT:
+#elif defined(ESC_PROTOCOL_BDSHOT)
+	// for TIM1
+	DMA2_Stream6->CR = 0x0;
+	while (DMA2_Stream6->CR & DMA_SxCR_EN)
+	{
+		; // wait
+	}
+	DMA2_Stream6->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	// all the other parameters will be set afterward
+
+	DMA2_Stream2->CR = 0x0;
+	while (DMA2_Stream2->CR & DMA_SxCR_EN)
+	{
+		; // wait
+	}
+	DMA2_Stream2->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	// all the other parameters will be set afterward
 
 // DSHOT_BURST:
 #elif defined(ESC_PROTOCOL_DSHOT_BURST)
@@ -945,10 +964,10 @@ static void setup_DMA()
 	//-----------------------------END DSHOT_BURST-------------------------------------
 
 	// USART6 - telemetry TX (from memory to peripheral):
-	DMA2_Stream6->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
-	DMA2_Stream6->PAR = (uint32_t)(&(USART6->DR));
-	DMA2_Stream6->M0AR = (uint32_t)(table_of_bytes_to_sent);
-	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
+	DMA2_Stream7->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA2_Stream7->PAR = (uint32_t)(&(USART6->DR));
+	DMA2_Stream7->M0AR = (uint32_t)(table_of_bytes_to_sent);
+	DMA2_Stream7->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
 
 	// USART1 - RX reading:
 	DMA2_Stream5->CR |= DMA_SxCR_CHSEL_2 | DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_PL_1;
@@ -987,17 +1006,17 @@ static void setup_EXTI()
 
 	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
 
-	// set PC4,PC5 as EXTI
+	// set PC4,PC5 as EXTI:
 	SYSCFG->EXTICR[1] |= SYSCFG_EXTICR2_EXTI4_PC | SYSCFG_EXTICR2_EXTI5_PC;
 
-	// disable interrupts mask for IM4, IM5 and IM15
+	// disable interrupts mask for IM0, IM1, IM2, IM3, IM4, IM5 and IM15
 	EXTI->IMR &= ~(EXTI_IMR_MR4 | EXTI_IMR_MR5 | EXTI_IMR_MR15);
 	EXTI->IMR |= EXTI_IMR_MR4 | EXTI_IMR_MR5 | EXTI_IMR_MR15;
 
-	// setting rising edge detection for PC4, PC5:
+	// set rising edge detection for PC4, PC5:
 	EXTI->RTSR |= EXTI_RTSR_TR4 | EXTI_RTSR_TR5;
-	// setting falling edge detection for PC5:
-	EXTI->FTSR |= EXTI_FTSR_TR4 | EXTI_FTSR_TR5;
+	// set falling edge detection for PC5:
+	EXTI->FTSR |= EXTI_FTSR_TR5;
 }
 
 static void setup_I2C1()
@@ -1106,6 +1125,15 @@ void setup_NVIC_2()
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 	NVIC_SetPriority(DMA2_Stream5_IRQn, 11);
 
+	NVIC_EnableIRQ(DMA2_Stream7_IRQn);
+	NVIC_SetPriority(DMA2_Stream7_IRQn, 12);
+
+#if defined(ESC_PROTOCOL_BDSHOT)
+
 	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
-	NVIC_SetPriority(DMA2_Stream6_IRQn, 12);
+	NVIC_SetPriority(DMA2_Stream6_IRQn, 13);
+	NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+	NVIC_SetPriority(DMA2_Stream2_IRQn, 14);
+
+#endif
 }

@@ -28,7 +28,6 @@
 
 void main(void)
 {
-
 	setup();
 	turn_OFF_BLUE_LED();
 	setup_NVIC_1();

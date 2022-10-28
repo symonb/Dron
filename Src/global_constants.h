@@ -13,7 +13,7 @@
 #define MAX(a, b) ((a > b) ? a : b) // choose greater value
 #define GYRO_ACC_SIZE 7				// 3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14		// telemetry information different values
-#define GYRO_TO_DPS 1000 / 32767.f	// convert gyro register into degrees per second unit
+#define GYRO_TO_DPS 2000 / 32767.f	// convert gyro register into degrees per second unit
 #define RAD_TO_DEG 180 / M_PI
 #define DEG_TO_RAD M_PI / 180
 #define GYRO_TO_RAD (1.f / 32.767f * DEG_TO_RAD)  // convert gyro register into rad per second unit
@@ -50,17 +50,42 @@
 #define BLACKBOX_CHANNEL 7 //	switch to turn on blackbox data collection
 
 //------------ESC_PROTOCOLS----------
-#define ESC_PROTOCOL_ONESHOT125 // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125, ESC_PROTOCOL_BDSHOT, ESC_PROTOCOL_DSHOT, ESC_PROTOCOL_DSHOT_BURST - nieskonczone
+#define ESC_PROTOCOL_BDSHOT // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125, ESC_PROTOCOL_BDSHOT, ESC_PROTOCOL_DSHOT, ESC_PROTOCOL_DSHOT_BURST - nieskonczone
+#define BIT_BANGING_V1
+#define DSHOT_MODE 300 // 150 300 600 1200
 
-#define DSHOT_MODE 600		   // 150 300 600 1200
 #define DSHOT_BUFFER_LENGTH 18 // 16 bits of Dshot and 2 for clearing
 #define DSHOT_PWM_FRAME_LENGTH 35
 #define DSHOT_1_LENGTH 26
 #define DSHOT_0_LENGTH 13
 
+#if defined(BIT_BANGING_V1)
+#define DSHOT_BB_BUFFER_LENGTH 18  // 16 bits of Dshot and 2 for clearing - used when bit-banging dshot used
+#define DSHOT_BB_FRAME_LENGTH 140  //	how many counts of timer gives one bit frame
+#define DSHOT_BB_FRAME_SECTIONS 35 // in how many sections is bit frame divided (must be factor of DSHOT_BB_FRAME_LENGTH)
+#define DSHOT_BB_1_LENGTH 25
+#define DSHOT_BB_0_LENGTH 10
+#define BDSHOT_RESPONSE_LENGTH 21
+#define BDSHOT_RESPONSE_BITRATE (DSHOT_MODE * 4 / 3) // in my tests this value was not 5/4 * DSHOT_MODE as documentation suggests
+#define BDSHOT_RESPONSE_OVERSAMPLING 3				 // it has to be a factor of DSHOT_BB_FRAME_LENGTH * DSHOT_MODE / BDSHOT_RESPONSE_BITRATE
+
+#elif defined(BIT_BANGING_V2)
+#define DSHOT_BB_BUFFER_LENGTH 18 // 16 bits of Dshot and 2 for clearing - used when bit-banging dshot used
+#define DSHOT_BB_FRAME_LENGTH 35
+#define DSHOT_BB_1_LENGTH 26
+#define DSHOT_BB_0_LENGTH 13
+#define DSHOT_BB_FRAME_SECTIONS 3
+#define BDSHOT_RESPONSE_BUFFER_LENGTH 21
+#endif
+
 //----------MOTORS_AND_CORRECTIONS-------
 #define MAX_I_CORRECTION 300 // maximal I_corr for PIDs betwenn <0;4000>
 #define IDLE_VALUE 1050
+#define MOTOR_1 3			  // PA3
+#define MOTOR_2 0			  // PB0
+#define MOTOR_3 1			  // PB1
+#define MOTOR_4 2			  // PA2
+#define MOTOR_POLES_NUMBER 14 // how many poles have your motors (usually 14 or 12)
 
 //----------STABILIZE_SETINGS------
 #define MAX_ROLL_ANGLE 45
@@ -73,11 +98,11 @@
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_MAIN_LOOP 900			 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_MAIN_LOOP 700			 //[Hz]   IF YOU' RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
 #define FREQUENCY_STABILIZATION_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 900		 //[Hz]
-#define FREQUENCY_IMU_READING 900		 //[Hz]
-#define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible
+#define FREQUENCY_ESC_UPDATE 700		 //[Hz]
+#define FREQUENCY_IMU_READING 700		 //[Hz]
+#define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible (>150)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 5		 //[Hz]
 #define FREQUENCY_OSD_UPDATE 5			 //[Hz]

@@ -22,7 +22,7 @@ void battery_manage()
     if (main_battery.BATTERY_STATUS == BATTERY_NOT_CONNECTED)
     {
         // wait for voltage to stabilize:
-        if (abs(main_battery.voltage_filtered - main_battery.voltage) < 0.1 && main_battery.voltage_filtered > 0)
+        if (fabs(main_battery.voltage_filtered - main_battery.voltage) < 0.1 && main_battery.voltage_filtered > 0)
         {
             main_battery.voltage_stable = true;
             // calculate number of cells:

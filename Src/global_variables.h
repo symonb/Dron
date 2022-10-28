@@ -119,6 +119,16 @@ extern uint16_t motor_2_value;
 extern uint16_t motor_3_value;
 extern uint16_t motor_4_value;
 
+extern uint32_t motor_1_rpm;
+extern uint32_t motor_2_rpm;
+extern uint32_t motor_3_rpm;
+extern uint32_t motor_4_rpm;
+
+extern float motor_1_error;
+extern float motor_2_error;
+extern float motor_3_error;
+extern float motor_4_error;
+
 extern uint16_t *motor_1_value_pointer;
 extern uint16_t *motor_2_value_pointer;
 extern uint16_t *motor_3_value_pointer;
@@ -172,8 +182,12 @@ extern uint32_t dshot_buffer_1[];
 extern uint16_t dshot_buffer_2[];
 extern uint16_t dshot_buffer_3[];
 extern uint32_t dshot_buffer_4[];
-extern uint16_t dshot_buffer_4_1[];
-extern uint16_t dshot_buffer_2_3[];
+extern uint16_t dshot_burst_buffer_4_1[];
+extern uint16_t dshot_burst_buffer_2_3[];
+extern uint32_t dshot_bb_buffer_1_4[];
+extern uint32_t dshot_bb_buffer_2_3[];
+extern uint32_t dshot_bb_buffer_1_4_r[];
+extern uint32_t dshot_bb_buffer_2_3_r[];
 
 extern enum failsafe_t FailSafe_status;
 

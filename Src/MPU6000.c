@@ -363,8 +363,8 @@ static void setup_gyro()
 	SPI1_enable();
 
 	// 0x1B- address of Gyroscope Configuration register:
-	// set +/-1000[deg/s]
-	MPU6000_SPI_write(0x1B, 0x10);
+	// set +/-2000[deg/s]
+	MPU6000_SPI_write(0x1B, 0x18);
 	delay_micro(15);
 
 	SPI1_disable();

@@ -92,6 +92,18 @@ uint16_t motor_2_value;
 uint16_t motor_3_value;
 uint16_t motor_4_value;
 
+//	motor's RPM values (from BDshot)
+uint32_t motor_1_rpm;
+uint32_t motor_2_rpm;
+uint32_t motor_3_rpm;
+uint32_t motor_4_rpm;
+
+// used in BDshot:
+float motor_1_error = 0;
+float motor_2_error = 0;
+float motor_3_error = 0;
+float motor_4_error = 0;
+
 // pointers for motor's values:
 uint16_t *motor_1_value_pointer;
 uint16_t *motor_2_value_pointer;
@@ -141,18 +153,25 @@ uint8_t I2C1_read_buffer[I2C1_BUFFER_SIZE];
 bool imu_received = false;
 
 bool transmitting_is_Done = true;
-
+#if defined(ESC_PROTOCOL_DSHOT)
 uint32_t dshot_buffer_1[DSHOT_BUFFER_LENGTH];
 uint16_t dshot_buffer_2[DSHOT_BUFFER_LENGTH];
 uint16_t dshot_buffer_3[DSHOT_BUFFER_LENGTH];
 uint32_t dshot_buffer_4[DSHOT_BUFFER_LENGTH];
-uint16_t dshot_buffer_4_1[DSHOT_PWM_FRAME_LENGTH * 2];
-uint16_t dshot_buffer_2_3[DSHOT_PWM_FRAME_LENGTH * 2];
-
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
+uint16_t dshot_burst_buffer_4_1[DSHOT_PWM_FRAME_LENGTH * 2];
+uint16_t dshot_burst_buffer_2_3[DSHOT_PWM_FRAME_LENGTH * 2];
+#elif defined(ESC_PROTOCOL_BDSHOT)
+uint32_t dshot_bb_buffer_1_4[DSHOT_BB_BUFFER_LENGTH * DSHOT_BB_FRAME_SECTIONS];
+uint32_t dshot_bb_buffer_2_3[DSHOT_BB_BUFFER_LENGTH * DSHOT_BB_FRAME_SECTIONS];
+// BDSHOT response is being sampled just after transmission. There is ~33 [us] break before response (additional sampling) and bitrate is increased by 5/4:
+uint32_t dshot_bb_buffer_1_4_r[(int)(33 * BDSHOT_RESPONSE_BITRATE / 1000 + BDSHOT_RESPONSE_LENGTH + 1) * BDSHOT_RESPONSE_OVERSAMPLING];
+uint32_t dshot_bb_buffer_2_3_r[(int)(33 * BDSHOT_RESPONSE_BITRATE / 1000 + BDSHOT_RESPONSE_LENGTH + 1) * BDSHOT_RESPONSE_OVERSAMPLING];
+#endif
 enum failsafe_t FailSafe_status;
 
 // value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000):
-#if defined(ESC_PROTOCOL_DSHOT)
+#if defined(ESC_PROTOCOL_DSHOT) || defined(ESC_PROTOCOL_BDSHOT)
 
 uint16_t MOTOR_OFF = 1953;
 

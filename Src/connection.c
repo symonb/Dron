@@ -16,13 +16,13 @@ static volatile int32_t txTransmitted;
 static volatile int32_t txSize;
 static uint8_t bufor[50];
 
-void DMA2_Stream6_IRQHandler(void)
+void DMA2_Stream7_IRQHandler(void)
 {
 	// if channel6 transfer USART6 is completed:
-	if (DMA2->HISR & DMA_HISR_TCIF6)
+	if (DMA2->HISR & DMA_HISR_TCIF7)
 	{
-		DMA2->HIFCR |= DMA_HIFCR_CTCIF6;
-		DMA2_Stream6->CR &= ~DMA_SxCR_EN;
+		DMA2->HIFCR |= DMA_HIFCR_CTCIF7;
+		DMA2_Stream7->CR &= ~DMA_SxCR_EN;
 		transmitting_is_Done = 1;
 	}
 	//	//if channel3 transfer I2C is completed:
@@ -87,7 +87,7 @@ void USART6_IRQHandler(void)
 	if (USART6->SR & USART_SR_IDLE)
 	{
 		USART6->DR;						  // If not read usart will crush
-		DMA2_Stream6->CR &= ~DMA_SxCR_EN; /* Disable DMA on stream 6 - trigers dma TC */
+		DMA2_Stream7->CR &= ~DMA_SxCR_EN; /* Disable DMA on stream 6 - trigers dma TC */
 	}
 
 	// TRANSMISJA:
@@ -140,10 +140,10 @@ void print(uint16_t x[], uint8_t data_to_send)
 	txTransmitted = 0;
 	transmitting_is_Done = 0;
 
-	DMA2_Stream6->M0AR = (uint32_t)(table_of_bytes_to_sent);
-	DMA2_Stream6->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
+	DMA2_Stream7->M0AR = (uint32_t)(table_of_bytes_to_sent);
+	DMA2_Stream7->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
 
-	DMA2_Stream6->CR |= DMA_SxCR_EN; // DMA option
+	DMA2_Stream7->CR |= DMA_SxCR_EN; // DMA option
 									 // USART6->CR1 |= USART_CR1_TXEIE;			//Interrupt option
 }
 
@@ -177,9 +177,9 @@ void print_flash(uint8_t data_pack_size)
 			{
 				// if you sending only 1 value (2 bytes) it is not worth to send frame with 6 byte
 
-				DMA2_Stream6->M0AR = (uint32_t)(flash_read_buffer);
-				DMA2_Stream6->NDTR = 256;
-				DMA2_Stream6->CR |= DMA_SxCR_EN;
+				DMA2_Stream7->M0AR = (uint32_t)(flash_read_buffer);
+				DMA2_Stream7->NDTR = 256;
+				DMA2_Stream7->CR |= DMA_SxCR_EN;
 			}
 
 			else
@@ -212,9 +212,9 @@ void print_flash(uint8_t data_pack_size)
 					}
 				}
 
-				DMA2_Stream6->M0AR = (uint32_t)(temporary_array);
-				DMA2_Stream6->NDTR = i;
-				DMA2_Stream6->CR |= DMA_SxCR_EN;
+				DMA2_Stream7->M0AR = (uint32_t)(temporary_array);
+				DMA2_Stream7->NDTR = i;
+				DMA2_Stream7->CR |= DMA_SxCR_EN;
 
 				j = 0;
 				i = 0;
