@@ -42,7 +42,6 @@
                 "-f",
                 "target/stm32f4x.cfg",
                 "-c",
-                
                 {
                     "value": "program ./bin/main.bin verify reset exit 0x08000000",
                     "quoting": "strong"

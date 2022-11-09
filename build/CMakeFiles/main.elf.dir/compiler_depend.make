@@ -118,8 +118,8 @@ CMakeFiles/main.elf.dir/Src/acro.c.obj: C:/Users/symon/Documents/Projects/Drone/
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_variables.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_functions.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/MPU6000.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/acro.h \
-  C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/filters.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/acro.h
 
 CMakeFiles/main.elf.dir/Src/adc1.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.c \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/stm32f4xx.h \
@@ -211,6 +211,18 @@ CMakeFiles/main.elf.dir/Src/filters.c.obj: C:/Users/symon/Documents/Projects/Dro
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmFunc.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/core_cmSimd.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/Include/system_stm32f4xx.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/math.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/reent.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_ansi.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/newlib.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/config.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/ieeefp.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stddef.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/_types.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/machine/_types.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/lock.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/sys/cdefs.h \
+  C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/arm-none-eabi/include/_ansi.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_constants.h \
   C:/tools/Arm\ GNU\ Toolchain/10\ 2021.10/lib/gcc/arm-none-eabi/10.3.1/include/stdbool.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_variables.h \
@@ -488,6 +500,7 @@ CMakeFiles/main.elf.dir/Src/setup.c.obj: C:/Users/symon/Documents/Projects/Drone
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/global_functions.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/OSD.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/adc1.h \
+  C:/Users/symon/Documents/Projects/Drone/Dron/Src/motors.h \
   C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.h
 
 CMakeFiles/main.elf.dir/Src/stabilize.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/stabilize.c \
@@ -688,8 +701,6 @@ C:/Users/symon/Documents/Projects/Drone/Dron/Src/acro.c:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/acro.h:
 
-C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h:
-
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/battery.c:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/connection.c:
@@ -699,6 +710,8 @@ C:/Users/symon/Documents/Projects/Drone/Dron/Src/motors.c:
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/i2c1.h:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/stabilize.h:
+
+C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.h:
 
 C:/Users/symon/Documents/Projects/Drone/Dron/Src/quaternions.c:
 

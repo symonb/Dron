@@ -5,6 +5,7 @@
  *      Author: symon
  */
 #include "stm32f4xx.h"
+#include <math.h>
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
@@ -17,6 +18,7 @@ static FIR_Filter filter_gyro_Z;
 static FIR_Filter filter_acc_X;
 static FIR_Filter filter_acc_Y;
 static FIR_Filter filter_acc_Z;
+static FIR_Filter filter_D_term;
 #elif defined(USE_IIR_FILTERS)
 static IIR_Filter filter_gyro_X;
 static IIR_Filter filter_gyro_Y;
@@ -24,9 +26,20 @@ static IIR_Filter filter_gyro_Z;
 static IIR_Filter filter_acc_X;
 static IIR_Filter filter_acc_Y;
 static IIR_Filter filter_acc_Z;
+static IIR_Filter filter_D_term;
+#elif defined(USE_BIQUAD_FILTERS)
+static biquad_Filter_t filter_gyro_X;
+static biquad_Filter_t filter_gyro_Y;
+static biquad_Filter_t filter_gyro_Z;
+static biquad_Filter_t filter_acc_X;
+static biquad_Filter_t filter_acc_Y;
+static biquad_Filter_t filter_acc_Z;
+static biquad_Filter_t filter_D_term_roll;
+static biquad_Filter_t filter_D_term_pitch;
+static biquad_Filter_t filter_D_term_yaw;
 #endif
 
-void FIR_Filter_Init(FIR_Filter *fir)
+void FIR_filter_init(FIR_Filter *fir)
 {
 
 	//	Allocate memory for arrays
@@ -48,7 +61,7 @@ void FIR_Filter_Init(FIR_Filter *fir)
 	fir->output = 0.0f;
 }
 
-float FIR_Filter_filtering(FIR_Filter *fir, float input)
+float FIR_filter_apply(FIR_Filter *fir, float input)
 {
 	//	Add new data to buffer
 	fir->buffer[fir->buffer_index] = input;
@@ -81,7 +94,7 @@ float FIR_Filter_filtering(FIR_Filter *fir, float input)
 	return fir->output;
 }
 
-void IIR_Filter_Init(IIR_Filter *iir)
+void IIR_filter_init(IIR_Filter *iir)
 {
 	//	Allocate memory for arrays
 	iir->buffer_input = (float *)malloc(
@@ -112,7 +125,7 @@ void IIR_Filter_Init(IIR_Filter *iir)
 	iir->output = 0.0f;
 }
 
-float IIR_Filter_filtering(IIR_Filter *iir, float input)
+float IIR_filter_apply(IIR_Filter *iir, float input)
 {
 	//	Add new data to buffer_input:
 	iir->buffer_input[iir->buffer_index] = input;
@@ -170,6 +183,115 @@ float IIR_Filter_filtering(IIR_Filter *iir, float input)
 	return iir->output;
 }
 
+void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
+{
+	// save filter info:
+	filter->frequency = filter_frequency_Hz;
+	filter->Q_factor = quality_factor;
+	const float omega = 2.f * M_PI * filter->frequency / sampling_frequency_Hz;
+	const float sn = sinf(omega);
+	const float cs = cosf(omega);
+	const float alpha = sn / (2.0f * filter->Q_factor);
+	// implementation from datasheet:https://www.ti.com/lit/an/slaa447/slaa447.pdf <-- not everything good
+	// or even better: http://shepazu.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html <-- probably resource for above
+
+	/*
+	general formula for 2nd order filter:
+
+			   b0*z^-2 + b1*z^-1 + b2
+	H(z^-1) = ------------------------
+			   a0*z^-2 + a1*z^-1 + a2
+
+	main analog prototypes:
+
+	Low-pass:
+				 1
+	H(s) = ---------------
+			s^2 + s/Q + 1
+
+	Notch:
+			   s^2 + 1
+	H(s) = ---------------
+			s^2 + s/Q + 1
+
+	BPF (skirt gain where Q is max. gain):
+				 s
+	H(s) = ---------------
+			s^2 + s/Q + 1
+
+	Q is quality factor
+	In this datasheet conversion from s -> z domain is done with Bilinear transform with pre-warping
+	*/
+
+	const float a0 = 1 + alpha;
+	switch (filter_type)
+	{
+	case BIQUAD_LPF:
+
+		filter->b0 = filter->b1 * 0.5f;
+		filter->b1 = 1 - cs;
+		filter->b2 = filter->b0;
+		filter->a1 = -2 * cs;
+		filter->a2 = 1 - alpha;
+		break;
+	case BIQUAD_NOTCH:
+		filter->b0 = 1;
+		filter->b1 = -2 * cs;
+		filter->b2 = 1;
+		filter->a1 = filter->b1;
+		filter->a2 = 1 - alpha;
+		break;
+	case BIQUAD_BPF:
+		filter->b0 = alpha;
+		filter->b1 = 0;
+		filter->b2 = -alpha;
+		filter->a1 = -2 * cs;
+		filter->a2 = 1 - alpha;
+		break;
+	}
+
+	// oust a0 coefficient:
+	filter->b0 /= a0;
+	filter->b1 /= a0;
+	filter->b2 /= a0;
+	filter->a1 /= a0;
+	filter->a2 /= a0;
+
+	// set previous values as 0:
+	filter->x1 = 0;
+	filter->x2 = 0;
+	filter->y1 = 0;
+	filter->y2 = 0;
+}
+
+float biquad_filter_apply_DF1(biquad_Filter_t *filter, float input)
+{
+	/* compute result */
+	const float result = filter->b0 * input + filter->b1 * filter->x1 + filter->b2 * filter->x2 - filter->a1 * filter->y1 - filter->a2 * filter->y2;
+
+	/* shift x1 to x2, input to x1 */
+	filter->x2 = filter->x1;
+	filter->x1 = input;
+
+	/* shift y1 to y2, result to y1 */
+	filter->y2 = filter->y1;
+	filter->y1 = result;
+
+	return result;
+}
+
+float biquad_filter_apply_DF2(biquad_Filter_t *filter, float input)
+{
+	//	this is transposed direct form 2 is a little more precised for float number implementation:
+
+	const float result = filter->b0 * input + filter->x1;
+
+	filter->x1 = filter->b1 * input - filter->a1 * result + filter->x2;
+	filter->x2 = filter->b2 * input - filter->a2 * result;
+
+	return result;
+}
+
 void Gyro_Acc_filters_setup()
 {
 #if defined(USE_FIR_FILTERS)
@@ -177,7 +299,7 @@ void Gyro_Acc_filters_setup()
 	//	X axis:
 	filter_gyro_X.length = GYRO_FILTERS_ORDER;
 
-	FIR_Filter_Init(&filter_gyro_X);
+	FIR_filter_init(&filter_gyro_X);
 
 	for (uint8_t i = 0; i < filter_gyro_X.length; i++)
 	{
@@ -187,7 +309,7 @@ void Gyro_Acc_filters_setup()
 	//	Y axis:
 	filter_gyro_Y.length = GYRO_FILTERS_ORDER;
 
-	FIR_Filter_Init(&filter_gyro_Y);
+	FIR_filter_init(&filter_gyro_Y);
 
 	for (uint8_t i = 0; i < filter_gyro_Y.length; i++)
 	{
@@ -197,7 +319,7 @@ void Gyro_Acc_filters_setup()
 	//	Z axis:
 	filter_gyro_Z.length = GYRO_FILTERS_ORDER;
 
-	FIR_Filter_Init(&filter_gyro_Z);
+	FIR_filter_init(&filter_gyro_Z);
 
 	for (uint8_t i = 0; i < filter_gyro_Z.length; i++)
 	{
@@ -207,7 +329,7 @@ void Gyro_Acc_filters_setup()
 	//	X axis:
 	filter_acc_X.length = ACC_FILTERS_ORDER;
 
-	FIR_Filter_Init(&filter_acc_X);
+	FIR_filter_init(&filter_acc_X);
 
 	for (uint8_t i = 0; i < filter_acc_X.length; i++)
 	{
@@ -217,7 +339,7 @@ void Gyro_Acc_filters_setup()
 	//	Y axis:
 	filter_acc_Y.length = ACC_FILTERS_ORDER;
 
-	FIR_Filter_Init(&filter_acc_Y);
+	FIR_filter_init(&filter_acc_Y);
 
 	for (uint8_t i = 0; i < filter_acc_Y.length; i++)
 	{
@@ -227,7 +349,7 @@ void Gyro_Acc_filters_setup()
 	//	Z axis:
 	filter_acc_Z.length = ACC_FILTERS_ORDER;
 
-	FIR_Filter_Init(&filter_acc_Z);
+	FIR_filter_init(&filter_acc_Z);
 
 	for (uint8_t i = 0; i < filter_acc_Z.length; i++)
 	{
@@ -239,7 +361,7 @@ void Gyro_Acc_filters_setup()
 	//	X axis:
 	filter_gyro_X.filter_order = GYRO_FILTERS_ORDER;
 
-	IIR_Filter_Init(&filter_gyro_X);
+	IIR_filter_init(&filter_gyro_X);
 
 	for (uint8_t i = 0; i < filter_gyro_X.filter_order + 1; i++)
 	{
@@ -254,7 +376,7 @@ void Gyro_Acc_filters_setup()
 	//	Y axis:
 	filter_gyro_Y.filter_order = GYRO_FILTERS_ORDER;
 
-	IIR_Filter_Init(&filter_gyro_Y);
+	IIR_filter_init(&filter_gyro_Y);
 
 	for (uint8_t i = 0; i < filter_gyro_Y.filter_order + 1; i++)
 	{
@@ -269,7 +391,7 @@ void Gyro_Acc_filters_setup()
 	//	Z axis:
 	filter_gyro_Z.filter_order = GYRO_FILTERS_ORDER;
 
-	IIR_Filter_Init(&filter_gyro_Z);
+	IIR_filter_init(&filter_gyro_Z);
 
 	for (uint8_t i = 0; i < filter_gyro_Z.filter_order + 1; i++)
 	{
@@ -286,7 +408,7 @@ void Gyro_Acc_filters_setup()
 	//	X axis:
 	filter_acc_X.filter_order = ACC_FILTERS_ORDER;
 
-	IIR_Filter_Init(&filter_acc_X);
+	IIR_filter_init(&filter_acc_X);
 
 	for (uint8_t i = 0; i < filter_acc_X.filter_order + 1; i++)
 	{
@@ -301,7 +423,7 @@ void Gyro_Acc_filters_setup()
 	//	Y axis:
 	filter_acc_Y.filter_order = ACC_FILTERS_ORDER;
 
-	IIR_Filter_Init(&filter_acc_Y);
+	IIR_filter_init(&filter_acc_Y);
 
 	for (uint8_t i = 0; i < filter_acc_Y.filter_order + 1; i++)
 	{
@@ -316,7 +438,7 @@ void Gyro_Acc_filters_setup()
 	//	Z axis:
 	filter_acc_Z.filter_order = ACC_FILTERS_ORDER;
 
-	IIR_Filter_Init(&filter_acc_Z);
+	IIR_filter_init(&filter_acc_Z);
 
 	for (uint8_t i = 0; i < filter_acc_Z.filter_order + 1; i++)
 	{
@@ -328,38 +450,122 @@ void Gyro_Acc_filters_setup()
 		filter_acc_Z.feedback_coefficients[i] = ACC_FILTER_Y_BACK_COEF[i];
 	}
 
+#elif defined(USE_BIQUAD_FILTERS)
+
+	biquad_filter_init(&filter_gyro_X, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+	biquad_filter_init(&filter_gyro_Y, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+	biquad_filter_init(&filter_gyro_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+
+	biquad_filter_init(&filter_acc_X, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+	biquad_filter_init(&filter_acc_Y, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+	biquad_filter_init(&filter_acc_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+
 #endif
 }
 
 void Gyro_Acc_filtering(float *temporary)
 {
 #if defined(USE_FIR_FILTERS)
-	Gyro_Acc[0] = FIR_Filter_filtering(&filter_gyro_X,
-									   temporary[0] - GYRO_ROLL_OFFSET);
-	Gyro_Acc[1] = FIR_Filter_filtering(&filter_gyro_Y,
-									   temporary[1] - GYRO_PITCH_OFFSET);
-	Gyro_Acc[2] = FIR_Filter_filtering(&filter_gyro_Z,
-									   temporary[2] - GYRO_YAW_OFFSET);
-	Gyro_Acc[3] = FIR_Filter_filtering(&filter_acc_X,
-									   temporary[3] - ACC_ROLL_OFFSET);
-	Gyro_Acc[4] = FIR_Filter_filtering(&filter_acc_Y,
-									   temporary[4] - ACC_PITCH_OFFSET);
-	Gyro_Acc[5] = FIR_Filter_filtering(&filter_acc_Z,
-									   temporary[5] - ACC_YAW_OFFSET);
+	Gyro_Acc[0] = FIR_filter_apply(&filter_gyro_X,
+								   temporary[0] - GYRO_ROLL_OFFSET);
+	Gyro_Acc[1] = FIR_filter_apply(&filter_gyro_Y,
+								   temporary[1] - GYRO_PITCH_OFFSET);
+	Gyro_Acc[2] = FIR_filter_apply(&filter_gyro_Z,
+								   temporary[2] - GYRO_YAW_OFFSET);
+	Gyro_Acc[3] = FIR_filter_apply(&filter_acc_X,
+								   temporary[3] - ACC_ROLL_OFFSET);
+	Gyro_Acc[4] = FIR_filter_apply(&filter_acc_Y,
+								   temporary[4] - ACC_PITCH_OFFSET);
+	Gyro_Acc[5] = FIR_filter_apply(&filter_acc_Z,
+								   temporary[5] - ACC_YAW_OFFSET);
 
 #elif defined(USE_IIR_FILTERS)
 
-	Gyro_Acc[0] = IIR_Filter_filtering(&filter_gyro_X,
-									   temporary[0] - GYRO_ROLL_OFFSET);
-	Gyro_Acc[1] = IIR_Filter_filtering(&filter_gyro_Y,
-									   temporary[1] - GYRO_PITCH_OFFSET);
-	Gyro_Acc[2] = IIR_Filter_filtering(&filter_gyro_Z,
-									   temporary[2] - GYRO_YAW_OFFSET);
-	Gyro_Acc[3] = IIR_Filter_filtering(&filter_acc_X,
-									   temporary[3] - ACC_ROLL_OFFSET);
-	Gyro_Acc[4] = IIR_Filter_filtering(&filter_acc_Y,
-									   temporary[4] - ACC_PITCH_OFFSET);
-	Gyro_Acc[5] = IIR_Filter_filtering(&filter_acc_Z,
-									   temporary[5] - ACC_YAW_OFFSET);
+	Gyro_Acc[0] = IIR_filter_apply(&filter_gyro_X,
+								   temporary[0] - GYRO_ROLL_OFFSET);
+	Gyro_Acc[1] = IIR_filter_apply(&filter_gyro_Y,
+								   temporary[1] - GYRO_PITCH_OFFSET);
+	Gyro_Acc[2] = IIR_filter_apply(&filter_gyro_Z,
+								   temporary[2] - GYRO_YAW_OFFSET);
+	Gyro_Acc[3] = IIR_filter_apply(&filter_acc_X,
+								   temporary[3] - ACC_ROLL_OFFSET);
+	Gyro_Acc[4] = IIR_filter_apply(&filter_acc_Y,
+								   temporary[4] - ACC_PITCH_OFFSET);
+	Gyro_Acc[5] = IIR_filter_apply(&filter_acc_Z,
+								   temporary[5] - ACC_YAW_OFFSET);
+
+#elif defined(USE_BIQUAD_FILTERS)
+	Gyro_Acc[0] = biquad_filter_apply_DF2(&filter_gyro_X, temporary[0] - GYRO_ROLL_OFFSET);
+	Gyro_Acc[1] = biquad_filter_apply_DF2(&filter_gyro_Y, temporary[1] - GYRO_PITCH_OFFSET);
+	Gyro_Acc[2] = biquad_filter_apply_DF2(&filter_gyro_Z, temporary[2] - GYRO_YAW_OFFSET);
+
+	Gyro_Acc[3] = biquad_filter_apply_DF2(&filter_acc_X, temporary[3] - ACC_ROLL_OFFSET);
+	Gyro_Acc[4] = biquad_filter_apply_DF2(&filter_acc_Y, temporary[4] - ACC_PITCH_OFFSET);
+	Gyro_Acc[5] = biquad_filter_apply_DF2(&filter_acc_Z, temporary[5] - ACC_YAW_OFFSET);
+#endif
+}
+
+void D_term_lowpass_setup()
+{
+#if defined(USE_FIR_FILTERS)
+
+#elif defined(USE_IIR_FILTERS)
+	filter_D_term_pitch.filter_order = D_TERM_FILTER_ORDER;
+	IIR_filter_init(&filter_D_term_pitch);
+	for (uint8_t i = 0; i < filter_D_term_pitch.filter_order + 1; i++)
+	{
+		filter_D_term_pitch.forward_coefficients[i] = D_TERM_FILTER_FORW_COEF[i];
+	}
+
+	for (uint8_t i = 0; i < filter_D_term_pitch.filter_order; i++)
+	{
+		filter_D_term_pitch.feedback_coefficients[i] = D_TERM_FILTER_BACK_COEF[i];
+	}
+
+	filter_D_term_roll.filter_order = D_TERM_FILTER_ORDER;
+	IIR_filter_init(&filter_D_term_roll);
+	for (uint8_t i = 0; i < filter_D_term_roll.filter_order + 1; i++)
+	{
+		filter_D_term_roll.forward_coefficients[i] = D_TERM_FILTER_FORW_COEF[i];
+	}
+
+	for (uint8_t i = 0; i < filter_D_term_roll.filter_order; i++)
+	{
+		filter_D_term_roll.feedback_coefficients[i] = D_TERM_FILTER_BACK_COEF[i];
+	}
+
+	filter_D_term_yaw.filter_order = D_TERM_FILTER_ORDER;
+	IIR_filter_init(&filter_D_term_yaw);
+	for (uint8_t i = 0; i < filter_D_term_yaw.filter_order + 1; i++)
+	{
+		filter_D_term_yaw.forward_coefficients[i] = D_TERM_FILTER_FORW_COEF[i];
+	}
+
+	for (uint8_t i = 0; i < filter_D_term_yaw.filter_order; i++)
+	{
+		filter_D_term_yaw.feedback_coefficients[i] = D_TERM_FILTER_BACK_COEF[i];
+	}
+
+#elif defined(USE_BIQUAD_FILTERS)
+	biquad_filter_init(&filter_D_term_pitch, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_MAIN_LOOP);
+	biquad_filter_init(&filter_D_term_roll, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_MAIN_LOOP);
+	biquad_filter_init(&filter_D_term_yaw, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_MAIN_LOOP);
+#endif
+}
+
+void D_term_filtering(ThreeF *input)
+{
+#if defined(USE_FIR_FILTERS)
+	input->pitch = FIR_filter_apply(&filter_D_term_pitch, input->pitch);
+	input->roll = FIR_filter_apply(&filter_D_term_roll, input->roll);
+	input->yaw = FIR_filter_apply(&filter_D_term_yaw, input->yaw);
+#elif defined(USE_IIR_FILTERS)
+	input->pitch = IIR_filter_apply(&filter_D_term_pitch, input->pitch);
+	input->roll = IIR_filter_apply(&filter_D_term_roll, input->roll);
+	input->yaw = IIR_filter_apply(&filter_D_term_yaw, input->yaw);
+#elif defined(USE_BIQUAD_FILTERS)
+	input->pitch = IIR_filter_apply(&filter_D_term_pitch, input->pitch);
+	input->roll = IIR_filter_apply(&filter_D_term_roll, input->roll);
+	input->yaw = IIR_filter_apply(&filter_D_term_yaw, input->yaw);
 #endif
 }

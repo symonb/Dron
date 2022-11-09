@@ -62,9 +62,9 @@
 #if defined(BIT_BANGING_V1)
 #define DSHOT_BB_BUFFER_LENGTH 18  // 16 bits of Dshot and 2 for clearing - used when bit-banging dshot used
 #define DSHOT_BB_FRAME_LENGTH 140  //	how many counts of timer gives one bit frame
-#define DSHOT_BB_FRAME_SECTIONS 35 // in how many sections is bit frame divided (must be factor of DSHOT_BB_FRAME_LENGTH)
-#define DSHOT_BB_1_LENGTH 25
-#define DSHOT_BB_0_LENGTH 10
+#define DSHOT_BB_FRAME_SECTIONS 14 // in how many sections is bit frame divided (must be factor of DSHOT_BB_FRAME_LENGTH)
+#define DSHOT_BB_1_LENGTH 10
+#define DSHOT_BB_0_LENGTH 4
 #define BDSHOT_RESPONSE_LENGTH 21
 #define BDSHOT_RESPONSE_BITRATE (DSHOT_MODE * 4 / 3) // in my tests this value was not 5/4 * DSHOT_MODE as documentation suggests
 #define BDSHOT_RESPONSE_OVERSAMPLING 3				 // it has to be a factor of DSHOT_BB_FRAME_LENGTH * DSHOT_MODE / BDSHOT_RESPONSE_BITRATE
@@ -173,9 +173,16 @@ enum blackbox_t
 #define I2C1_BUFFER_SIZE 10
 
 //-------------------FILTERS------------------
-#define USE_IIR_FILTERS // USE_FIR_FILTERS or USE_IIR_FILTERS
+#define USE_BIQUAD_FILTERS // USE_FIR_FILTERS or USE_IIR_FILTERS or USE_BIQUAD_FILTERS
+#if defined(USE_FIR_FILTERS) || defined(USE_IIR_FILTERS)
 #define GYRO_FILTERS_ORDER 2
 #define ACC_FILTERS_ORDER 2
+#define D_TERM_FILTER_ORDER 2
+#else
+#define BIQUAD_LPF_CUTOFF 50		//	[Hz]
+#define BIQUAD_LPF_Q 1.f / sqrtf(2) //	Q factor for Low-pass filters
+#define BIQUAD_NOTCH_Q 10			//	Q factor for notch filters
+#endif
 
 //	remember to define coefficients in global_variables.c
 
@@ -183,14 +190,16 @@ enum blackbox_t
 #define PITCH_OFFSET -7
 #define ROLL_OFFSET 0
 
-#define GYRO_ROLL_OFFSET 99
+//	average error on each drone' axis:
+#define GYRO_ROLL_OFFSET 9
 #define GYRO_PITCH_OFFSET 8
 #define GYRO_YAW_OFFSET -9
 
-#define ACC_PITCH_OFFSET 125.6525f
 #define ACC_ROLL_OFFSET 2.862f
+#define ACC_PITCH_OFFSET 125.6525f
 #define ACC_YAW_OFFSET 391.325f
 
+//
 #define ACC_CALIBRATION_X_X 4249.908f
 #define ACC_CALIBRATION_X_Y -43.456f
 #define ACC_CALIBRATION_X_Z 108.501f

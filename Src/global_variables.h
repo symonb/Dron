@@ -152,6 +152,8 @@ extern const float ACC_FILTER_X_COEF[];
 extern const float ACC_FILTER_Y_COEF[];
 extern const float ACC_FILTER_Z_COEF[];
 
+extern const float D_TERM_FILTER_COEF[];
+
 #elif defined(USE_IIR_FILTERS)
 
 extern const float GYRO_FILTER_X_FORW_COEF[];
@@ -169,6 +171,9 @@ extern const float ACC_FILTER_Z_FORW_COEF[];
 extern const float ACC_FILTER_X_BACK_COEF[];
 extern const float ACC_FILTER_Y_BACK_COEF[];
 extern const float ACC_FILTER_Z_BACK_COEF[];
+
+extern const float D_TERM_FILTER_FORW_COEF[];
+extern const float D_TERM_FILTER_BACK_COEF[];
 
 #endif
 

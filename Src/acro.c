@@ -11,12 +11,12 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "MPU6000.h"
+#include "filters.h"
 #include "acro.h"
-#include "tasks.h"
 
 static ThreeF corrections(float);
 
-//---User defines maximum speed of spinning [deg/s]:
+//---User defined maximum speed of spinning [deg/s]:
 static Three Rates = {500, 500, 400};
 
 // 4s
@@ -62,7 +62,7 @@ static ThreeF corrections(float dt)
 		// use rotation speed computed from desired angles:
 		err.roll = 1.5 * desired_rotation_speed.roll - Gyro_Acc[0] * GYRO_TO_DPS / Rates.roll;
 		err.pitch = 1.5 * desired_rotation_speed.pitch - Gyro_Acc[1] * GYRO_TO_DPS / Rates.pitch;
-		err.yaw = 2 * desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS / Rates.yaw;
+		err.yaw = 4 * desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS / Rates.yaw;
 	}
 
 	//	estimate Integral by sum (I term):
@@ -81,6 +81,7 @@ static ThreeF corrections(float dt)
 	F_corr.yaw = (channels[3] - channels_previous_values[3]) * 0.002f / dt;
 
 	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
+	D_term_filtering(&D_corr);
 
 	//	calculate corrections:
 	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll + R_PIDF.D * D_corr.roll + R_PIDF.F * F_corr.roll) * 2;

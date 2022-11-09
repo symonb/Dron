@@ -124,8 +124,8 @@ CMakeFiles/main.elf.dir/clean:
 # Target rules for target CMakeFiles/main.bin.dir
 
 # All Build rule for target.
-CMakeFiles/main.bin.dir/all: CMakeFiles/main.hex.dir/all
 CMakeFiles/main.bin.dir/all: CMakeFiles/main.elf.dir/all
+CMakeFiles/main.bin.dir/all: CMakeFiles/main.hex.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.bin.dir\build.make CMakeFiles/main.bin.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.bin.dir\build.make CMakeFiles/main.bin.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num= "Built target main.bin"

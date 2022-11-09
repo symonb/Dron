@@ -397,7 +397,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 		drone_was_armed = true;
 		set_angles.yaw = global_euler_angles.yaw;
 	}
-	else
+	else if (ARMING_STATUS != ARMED)
 	{
 		drone_was_armed = false;
 	}
