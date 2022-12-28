@@ -16,13 +16,14 @@
 
 static ThreeF corrections(float);
 
-//---User defined maximum speed of spinning [deg/s]:
-static Three Rates = {500, 500, 400};
-
 // 4s
-static PIDF R_PIDF = {180, 300, 1.1, 1};
-static PIDF P_PIDF = {200, 300, 2, 1};
-static PIDF Y_PIDF = {1000, 50, 0.5, 1};
+// static PIDF R_PIDF = {180, 300, 1.1, 1};
+// static PIDF P_PIDF = {200, 300, 2, 1};
+// static PIDF Y_PIDF = {1000, 50, 0.5, 1};
+
+static PIDF R_PIDF = {500, 0, 25, 0}; // 590 30 55 0
+static PIDF P_PIDF = {700, 0, 40, 0}; // 750 30 65 0
+static PIDF Y_PIDF = {700, 0, 0, 0};  // 1100 30 30 0
 
 // 3s
 // static PIDF R_PIDF = { 350, 400, 5, 5};
@@ -46,23 +47,22 @@ void acro(timeUs_t dt_us)
 
 static ThreeF corrections(float dt)
 {
-
 	static ThreeF corr = {0, 0, 0};
 	static Three last_measurement = {0, 0, 0};
 
 	if (flight_mode == FLIGHT_MODE_ACRO)
 	{
-		//	use user sticks values as inputs:
-		err.roll = (channels[0] - 1500) / 500.f - Gyro_Acc[0] * GYRO_TO_DPS / Rates.roll;
-		err.pitch = (channels[1] - 1500) / 500.f - Gyro_Acc[1] * GYRO_TO_DPS / Rates.pitch;
-		err.yaw = (channels[3] - 1500) / 500.f - Gyro_Acc[2] * GYRO_TO_DPS / Rates.yaw;
+		// use rotation speed computed sticks position:
+		err.roll = (desired_rotation_speed.roll - Gyro_Acc[0] * GYRO_TO_DPS) / RATES_MAX_RATE_R;
+		err.pitch = (desired_rotation_speed.pitch - Gyro_Acc[1] * GYRO_TO_DPS) / RATES_MAX_RATE_P;
+		err.yaw = (desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS) / RATES_MAX_RATE_Y;
 	}
 	else if (flight_mode == FLIGHT_MODE_STABLE)
 	{
 		// use rotation speed computed from desired angles:
-		err.roll = 1.5 * desired_rotation_speed.roll - Gyro_Acc[0] * GYRO_TO_DPS / Rates.roll;
-		err.pitch = 1.5 * desired_rotation_speed.pitch - Gyro_Acc[1] * GYRO_TO_DPS / Rates.pitch;
-		err.yaw = 4 * desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS / Rates.yaw;
+		err.roll = 1.5 * desired_rotation_speed.roll - Gyro_Acc[0] * GYRO_TO_DPS / RATES_MAX_RATE_R;
+		err.pitch = 1.5 * desired_rotation_speed.pitch - Gyro_Acc[1] * GYRO_TO_DPS / RATES_MAX_RATE_P;
+		err.yaw = (desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS) / RATES_MAX_RATE_Y;
 	}
 
 	//	estimate Integral by sum (I term):
@@ -72,9 +72,9 @@ static ThreeF corrections(float dt)
 
 	// D correction will be divide for measurements and set-point corrections:
 
-	D_corr.roll = (last_measurement.roll - Gyro_Acc[0]) * 0.0305185f / Rates.roll / dt;
-	D_corr.pitch = (last_measurement.pitch - Gyro_Acc[1]) * 0.0305185f / Rates.pitch / dt;
-	D_corr.yaw = (last_measurement.yaw - Gyro_Acc[2]) * 0.0305185f / Rates.yaw / dt;
+	D_corr.roll = (last_measurement.roll - Gyro_Acc[0]) * 0.0305185f / RATES_MAX_RATE_R / dt;
+	D_corr.pitch = (last_measurement.pitch - Gyro_Acc[1]) * 0.0305185f / RATES_MAX_RATE_P / dt;
+	D_corr.yaw = (last_measurement.yaw - Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y / dt;
 
 	F_corr.roll = (channels[0] - channels_previous_values[0]) * 0.002f / dt;
 	F_corr.pitch = (channels[1] - channels_previous_values[1]) * 0.002f / dt;
@@ -109,12 +109,12 @@ void send_telemetry_acro(timeUs_t time)
 	table_to_send[3] = R_PIDF.P * err.roll + 1000;
 	table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
 	table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
-	table_to_send[6] = (Gyro_Acc[0] / 32.768f / Rates.roll * 50) + 1000;
-	table_to_send[7] = (Gyro_Acc[1] / 32.768f / Rates.pitch * 50) + 1000;
+	table_to_send[6] = (Gyro_Acc[0] / 32.768f / RATES_MAX_RATE_R * 50) + 1000;
+	table_to_send[7] = (Gyro_Acc[1] / 32.768f / RATES_MAX_RATE_P * 50) + 1000;
 	table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
 	table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
 	table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
-	table_to_send[11] = (Gyro_Acc[2] / 32.768f / Rates.yaw * 50) + 1000;
+	table_to_send[11] = (Gyro_Acc[2] / 32.768f / RATES_MAX_RATE_Y * 50) + 1000;
 	table_to_send[12] = channels[1] - 500;
 	table_to_send[13] = channels[0] - 500;
 

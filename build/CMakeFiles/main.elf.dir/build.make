@@ -319,10 +319,24 @@ CMakeFiles/main.elf.dir/Src/quaternions.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/main.elf.dir/Src/quaternions.c.s"
 	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S C:\Users\symon\Documents\Projects\Drone\Dron\Src\quaternions.c -o CMakeFiles\main.elf.dir\Src\quaternions.c.s
 
+CMakeFiles/main.elf.dir/Src/rx.c.obj: CMakeFiles/main.elf.dir/flags.make
+CMakeFiles/main.elf.dir/Src/rx.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/rx.c
+CMakeFiles/main.elf.dir/Src/rx.c.obj: CMakeFiles/main.elf.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building C object CMakeFiles/main.elf.dir/Src/rx.c.obj"
+	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/main.elf.dir/Src/rx.c.obj -MF CMakeFiles\main.elf.dir\Src\rx.c.obj.d -o CMakeFiles\main.elf.dir\Src\rx.c.obj -c C:\Users\symon\Documents\Projects\Drone\Dron\Src\rx.c
+
+CMakeFiles/main.elf.dir/Src/rx.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/main.elf.dir/Src/rx.c.i"
+	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E C:\Users\symon\Documents\Projects\Drone\Dron\Src\rx.c > CMakeFiles\main.elf.dir\Src\rx.c.i
+
+CMakeFiles/main.elf.dir/Src/rx.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/main.elf.dir/Src/rx.c.s"
+	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S C:\Users\symon\Documents\Projects\Drone\Dron\Src\rx.c -o CMakeFiles\main.elf.dir\Src\rx.c.s
+
 CMakeFiles/main.elf.dir/Src/scheduler.c.obj: CMakeFiles/main.elf.dir/flags.make
 CMakeFiles/main.elf.dir/Src/scheduler.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.c
 CMakeFiles/main.elf.dir/Src/scheduler.c.obj: CMakeFiles/main.elf.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building C object CMakeFiles/main.elf.dir/Src/scheduler.c.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building C object CMakeFiles/main.elf.dir/Src/scheduler.c.obj"
 	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/main.elf.dir/Src/scheduler.c.obj -MF CMakeFiles\main.elf.dir\Src\scheduler.c.obj.d -o CMakeFiles\main.elf.dir\Src\scheduler.c.obj -c C:\Users\symon\Documents\Projects\Drone\Dron\Src\scheduler.c
 
 CMakeFiles/main.elf.dir/Src/scheduler.c.i: cmake_force
@@ -336,7 +350,7 @@ CMakeFiles/main.elf.dir/Src/scheduler.c.s: cmake_force
 CMakeFiles/main.elf.dir/Src/stabilize.c.obj: CMakeFiles/main.elf.dir/flags.make
 CMakeFiles/main.elf.dir/Src/stabilize.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/stabilize.c
 CMakeFiles/main.elf.dir/Src/stabilize.c.obj: CMakeFiles/main.elf.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building C object CMakeFiles/main.elf.dir/Src/stabilize.c.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building C object CMakeFiles/main.elf.dir/Src/stabilize.c.obj"
 	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/main.elf.dir/Src/stabilize.c.obj -MF CMakeFiles\main.elf.dir\Src\stabilize.c.obj.d -o CMakeFiles\main.elf.dir\Src\stabilize.c.obj -c C:\Users\symon\Documents\Projects\Drone\Dron\Src\stabilize.c
 
 CMakeFiles/main.elf.dir/Src/stabilize.c.i: cmake_force
@@ -350,7 +364,7 @@ CMakeFiles/main.elf.dir/Src/stabilize.c.s: cmake_force
 CMakeFiles/main.elf.dir/Src/tasks.c.obj: CMakeFiles/main.elf.dir/flags.make
 CMakeFiles/main.elf.dir/Src/tasks.c.obj: C:/Users/symon/Documents/Projects/Drone/Dron/Src/tasks.c
 CMakeFiles/main.elf.dir/Src/tasks.c.obj: CMakeFiles/main.elf.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building C object CMakeFiles/main.elf.dir/Src/tasks.c.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building C object CMakeFiles/main.elf.dir/Src/tasks.c.obj"
 	C:\tools\ARMGNU~1\102021~1.10\bin\AR19DD~1.EXE $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/main.elf.dir/Src/tasks.c.obj -MF CMakeFiles\main.elf.dir\Src\tasks.c.obj.d -o CMakeFiles\main.elf.dir\Src\tasks.c.obj -c C:\Users\symon\Documents\Projects\Drone\Dron\Src\tasks.c
 
 CMakeFiles/main.elf.dir/Src/tasks.c.i: cmake_force
@@ -381,6 +395,7 @@ main_elf_OBJECTS = \
 "CMakeFiles/main.elf.dir/Src/MPU6000.c.obj" \
 "CMakeFiles/main.elf.dir/Src/OSD.c.obj" \
 "CMakeFiles/main.elf.dir/Src/quaternions.c.obj" \
+"CMakeFiles/main.elf.dir/Src/rx.c.obj" \
 "CMakeFiles/main.elf.dir/Src/scheduler.c.obj" \
 "CMakeFiles/main.elf.dir/Src/stabilize.c.obj" \
 "CMakeFiles/main.elf.dir/Src/tasks.c.obj"
@@ -406,13 +421,14 @@ C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.d
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/MPU6000.c.obj
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/OSD.c.obj
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/quaternions.c.obj
+C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/rx.c.obj
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/scheduler.c.obj
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/stabilize.c.obj
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/Src/tasks.c.obj
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/build.make
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: C:/Users/symon/Documents/Projects/Drone/Dron/Drivers/CMSIS/libarm_cortexM4lf_math.a
 C:/Users/symon/Documents/Projects/Drone/Dron/bin/main.elf: CMakeFiles/main.elf.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Linking C executable C:\Users\symon\Documents\Projects\Drone\Dron\bin\main.elf"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=C:\Users\symon\Documents\Projects\Drone\Dron\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Linking C executable C:\Users\symon\Documents\Projects\Drone\Dron\bin\main.elf"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\main.elf.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

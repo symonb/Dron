@@ -18,6 +18,7 @@ set(MAIN_SRC
     MPU6000.c
     OSD.c
     quaternions.c
+    rx.c
     scheduler.c
     stabilize.c
     tasks.c

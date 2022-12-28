@@ -66,6 +66,15 @@ typedef enum
 	BIQUAD_BPF,
 } biquad_Filter_type;
 
+typedef struct
+{
+	biquad_Filter_t notch_filters[3][MOTORS_COUNT][RPM_MAX_HARMONICS]; // each axes (X,Y,Z) for each motor and its harmonics
+	float weight[3][MOTORS_COUNT][RPM_MAX_HARMONICS];				   // weight used to fade out filter (0 - filter is off, 1 - is used in 100%)
+	float q_factor;													   // q_factor for all notches
+	uint8_t harmonics;												   // number of filtered harmonics
+
+} RPM_filter_t;
+
 void FIR_filter_init(FIR_Filter *fir);
 float FIR_filter_apply(FIR_Filter *fir, float input);
 
@@ -76,10 +85,13 @@ void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type,
 float biquad_filter_apply_DF1(biquad_Filter_t *filter, float input);
 float biquad_filter_apply_DF2(biquad_Filter_t *filter, float input);
 
+void RPM_filter_init(RPM_filter_t *filter, uint16_t sampling_frequency_Hz);
+float RPM_filter_apply(RPM_filter_t *filter, uint8_t axis, float input);
+
 void Gyro_Acc_filters_setup();
 void Gyro_Acc_filtering(float *temporary);
 
-void D_term_filters_setup();
+void setup_D_term_filters();
 void D_term_filtering(ThreeF *input);
 
 #endif /* FILTERS_H_ */

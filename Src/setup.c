@@ -12,6 +12,7 @@
 #include "OSD.h"
 #include "adc1.h"
 #include "motors.h"
+#include "filters.h"
 #include "setup.h"
 
 /* IMPORTANT:
@@ -80,6 +81,7 @@ void setup()
 	setup_I2C1();
 	setup_OTG_USB_FS();
 	setup_DMA();
+	setup_D_term_filters();
 }
 
 static void setup_HSE()
@@ -176,12 +178,14 @@ static void setup_GPIOA()
 	// enable GPIOA clock:
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
-	//	set mode (00-input; 01-output; 10-alternate):
+//	set mode (00-input; 01-output; 10-alternate):
+#if !defined(ESC_PROTOCOL_BDSHOT)
 	GPIOA->MODER &= ~GPIO_MODER_MODER2;
 	GPIOA->MODER |= GPIO_MODER_MODER2_1;
 
 	GPIOA->MODER &= ~GPIO_MODER_MODER3;
 	GPIOA->MODER |= GPIO_MODER_MODER3_1;
+#endif
 
 	GPIOA->MODER &= ~GPIO_MODER_MODER4;
 	GPIOA->MODER |= GPIO_MODER_MODER4_0;
@@ -214,22 +218,21 @@ static void setup_GPIOA()
 	GPIOA->AFR[1] |= 0x00077700;
 
 	// pull up (01) pull down (10)
-	// GPIOA->PUPDR |= GPIO_PUPDR_PUPDR4_0;  // on PIN4 (SPI1 CS):
 
 	// set high on PIN4 (SPI CS)
 	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
 
-	// set speed:
-	GPIOA->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR2_1 | GPIO_OSPEEDER_OSPEEDR2_0 |
-					   GPIO_OSPEEDER_OSPEEDR3_1 | GPIO_OSPEEDER_OSPEEDR3_0 |
-					   GPIO_OSPEEDER_OSPEEDR4_1 | GPIO_OSPEEDER_OSPEEDR4_0 |
-					   GPIO_OSPEEDER_OSPEEDR5_1 | GPIO_OSPEEDER_OSPEEDR5_0 |
-					   GPIO_OSPEEDER_OSPEEDR6_1 | GPIO_OSPEEDER_OSPEEDR6_0 |
-					   GPIO_OSPEEDER_OSPEEDR7_1 | GPIO_OSPEEDER_OSPEEDR7_0 |
-					   GPIO_OSPEEDER_OSPEEDR8_1 | GPIO_OSPEEDER_OSPEEDR8_0 |
-					   GPIO_OSPEEDER_OSPEEDR10_1 | GPIO_OSPEEDER_OSPEEDR10_0 |
-					   GPIO_OSPEEDER_OSPEEDR11_1 | GPIO_OSPEEDER_OSPEEDR11_0 |
-					   GPIO_OSPEEDER_OSPEEDR12_1 | GPIO_OSPEEDER_OSPEEDR12_0);
+	// set speed (max speed):
+	GPIOA->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR2 |
+					   GPIO_OSPEEDER_OSPEEDR3 |
+					   GPIO_OSPEEDER_OSPEEDR4 |
+					   GPIO_OSPEEDER_OSPEEDR5 |
+					   GPIO_OSPEEDER_OSPEEDR6 |
+					   GPIO_OSPEEDER_OSPEEDR7 |
+					   GPIO_OSPEEDER_OSPEEDR8 |
+					   GPIO_OSPEEDER_OSPEEDR10 |
+					   GPIO_OSPEEDER_OSPEEDR11 |
+					   GPIO_OSPEEDER_OSPEEDR12);
 }
 
 static void setup_GPIOB()
@@ -237,12 +240,14 @@ static void setup_GPIOB()
 	// enable GPIOB clock:
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
 
-	//	set mode (00-input; 01-output; 10-alternate):
+//	set mode (00-input; 01-output; 10-alternate):
+#if !defined(ESC_PROTOCOL_BDSHOT)
 	GPIOB->MODER &= ~GPIO_MODER_MODER0;
 	GPIOB->MODER |= GPIO_MODER_MODER0_1;
 
 	GPIOB->MODER &= ~GPIO_MODER_MODER1;
 	GPIOB->MODER |= GPIO_MODER_MODER1_1;
+#endif
 
 	GPIOB->MODER &= ~GPIO_MODER_MODER3;
 	GPIOB->MODER |= GPIO_MODER_MODER3_0;

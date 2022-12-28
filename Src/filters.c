@@ -38,6 +38,17 @@ static biquad_Filter_t filter_D_term_roll;
 static biquad_Filter_t filter_D_term_pitch;
 static biquad_Filter_t filter_D_term_yaw;
 #endif
+#if defined(USE_RPM_FILTER)
+
+static RPM_filter_t rpm_filter_gyro;
+
+static RPM_filter_t rpm_filter_acc;
+
+#endif
+
+static void biquad_filter_update(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
+static void biquad_filter_copy_coefficients(biquad_Filter_t *copy_from_filter, biquad_Filter_t *copy_to_filter);
+static void RPM_filter_update(RPM_filter_t *filter);
 
 void FIR_filter_init(FIR_Filter *fir)
 {
@@ -185,13 +196,25 @@ float IIR_filter_apply(IIR_Filter *iir, float input)
 
 void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
 {
+	biquad_filter_update(filter, filter_type, filter_frequency_Hz, quality_factor, sampling_frequency_Hz);
+
+	// set previous values as 0:
+	filter->x1 = 0;
+	filter->x2 = 0;
+	filter->y1 = 0;
+	filter->y2 = 0;
+}
+
+static void biquad_filter_update(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
+{
 	// save filter info:
 	filter->frequency = filter_frequency_Hz;
 	filter->Q_factor = quality_factor;
-	const float omega = 2.f * M_PI * filter->frequency / sampling_frequency_Hz;
+	const float omega = 2.f * M_PI * filter_frequency_Hz / sampling_frequency_Hz;
 	const float sn = sinf(omega);
 	const float cs = cosf(omega);
 	const float alpha = sn / (2.0f * filter->Q_factor);
+
 	// implementation from datasheet:https://www.ti.com/lit/an/slaa447/slaa447.pdf <-- not everything good
 	// or even better: http://shepazu.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html <-- probably resource for above
 
@@ -223,12 +246,12 @@ void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type,
 	In this datasheet conversion from s -> z domain is done with Bilinear transform with pre-warping
 	*/
 
-	const float a0 = 1 + alpha;
+	filter->a0 = 1 + alpha;
 	switch (filter_type)
 	{
 	case BIQUAD_LPF:
 
-		filter->b0 = filter->b1 * 0.5f;
+		filter->b0 = (1 - cs) * 0.5f;
 		filter->b1 = 1 - cs;
 		filter->b2 = filter->b0;
 		filter->a1 = -2 * cs;
@@ -251,17 +274,11 @@ void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type,
 	}
 
 	// oust a0 coefficient:
-	filter->b0 /= a0;
-	filter->b1 /= a0;
-	filter->b2 /= a0;
-	filter->a1 /= a0;
-	filter->a2 /= a0;
-
-	// set previous values as 0:
-	filter->x1 = 0;
-	filter->x2 = 0;
-	filter->y1 = 0;
-	filter->y2 = 0;
+	filter->b0 /= filter->a0;
+	filter->b1 /= filter->a0;
+	filter->b2 /= filter->a0;
+	filter->a1 /= filter->a0;
+	filter->a2 /= filter->a0;
 }
 
 float biquad_filter_apply_DF1(biquad_Filter_t *filter, float input)
@@ -288,6 +305,106 @@ float biquad_filter_apply_DF2(biquad_Filter_t *filter, float input)
 
 	filter->x1 = filter->b1 * input - filter->a1 * result + filter->x2;
 	filter->x2 = filter->b2 * input - filter->a2 * result;
+
+	return result;
+}
+
+static void biquad_filter_copy_coefficients(biquad_Filter_t *copy_from_filter, biquad_Filter_t *copy_to_filter)
+{
+	copy_to_filter->a0 = copy_from_filter->a0;
+	copy_to_filter->a1 = copy_from_filter->a1;
+	copy_to_filter->a2 = copy_from_filter->a2;
+
+	copy_to_filter->b0 = copy_from_filter->b0;
+	copy_to_filter->b1 = copy_from_filter->b1;
+	copy_to_filter->b2 = copy_from_filter->b2;
+}
+
+void RPM_filter_init(RPM_filter_t *filter, uint16_t sampling_frequency_Hz)
+{
+	filter->harmonics = RPM_MAX_HARMONICS;
+	filter->q_factor = RPM_Q_FACTOR;
+	const float default_freq = 100; // only for initialization doesn't really matter
+
+	// initialize notch filters:
+	for (uint8_t axis = 0; axis < 3; axis++)
+	{
+		for (uint8_t motor = 0; motor < MOTORS_COUNT; motor++)
+		{
+			for (uint8_t harmonic = 0; harmonic < RPM_MAX_HARMONICS; harmonic++)
+			{
+				biquad_filter_init(&(filter->notch_filters[axis][motor][harmonic]), BIQUAD_NOTCH, default_freq, filter->q_factor, sampling_frequency_Hz);
+				filter->weight[axis][motor][harmonic] = 1;
+			}
+		}
+	}
+}
+
+static void RPM_filter_update(RPM_filter_t *filter)
+{
+	const uint8_t sec_in_min = 60; // for conversion from Hz to rpm
+	float frequency;			   // frequency for filtering
+	// each motor introduces its own frequency (with harmonics) but for every axes noises are the same;
+
+	for (uint8_t motor = 0; motor < MOTORS_COUNT; motor++)
+	{
+		for (uint8_t harmonic = 0; harmonic < RPM_MAX_HARMONICS; harmonic++)
+		{
+			frequency = (float)motors_rpm[motor] * (harmonic + 1) / sec_in_min;
+			if (frequency > RPM_MIN_FREQUENCY_HZ)
+			{
+				if (frequency < MAX_FREQUENCY_FOR_FILTERING)
+				{
+					// each axis has the same noises from motors, so compute it once and next copy values:
+					biquad_filter_update(&(filter->notch_filters[0][motor][harmonic]), BIQUAD_NOTCH, frequency, filter->q_factor, FREQUENCY_IMU_READING);
+					biquad_filter_copy_coefficients(&(filter->notch_filters[0][motor][harmonic]), &(filter->notch_filters[1][motor][harmonic]));
+					biquad_filter_copy_coefficients(&(filter->notch_filters[0][motor][harmonic]), &(filter->notch_filters[2][motor][harmonic]));
+
+					// fade out if reaching minimal frequency:
+					if (frequency < (RPM_MIN_FREQUENCY_HZ + RPM_FADE_RANGE_HZ))
+					{
+						filter->weight[0][motor][harmonic] = (float)(frequency - RPM_MIN_FREQUENCY_HZ) / (RPM_FADE_RANGE_HZ);
+						filter->weight[1][motor][harmonic] = filter->weight[0][motor][harmonic];
+						filter->weight[2][motor][harmonic] = filter->weight[0][motor][harmonic];
+					}
+					else
+					{
+						filter->weight[0][motor][harmonic] = 1;
+						filter->weight[1][motor][harmonic] = 1;
+						filter->weight[2][motor][harmonic] = 1;
+					}
+				}
+				else
+				{
+					filter->weight[0][motor][harmonic] = 0;
+					filter->weight[1][motor][harmonic] = 0;
+					filter->weight[2][motor][harmonic] = 0;
+				}
+			}
+			else
+			{
+				frequency = RPM_MIN_FREQUENCY_HZ;
+
+				filter->weight[0][motor][harmonic] = 0;
+				filter->weight[1][motor][harmonic] = 0;
+				filter->weight[2][motor][harmonic] = 0;
+			}
+		}
+	}
+}
+
+float RPM_filter_apply(RPM_filter_t *filter, uint8_t axis, float input)
+{
+	float result = input;
+	// Iterate over all notches on axis and apply each one to value.
+	// Order of application doesn't matter because biquads are linear time-invariant filters.
+	for (uint8_t motor = 0; motor < MOTORS_COUNT; motor++)
+	{
+		for (uint8_t harmonic = 0; harmonic < RPM_MAX_HARMONICS; harmonic++)
+		{
+			result = filter->weight[axis][motor][harmonic] * biquad_filter_apply_DF1(&(filter->notch_filters[axis][motor][harmonic]), result) + (1 - filter->weight[axis][motor][harmonic]) * result;
+		}
+	}
 
 	return result;
 }
@@ -461,6 +578,13 @@ void Gyro_Acc_filters_setup()
 	biquad_filter_init(&filter_acc_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
 
 #endif
+
+#if defined(USE_RPM_FILTER)
+	RPM_filter_init(&rpm_filter_gyro, FREQUENCY_IMU_READING);
+
+	RPM_filter_init(&rpm_filter_acc, FREQUENCY_IMU_READING);
+
+#endif
 }
 
 void Gyro_Acc_filtering(float *temporary)
@@ -503,9 +627,24 @@ void Gyro_Acc_filtering(float *temporary)
 	Gyro_Acc[4] = biquad_filter_apply_DF2(&filter_acc_Y, temporary[4] - ACC_PITCH_OFFSET);
 	Gyro_Acc[5] = biquad_filter_apply_DF2(&filter_acc_Z, temporary[5] - ACC_YAW_OFFSET);
 #endif
+#if defined(USE_RPM_FILTER)
+
+	// update coefficients:
+	RPM_filter_update(&rpm_filter_gyro);
+	RPM_filter_update(&rpm_filter_acc);
+	// next apply rpm filtering:
+	Gyro_Acc[0] = RPM_filter_apply(&rpm_filter_gyro, 0, Gyro_Acc[0]);
+	Gyro_Acc[1] = RPM_filter_apply(&rpm_filter_gyro, 1, Gyro_Acc[1]);
+	Gyro_Acc[2] = RPM_filter_apply(&rpm_filter_gyro, 2, Gyro_Acc[2]);
+
+	Gyro_Acc[3] = RPM_filter_apply(&rpm_filter_acc, 0, Gyro_Acc[3]);
+	Gyro_Acc[4] = RPM_filter_apply(&rpm_filter_acc, 1, Gyro_Acc[4]);
+	Gyro_Acc[5] = RPM_filter_apply(&rpm_filter_acc, 2, Gyro_Acc[5]);
+
+#endif
 }
 
-void D_term_lowpass_setup()
+void setup_D_term_filters()
 {
 #if defined(USE_FIR_FILTERS)
 
@@ -564,8 +703,8 @@ void D_term_filtering(ThreeF *input)
 	input->roll = IIR_filter_apply(&filter_D_term_roll, input->roll);
 	input->yaw = IIR_filter_apply(&filter_D_term_yaw, input->yaw);
 #elif defined(USE_BIQUAD_FILTERS)
-	input->pitch = IIR_filter_apply(&filter_D_term_pitch, input->pitch);
-	input->roll = IIR_filter_apply(&filter_D_term_roll, input->roll);
-	input->yaw = IIR_filter_apply(&filter_D_term_yaw, input->yaw);
+	input->pitch = biquad_filter_apply_DF2(&filter_D_term_pitch, input->pitch);
+	input->roll = biquad_filter_apply_DF2(&filter_D_term_roll, input->roll);
+	input->yaw = biquad_filter_apply_DF2(&filter_D_term_yaw, input->yaw);
 #endif
 }

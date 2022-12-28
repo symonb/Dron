@@ -55,6 +55,17 @@
                 "isDefault": true
             },
             "problemMatcher": []
-        }
+        },
+        {
+            "type": "shell",
+            "label": "build & load",
+            "dependsOrder": "sequence",
+            "dependsOn": ["Make Firmware", "Load Firmware"],
+            "group": {
+              "kind": "build",
+              "isDefault": true
+            },
+            "detail": "build and load program into a drone"
+          }
     ]
 }

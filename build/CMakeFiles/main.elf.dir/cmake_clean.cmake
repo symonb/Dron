@@ -35,6 +35,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/main.elf.dir/Src/motors.c.obj.d"
   "CMakeFiles/main.elf.dir/Src/quaternions.c.obj"
   "CMakeFiles/main.elf.dir/Src/quaternions.c.obj.d"
+  "CMakeFiles/main.elf.dir/Src/rx.c.obj"
+  "CMakeFiles/main.elf.dir/Src/rx.c.obj.d"
   "CMakeFiles/main.elf.dir/Src/scheduler.c.obj"
   "CMakeFiles/main.elf.dir/Src/scheduler.c.obj.d"
   "CMakeFiles/main.elf.dir/Src/setup.c.obj"

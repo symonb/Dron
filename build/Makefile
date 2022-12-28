@@ -546,6 +546,30 @@ Src/quaternions.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/quaternions.c.s
 .PHONY : Src/quaternions.c.s
 
+Src/rx.obj: Src/rx.c.obj
+.PHONY : Src/rx.obj
+
+# target to build an object file
+Src/rx.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/rx.c.obj
+.PHONY : Src/rx.c.obj
+
+Src/rx.i: Src/rx.c.i
+.PHONY : Src/rx.i
+
+# target to preprocess a source file
+Src/rx.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/rx.c.i
+.PHONY : Src/rx.c.i
+
+Src/rx.s: Src/rx.c.s
+.PHONY : Src/rx.s
+
+# target to generate assembly for a file
+Src/rx.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\main.elf.dir\build.make CMakeFiles/main.elf.dir/Src/rx.c.s
+.PHONY : Src/rx.c.s
+
 Src/scheduler.obj: Src/scheduler.c.obj
 .PHONY : Src/scheduler.obj
 
@@ -702,6 +726,9 @@ help:
 	@echo ... Src/quaternions.obj
 	@echo ... Src/quaternions.i
 	@echo ... Src/quaternions.s
+	@echo ... Src/rx.obj
+	@echo ... Src/rx.i
+	@echo ... Src/rx.s
 	@echo ... Src/scheduler.obj
 	@echo ... Src/scheduler.i
 	@echo ... Src/scheduler.s

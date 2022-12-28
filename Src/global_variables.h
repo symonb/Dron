@@ -113,21 +113,16 @@ extern ThreeF global_angles;
 extern Quaternion q_global_position;
 
 extern ThreeF desired_rotation_speed;
+extern ThreeF desired_angles;
 
 extern uint16_t motor_1_value;
 extern uint16_t motor_2_value;
 extern uint16_t motor_3_value;
 extern uint16_t motor_4_value;
 
-extern uint32_t motor_1_rpm;
-extern uint32_t motor_2_rpm;
-extern uint32_t motor_3_rpm;
-extern uint32_t motor_4_rpm;
+extern uint32_t motors_rpm[];
 
-extern float motor_1_error;
-extern float motor_2_error;
-extern float motor_3_error;
-extern float motor_4_error;
+extern float motors_error[];
 
 extern uint16_t *motor_1_value_pointer;
 extern uint16_t *motor_2_value_pointer;

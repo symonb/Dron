@@ -38,6 +38,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/main.c" "CMakeFiles/main.elf.dir/Src/main.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/main.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/motors.c" "CMakeFiles/main.elf.dir/Src/motors.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/motors.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/quaternions.c" "CMakeFiles/main.elf.dir/Src/quaternions.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/quaternions.c.obj.d"
+  "C:/Users/symon/Documents/Projects/Drone/Dron/Src/rx.c" "CMakeFiles/main.elf.dir/Src/rx.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/rx.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/scheduler.c" "CMakeFiles/main.elf.dir/Src/scheduler.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/scheduler.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/setup.c" "CMakeFiles/main.elf.dir/Src/setup.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/setup.c.obj.d"
   "C:/Users/symon/Documents/Projects/Drone/Dron/Src/stabilize.c" "CMakeFiles/main.elf.dir/Src/stabilize.c.obj" "gcc" "CMakeFiles/main.elf.dir/Src/stabilize.c.obj.d"

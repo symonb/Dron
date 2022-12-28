@@ -211,8 +211,6 @@ void update_motors(timeUs_t current_time)
                          prepare_Dshot_package(*motor_3_value_pointer),
                          prepare_Dshot_package(*motor_4_value_pointer));
 
-    NVIC_DisableIRQ(EXTI0_IRQn);
-
     bdshot_reception_1 = true;
     bdshot_reception_2 = true;
 
@@ -675,57 +673,14 @@ static void read_BDshot_response(uint32_t value, uint8_t motor)
         // value sent by ESC is a period between each pole changes [us].
         // to achive eRPM we need to find out how many of these changes are in one minute.
         // eRPM = (60*1000 000)/T_us next RPM can be achived -> RPM = eRPM/(poles/2):
-        switch (motor)
-        {
-        case 1:
-            motor_1_rpm = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13); // cut off CRC and add shifting - this is period in [us]
-            motor_1_rpm = 60 * 1000000 / motor_1_rpm * 2 / MOTOR_POLES_NUMBER;      // convert to RPM
-            motor_1_error = 0.9 * motor_1_error;                                    // reduce motor error
 
-            break;
-        case 2:
-            motor_2_rpm = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13); // cut off CRC and add shifting - this is period in [us]
-            motor_2_rpm = 60 * 1000000 / motor_2_rpm * 2 / MOTOR_POLES_NUMBER;      // convert to RPM
-            motor_2_error = 0.9 * motor_2_error;                                    // reduce motor error
-
-            break;
-        case 3:
-            motor_3_rpm = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13); // cut off CRC and add shifting - this is period in [us]
-            motor_3_rpm = 60 * 1000000 / motor_3_rpm * 2 / MOTOR_POLES_NUMBER;      // convert to RPM
-            motor_3_error = 0.9 * motor_3_error;                                    // reduce motor error
-
-            break;
-        case 4:
-            motor_4_rpm = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13); // cut off CRC and add shifting - this is period in [us]
-            motor_4_rpm = 60 * 1000000 / motor_4_rpm * 2 / MOTOR_POLES_NUMBER;      // convert to RPM
-            motor_4_error = 0.9 * motor_4_error;                                    // reduce motor error
-
-            break;
-
-        default:
-            break;
-        }
+        motors_rpm[motor - 1] = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13);      // cut off CRC and add shifting - this is period in [us]
+        motors_rpm[motor - 1] = 60 * 1000000 / motors_rpm[motor - 1] * 2 / MOTOR_POLES_NUMBER; // convert to RPM
+        motors_error[motor - 1] = 0.9 * motors_error[motor - 1];                               // reduce motor error
     }
     else
     {
-        switch (motor)
-        {
-        case 1:
-            motor_1_error = 0.9 * motor_1_error + 10; // increase motor error
-            break;
-        case 2:
-            motor_2_error = 0.9 * motor_2_error + 10; // increase motor error
-            break;
-        case 3:
-            motor_3_error = 0.9 * motor_3_error + 10; // increase motor error
-            break;
-        case 4:
-            motor_4_error = 0.9 * motor_4_error + 10; // increase motor error
-            break;
-
-        default:
-            break;
-        }
+        motors_error[motor - 1] = 0.9 * motors_error[motor - 1] + 10; // increase motor error
     }
 }
 

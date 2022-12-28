@@ -85,6 +85,7 @@ ThreeF global_angles = {0, 0, 0};
 Quaternion q_global_position = {1, 0, 0, 0};
 
 ThreeF desired_rotation_speed = {0, 0, 0};
+ThreeF desired_angles = {0, 0, 0};
 
 // motor's values set by PID's:
 uint16_t motor_1_value;
@@ -93,16 +94,10 @@ uint16_t motor_3_value;
 uint16_t motor_4_value;
 
 //	motor's RPM values (from BDshot)
-uint32_t motor_1_rpm;
-uint32_t motor_2_rpm;
-uint32_t motor_3_rpm;
-uint32_t motor_4_rpm;
+uint32_t motors_rpm[MOTORS_COUNT];
 
 // used in BDshot:
-float motor_1_error = 0;
-float motor_2_error = 0;
-float motor_3_error = 0;
-float motor_4_error = 0;
+float motors_error[MOTORS_COUNT];
 
 // pointers for motor's values:
 uint16_t *motor_1_value_pointer;

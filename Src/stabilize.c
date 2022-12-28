@@ -32,7 +32,6 @@ static ThreeF last_err = {0, 0, 0};
 static ThreeF D_corr = {0, 0, 0};
 static ThreeF F_corr = {0, 0, 0};
 static ThreeF last_D_corr = {0, 0, 0};
-static Three Rates = {400, 400, 400};
 
 // 4s
 //  DRONE 3D PRINT:
@@ -59,7 +58,10 @@ void stabilize(timeUs_t dt_us)
 	complementary_filter(dt);
 #endif
 	// from correction calculated from angles we need to convert them into float <-1,1> as desired rotation speed for next PID controller:
+	static float temp;
+	temp = desired_rotation_speed.yaw;
 	desired_rotation_speed = corrections_from_quaternion(q_global_position, dt);
+	desired_rotation_speed.yaw = temp;
 }
 
 static Quaternion gyro_angles(Quaternion q_position, float dt)
@@ -231,7 +233,7 @@ static void madgwick_filter(float dt)
 	delta_error_function = quaternion_multiply(delta_error_function,
 											   1.f / quaternion_norm(delta_error_function));
 
-	static float coefficient_Beta = 0.15; // 0.073 was
+	static float coefficient_Beta = 0.15f; // 0.073 was
 
 	q_global_position = quaternions_sum(q_global_position,
 										quaternion_multiply(
@@ -318,7 +320,7 @@ static void mahony_filter(float dt)
 	q_global_position = quaternion_multiply(q_global_position,
 											1.f / quaternion_norm(q_global_position));
 
-	// for debugging compute Euler angles from quaternion:
+	// compute Euler angles from quaternion:
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
 }
 
@@ -328,7 +330,7 @@ static ThreeF corrections(float dt)
 
 	err.roll = ((channels[0] - 1500) / 500. - global_angles.roll / MAX_ROLL_ANGLE);
 	err.pitch = ((channels[1] - 1500) / 500. - global_angles.pitch / MAX_PITCH_ANGLE);
-	err.yaw = (channels[3] - 1500) / 500. - (Gyro_Acc[2]) * 0.0305185f / Rates.yaw;
+	err.yaw = (channels[3] - 1500) / 500. - (Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y;
 
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;
@@ -365,29 +367,26 @@ static ThreeF corrections(float dt)
 
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt)
 {
-	static ThreeF set_angles;
 	static Quaternion set_position_quaternion;
 	static Quaternion error_quaternion;
 	static bool drone_was_armed;
 
-	set_angles.roll = (channels[0] - 1500) / 500.f * MAX_ROLL_ANGLE;
-	set_angles.pitch = (channels[1] - 1500) / 500.f * MAX_PITCH_ANGLE;
-	set_angles.yaw += (channels[3] - 1500) / 500.f * Rates.yaw * dt;
+	desired_angles.yaw = global_euler_angles.yaw;
 
-	if (set_angles.yaw > 180)
+	if (desired_angles.yaw > 180)
 	{
-		set_angles.yaw -= 360;
+		desired_angles.yaw -= 360;
 	}
 
-	else if (set_angles.yaw < -180)
+	else if (desired_angles.yaw < -180)
 	{
-		set_angles.yaw += 360;
+		desired_angles.yaw += 360;
 	}
 
 #if defined(BLACKBOX_SAVE_SET_ANGLES)
-	global_variable_monitor[0] = set_angles.roll;
-	global_variable_monitor[1] = set_angles.pitch;
-	global_variable_monitor[2] = set_angles.yaw;
+	global_variable_monitor[0] = desired_angles.roll;
+	global_variable_monitor[1] = desired_angles.pitch;
+	global_variable_monitor[2] = desired_angles.yaw;
 #endif
 
 	// reset error for yaw after arming drone:
@@ -395,7 +394,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 	if (!drone_was_armed && ARMING_STATUS == ARMED)
 	{
 		drone_was_armed = true;
-		set_angles.yaw = global_euler_angles.yaw;
+		desired_angles.yaw = global_euler_angles.yaw;
 	}
 	else if (ARMING_STATUS != ARMED)
 	{
@@ -403,7 +402,7 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 	}
 
 	// define quaternion of desired position (quaternion transformation from global to body frame):
-	set_position_quaternion = Euler_angles_to_Quaternion(set_angles);
+	set_position_quaternion = Euler_angles_to_Quaternion(desired_angles);
 
 #if defined(MAGDWICK_ORIGINAL)
 
