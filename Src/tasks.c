@@ -32,18 +32,21 @@ static void telemetry_fun(timeUs_t time);
 static void (*telemetry_fun_tab[FLIGHT_MODE_COUNT])(timeUs_t dt);
 static void buzzer_fun(timeUs_t time);
 static void OSD_update_fun(timeUs_t time);
+static void gyro_calibration_fun(timeUs_t time);
+static bool gyro_calibration_check_fun(timeUs_t current_time, timeUs_t delta_time);
 
 // ------DEFINE ALL TASKS--------
 task_t all_tasks[TASKS_COUNT] =
-	{[TASK_SYSTEM] = DEFINE_TASK("SYSTEM CHECK", task_system_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_SYSTEM_CHECK)),
-	 [TASK_IBUS_SAVE] = DEFINE_TASK("IBUS SAVING", ibus_save_enable, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_RX_READING)),
-	 [TASK_GYRO_ACC_FILTER] = DEFINE_TASK("GYRO ACC FILTERING", rewrite_Gyro_Acc_data, gyro_acc_filtering_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_IMU_READING)),
-	 [TASK_MAIN_LOOP] = DEFINE_TASK("MAIN LOOP", main_PID_fun, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
-	 [TASK_STABILIZATION_LOOP] = DEFINE_TASK("STABILIZATION LOOP", stabilization_fun, stabilization_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
-	 [TASK_UPDATE_MOTORS] = DEFINE_TASK("UPDATE MOTORS", update_motors, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_ESC_UPDATE)),
-	 [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE)),
-	 [TASK_BUZZER] = DEFINE_TASK("BUZZER", buzzer_fun, NULL, TASK_PRIORITY_IDLE, TASK_PERIOD_HZ(10)),
-	 [TASK_OSD] = DEFINE_TASK("OSD UPDATE", OSD_update_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_OSD_UPDATE))};
+{ [TASK_SYSTEM] = DEFINE_TASK("SYSTEM CHECK", task_system_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_SYSTEM_CHECK)),
+ [TASK_IBUS_SAVE] = DEFINE_TASK("IBUS SAVING", ibus_save_enable, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_RX_READING)),
+ [TASK_GYRO_ACC_FILTER] = DEFINE_TASK("GYRO ACC FILTERING", rewrite_Gyro_Acc_data, gyro_acc_filtering_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_IMU_READING)),
+ [TASK_MAIN_LOOP] = DEFINE_TASK("MAIN LOOP", main_PID_fun, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
+ [TASK_STABILIZATION_LOOP] = DEFINE_TASK("STABILIZATION LOOP", stabilization_fun, stabilization_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
+ [TASK_UPDATE_MOTORS] = DEFINE_TASK("UPDATE MOTORS", update_motors, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_ESC_UPDATE)),
+ [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE)),
+ [TASK_BUZZER] = DEFINE_TASK("BUZZER", buzzer_fun, NULL, TASK_PRIORITY_IDLE, TASK_PERIOD_HZ(10)),
+ [TASK_OSD] = DEFINE_TASK("OSD UPDATE", OSD_update_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_OSD_UPDATE)),
+ [TASK_GYRO_CALIBRATION] = DEFINE_TASK("GYRO CALIBRATION", gyro_calibration_fun, gyro_calibration_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_IMU_READING)) };
 
 static void main_PID_fun(timeUs_t current_time)
 {
@@ -106,9 +109,9 @@ static void telemetry_fun(timeUs_t time)
 }
 
 static void (*telemetry_fun_tab[FLIGHT_MODE_COUNT])(timeUs_t dt) =
-	{
-		[FLIGHT_MODE_STABLE] = send_telemetry_stabilize,
-		[FLIGHT_MODE_ACRO] = send_telemetry_acro};
+{
+	[FLIGHT_MODE_STABLE] = send_telemetry_stabilize,
+	[FLIGHT_MODE_ACRO] = send_telemetry_acro };
 
 static void buzzer_fun(timeUs_t time)
 {
@@ -142,4 +145,20 @@ static void OSD_update_fun(timeUs_t time)
 		OSD_print_flight_mode();
 		OSD_print_warnings();
 	}
+}
+
+static void gyro_calibration_fun(timeUs_t time) {
+	gyro_calibration(&gyro_1, time);
+}
+
+static bool gyro_calibration_check_fun(timeUs_t current_time, timeUs_t delta_time) {
+	// if gyro is calibrated remove this task from scheduler:
+	if (gyro_1.calibrated) {
+		remove_from_queue(&all_tasks[TASK_GYRO_CALIBRATION], &main_scheduler);
+		// reset tasks stats:
+		scheduler_reset_tasks_statistics(&main_scheduler);
+		return false;
+	}
+
+	return true;
 }

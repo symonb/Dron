@@ -31,11 +31,11 @@ void main(void)
 	setup();
 	turn_OFF_BLUE_LED();
 	setup_NVIC_1();
-	delay_mili(1000);
+	delay_mili(100);
 	setup_MPU6000();
 	setup_OSD();
 	setup_NVIC_2();
-	delay_mili(500);
+	delay_mili(100);
 	scheduler_initialization(&main_scheduler);
 
 	while (1)

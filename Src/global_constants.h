@@ -9,7 +9,7 @@
 #define GLOBAL_CONSTANTS_H_
 #include <stdbool.h>
 
-//------DIFFERENT_CONSTANTS------------
+ //------DIFFERENT_CONSTANTS------------
 #define MAX(a, b) ((a > b) ? a : b)	 // choose greater value
 #define GYRO_ACC_SIZE 7				 // 3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14		 // telemetry information different values
@@ -159,23 +159,24 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define FREQUENCY_IMU_READING 700		 //[Hz]
 #define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible (>150)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
-#define FREQUENCY_SYSTEM_CHECK 5		 //[Hz]
-#define FREQUENCY_OSD_UPDATE 5			 //[Hz]
+#define FREQUENCY_SYSTEM_CHECK 	30	 	//[Hz]
+#define FREQUENCY_OSD_UPDATE 30			 //[Hz]
 
 //------------FAILSAFE--------------------
 
 enum failsafe_t
 {
-	NO_FAILSAFE,
-	INCORRECT_CHANNELS_VALUES,
-	RX_TIMEOUT,
-	NO_PREARM,
-	SETUP_ERROR,
-	I2C_ERROR,
-	SPI_IMU_ERROR,
-	SPI_FLASH_ERROR,
-	SPI_OSD_ERROR,
-	PID_LOOP_TIMEOUT,
+	FS_NO_FAILSAFE,
+	FS_INCORRECT_CHANNELS_VALUES,
+	FS_RX_TIMEOUT,
+	FS_NO_PREARM,
+	FS_SETUP_ERROR,
+	FS_I2C_ERROR,
+	FS_SPI_IMU_ERROR,
+	FS_SPI_FLASH_ERROR,
+	FS_SPI_OSD_ERROR,
+	FS_PID_LOOP_TIMEOUT,
+	FS_GYRO_CALIBRATION,
 	FAILSAFES_COUNTER
 };
 
@@ -253,11 +254,10 @@ enum blackbox_t
 //-----------OFFSETS and CALIBRATIONS VALUE----------
 #define PITCH_OFFSET -7
 #define ROLL_OFFSET 0
+#define GYRO_STARTUP_CALIB_DURATION 1.5 // time when gyro bias is measured in [s]
+#define GYRO_STARTUP_CALIB_MAX_DEV 48 // maximum deviation accepted after gyro calibration
 
 //	average error on each drone' axis:
-#define GYRO_ROLL_OFFSET 20
-#define GYRO_PITCH_OFFSET 8
-#define GYRO_YAW_OFFSET -9
 
 #define ACC_ROLL_OFFSET 2.862f
 #define ACC_PITCH_OFFSET 125.6525f

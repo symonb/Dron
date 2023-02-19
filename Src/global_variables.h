@@ -11,7 +11,7 @@
 #include "stdint.h"
 #include "stdbool.h"
 
-//---------GLOBAL NEW TYPES-------------
+ //---------GLOBAL NEW TYPES-------------
 
 typedef struct
 {
@@ -19,12 +19,20 @@ typedef struct
 	double pitch; // Y
 	double yaw;	  // Z
 } ThreeD;
+
 typedef struct
 {
 	float roll;	 // X
 	float pitch; // Y
 	float yaw;	 // Z
 } ThreeF;
+
+typedef struct
+{
+	int32_t roll;  // X
+	int32_t pitch; // Y
+	int32_t yaw;   // Z
+} Three;
 
 typedef struct
 {
@@ -43,13 +51,6 @@ typedef struct
 
 typedef struct
 {
-	int32_t roll;  // X
-	int32_t pitch; // Y
-	int32_t yaw;   // Z
-} Three;
-
-typedef struct
-{
 	float w;
 	float x;
 	float y;
@@ -63,9 +64,17 @@ typedef enum
 	FLIGHT_MODE_COUNT
 } flight_mode_e;
 
+typedef struct {
+	char* name;
+	ThreeF offset;
+	bool calibrated;
+} gyro_t;
+
 extern flight_mode_e flight_mode;
 
 extern enum arming_t ARMING_STATUS;
+
+extern gyro_t gyro_1;
 
 typedef uint64_t timeUs_t;
 typedef uint32_t timeMs_t;
@@ -124,10 +133,10 @@ extern uint32_t motors_rpm[];
 
 extern float motors_error[];
 
-extern uint16_t *motor_1_value_pointer;
-extern uint16_t *motor_2_value_pointer;
-extern uint16_t *motor_3_value_pointer;
-extern uint16_t *motor_4_value_pointer;
+extern uint16_t* motor_1_value_pointer;
+extern uint16_t* motor_2_value_pointer;
+extern uint16_t* motor_3_value_pointer;
+extern uint16_t* motor_4_value_pointer;
 
 extern int16_t Gyro_Acc[];
 

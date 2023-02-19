@@ -31,6 +31,7 @@ macro(main_sources var)
 endmacro()
 
 add_subdirectory("${MAIN_SRC_DIR}")
+
 main_sources(src "${MAIN_SRC}")
 
 add_executable(${TARGET_ELF}

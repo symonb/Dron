@@ -19,15 +19,11 @@
 #include "connection.h"
 #include "scheduler.h"
 
-bool scheduler_initialization(scheduler_t *scheduler);
-void scheduler_execute(scheduler_t *scheduler);
-void scheduler_reschedule(scheduler_t *scheduler);
-void add_all_tasks(scheduler_t *scheduler);
-bool is_in_queue(task_t *task, scheduler_t *scheduler);
-bool add_to_queue(task_t *task, scheduler_t *scheduler);
-bool remove_from_queue(task_t *task, scheduler_t *scheduler);
-static task_t *queue_first(scheduler_t *scheduler);
-static task_t *queue_next(scheduler_t *scheduler);
+static void scheduler_reschedule(scheduler_t* scheduler);
+static bool is_in_queue(task_t* task, scheduler_t* scheduler);
+static bool add_to_queue(task_t* task, scheduler_t* scheduler);
+static task_t* queue_first(scheduler_t* scheduler);
+static task_t* queue_next(scheduler_t* scheduler);
 
 scheduler_t main_scheduler;
 static uint8_t task_queue_pos;
@@ -49,7 +45,7 @@ void task_system_fun(timeUs_t current_time)
 	}
 }
 
-bool scheduler_initialization(scheduler_t *scheduler)
+bool scheduler_initialization(scheduler_t* scheduler)
 {
 	scheduler->current_task = NULL;
 	scheduler->task_queue[0] = NULL;
@@ -64,11 +60,23 @@ bool scheduler_initialization(scheduler_t *scheduler)
 	add_to_queue(&all_tasks[TASK_UPDATE_MOTORS], scheduler);
 	add_to_queue(&all_tasks[TASK_BUZZER], scheduler);
 	add_to_queue(&all_tasks[TASK_OSD], scheduler);
+	add_to_queue(&all_tasks[TASK_GYRO_CALIBRATION], scheduler);
+
+	scheduler_reset_tasks_statistics(scheduler);
 
 	return true;
 }
 
-void scheduler_execute(scheduler_t *scheduler)
+void scheduler_reset_tasks_statistics(scheduler_t* scheduler)
+{
+	for (uint8_t i = 0; i < scheduler->task_queue_size;i++) {
+		scheduler->task_queue[i]->dynamic_priority = 0;
+		scheduler->task_queue[i]->last_execution = get_Global_Time();
+		scheduler->task_queue[i]->avg_execution_time = 0;
+	}
+}
+
+void scheduler_execute(scheduler_t* scheduler)
 {
 	static timeUs_t time_before_execution;
 
@@ -94,7 +102,7 @@ void scheduler_execute(scheduler_t *scheduler)
 	}
 }
 
-void scheduler_reschedule(scheduler_t *scheduler)
+static void scheduler_reschedule(scheduler_t* scheduler)
 {
 	//	reset variables:
 	timeUs_t current_time = get_Global_Time();
@@ -102,7 +110,7 @@ void scheduler_reschedule(scheduler_t *scheduler)
 	scheduler->current_task = NULL;
 
 	//	iterate throw all tasks update dynamic priority and choose current task:
-	for (task_t *task = queue_first(scheduler); task != NULL; task = queue_next(scheduler))
+	for (task_t* task = queue_first(scheduler); task != NULL; task = queue_next(scheduler))
 	{
 		//	if task.check_fun() exists:
 		if (task->check_fun)
@@ -153,11 +161,7 @@ void scheduler_reschedule(scheduler_t *scheduler)
 	}
 }
 
-void add_all_tasks(scheduler_t *scheduler)
-{
-}
-
-bool is_in_queue(task_t *task, scheduler_t *scheduler)
+static bool is_in_queue(task_t* task, scheduler_t* scheduler)
 {
 	for (uint8_t i = 0; i < scheduler->task_queue_size; i++)
 		if (scheduler->task_queue[i] == task)
@@ -165,7 +169,7 @@ bool is_in_queue(task_t *task, scheduler_t *scheduler)
 	return false;
 }
 
-bool add_to_queue(task_t *task, scheduler_t *scheduler)
+static bool add_to_queue(task_t* task, scheduler_t* scheduler)
 {
 
 	if (is_in_queue(task, scheduler) || scheduler->task_queue_size >= TASKS_COUNT) // make sure that we have space
@@ -175,7 +179,7 @@ bool add_to_queue(task_t *task, scheduler_t *scheduler)
 		if (scheduler->task_queue[i] == NULL || (scheduler->task_queue[i]->static_priority < task->static_priority))
 		{
 			memmove(&scheduler->task_queue[i + 1], &(scheduler->task_queue[i]),
-					sizeof(task) * (scheduler->task_queue_size - i));
+				sizeof(task) * (scheduler->task_queue_size - i));
 			scheduler->task_queue[i] = task;
 			scheduler->task_queue_size++;
 			return true;
@@ -184,15 +188,15 @@ bool add_to_queue(task_t *task, scheduler_t *scheduler)
 	return false;
 }
 
-bool remove_from_queue(task_t *task, scheduler_t *scheduler)
+bool remove_from_queue(task_t* task, scheduler_t* scheduler)
 {
 	for (int i = 0; i < scheduler->task_queue_size; i++)
 	{
 		if (scheduler->task_queue[i] == task)
 		{
 			memmove(&(scheduler->task_queue[i]),
-					&(scheduler->task_queue[i + 1]),
-					sizeof(task) * (scheduler->task_queue_size - i));
+				&(scheduler->task_queue[i + 1]),
+				sizeof(task) * (scheduler->task_queue_size - i));
 			scheduler->task_queue_size--;
 
 			scheduler->task_queue[scheduler->task_queue_size] = NULL;
@@ -203,13 +207,13 @@ bool remove_from_queue(task_t *task, scheduler_t *scheduler)
 	return false;
 }
 
-static task_t *queue_first(scheduler_t *scheduler)
+static task_t* queue_first(scheduler_t* scheduler)
 {
 	task_queue_pos = 0;
 	return scheduler->task_queue[0];
 }
 
-static task_t *queue_next(scheduler_t *scheduler)
+static task_t* queue_next(scheduler_t* scheduler)
 {
 	return scheduler->task_queue[++task_queue_pos];
 }

@@ -12,6 +12,7 @@
 #include "global_functions.h"
 #include "filters.h"
 #include "flash.h"
+#include "math/statistics.h"
 #include "MPU6000.h"
 
 static void setup_conf();
@@ -21,8 +22,8 @@ static void SPI1_enable();
 static void SPI1_disable();
 static void CS_IMU_enable();
 static void CS_IMU_disable();
-static void SPI_transmit(uint8_t *data, int size);
-static void SPI_receive(uint8_t address_of_register, uint8_t *data, int size);
+static void SPI_transmit(uint8_t* data, int size);
+static void SPI_receive(uint8_t address_of_register, uint8_t* data, int size);
 static bool failsafe_CONF();
 static bool failsafe_SPI();
 #if defined(IMU_TEST)
@@ -30,7 +31,7 @@ static void MPU6000_self_test_configuration();
 static void MPU6000_self_test_measurements();
 #endif
 
-// float M_rotacji[3][3] = { { (ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET)
+// float transform_matrix[3][3] = { { (ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET)
 //		/ sqrtf(
 //				powf(ACC_CALIBRATION_X_Z - ACC_YAW_OFFSET, 2)
 //						+ powf(ACC_CALIBRATION_X_Y - ACC_ROLL_OFFSET, 2)
@@ -82,7 +83,7 @@ static void MPU6000_self_test_measurements();
 //								+ powf(ACC_CALIBRATION_Z_X - ACC_PITCH_OFFSET,
 //										2)) } };
 
-float M_rotacji[3][3] = {{-1, 0, 0}, {0, -1, 0}, {0, 0, 1}};
+float transform_matrix[3][3] = { {-1, 0, 0}, {0, -1, 0}, {0, 0, 1} };
 
 uint8_t read_write_tab[14];
 static volatile uint8_t read_write_quantity;
@@ -157,7 +158,7 @@ static void CS_IMU_disable()
 	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
 }
 
-static void SPI_transmit(uint8_t *data, int size)
+static void SPI_transmit(uint8_t* data, int size)
 {
 	//----------------STEPS--------------------
 	/* 1 Wait for TXE bit to set in the Status Register
@@ -214,7 +215,7 @@ static void SPI_transmit(uint8_t *data, int size)
 	SPI1->SR;
 }
 
-static void SPI_receive(uint8_t address_of_register, uint8_t *data, int size)
+static void SPI_receive(uint8_t address_of_register, uint8_t* data, int size)
 {
 	//----------------STEPS--------------------
 	/* 1 Wait for TXE flag and write address_of_register |0x80 (first bit = 1 - reading)
@@ -299,8 +300,8 @@ void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value)
 	CS_IMU_disable();
 }
 
-void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t *memory_adress,
-					  int number_of_bytes)
+void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t* memory_adress,
+	int number_of_bytes)
 {
 	adress_of_register |= 0x80; // first bit of 1 byte has to be write (0) or read(1)
 	CS_IMU_enable();
@@ -343,7 +344,7 @@ static void setup_conf()
 
 	// 0x1A - address of (26) Configuration register:
 	// setting low pass filter in this register
-	MPU6000_SPI_write(0x1A, 0x01);
+	MPU6000_SPI_write(0x1A, 0x00);
 	delay_micro(15);
 
 	// 0x38 - address of (56) Interrupt Enable register:
@@ -460,14 +461,13 @@ void rewrite_Gyro_Acc_data(timeUs_t time)
 			Gyro_Acc[i + 3] = read_write_tab[2 * i] << 8 | read_write_tab[2 * i + 1];
 		}
 
-		float temporary[6] = {0};
+		float temporary[6] = { 0 };
 		for (int j = 0; j < 3; j++)
 		{
-
 			for (int i = 0; i < 3; i++)
 			{
-				temporary[j] += Gyro_Acc[i] * M_rotacji[i][j];
-				temporary[j + 3] += Gyro_Acc[i + 3] * M_rotacji[i][j];
+				temporary[j] += Gyro_Acc[i] * transform_matrix[i][j];
+				temporary[j + 3] += Gyro_Acc[i + 3] * transform_matrix[i][j];
 			}
 		}
 
@@ -483,12 +483,65 @@ void rewrite_Gyro_Acc_data(timeUs_t time)
 	}
 }
 
+void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time)
+{
+	static timeUs_t calibration_start;
+	static stdev_t gyro_roll_dev;
+	static stdev_t gyro_pitch_dev;
+	static stdev_t gyro_yaw_dev;
+
+	// start calibration in first loop:
+	if (calibration_start == 0) {
+		calibration_start = time;
+	}
+
+	read_gyro();
+
+	for (int i = 0; i < 3; i++)
+	{
+		// gyro:
+		Gyro_Acc[i] = read_write_tab[2 * i + 8] << 8 | read_write_tab[2 * i + 9];
+	}
+
+	float temporary[3] = { 0 };
+	for (int j = 0; j < 3; j++)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			temporary[j] += Gyro_Acc[i] * transform_matrix[i][j];
+		}
+	}
+
+	dev_push(&gyro_roll_dev, temporary[0]);
+	dev_push(&gyro_pitch_dev, temporary[1]);
+	dev_push(&gyro_yaw_dev, temporary[2]);
+
+	//check roll deviation end update variable or start over:
+	if (dev_standard_deviation(&gyro_roll_dev) <= GYRO_STARTUP_CALIB_MAX_DEV) {
+
+		gyro_to_calibrate->offset.roll = gyro_roll_dev.m_newM;
+		gyro_to_calibrate->offset.pitch = gyro_pitch_dev.m_newM;
+		gyro_to_calibrate->offset.yaw = gyro_yaw_dev.m_newM;
+		// if calibration is long enough end whole calibration:
+		if (time - calibration_start >= SEC_TO_US(GYRO_STARTUP_CALIB_DURATION)) {
+			gyro_to_calibrate->calibrated = true;
+		}
+	}
+	else {
+		//start calibration again
+		calibration_start = 0;
+		dev_clear(&gyro_roll_dev);
+		dev_clear(&gyro_pitch_dev);
+		dev_clear(&gyro_yaw_dev);
+	}
+}
+
 static bool failsafe_CONF()
 {
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
 	{
-		FailSafe_status = SETUP_ERROR;
+		FailSafe_status = FS_SETUP_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}
@@ -500,7 +553,7 @@ static bool failsafe_SPI()
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
 	{
-		FailSafe_status = SPI_IMU_ERROR;
+		FailSafe_status = FS_SPI_IMU_ERROR;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}

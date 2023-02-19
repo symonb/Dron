@@ -9,13 +9,15 @@
 #include "global_constants.h"
 #include "global_variables.h"
 
-// FOR DEBUGING ONLY
+ // FOR DEBUGING ONLY
 
 double debug_variable_1;
 
 flight_mode_e flight_mode;
 
 enum arming_t ARMING_STATUS;
+
+gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false };
 
 //----------TIME VARIABLES--------
 volatile timeUs_t Global_Time = 0;
@@ -78,14 +80,14 @@ uint16_t channels_previous_values[14] = {
 
 int16_t Throttle = 1000;
 
-ThreeF global_euler_angles = {0, 0, 0};
+ThreeF global_euler_angles = { 0, 0, 0 };
 
-ThreeF global_angles = {0, 0, 0};
+ThreeF global_angles = { 0, 0, 0 };
 
-Quaternion q_global_position = {1, 0, 0, 0};
+Quaternion q_global_position = { 1, 0, 0, 0 };
 
-ThreeF desired_rotation_speed = {0, 0, 0};
-ThreeF desired_angles = {0, 0, 0};
+ThreeF desired_rotation_speed = { 0, 0, 0 };
+ThreeF desired_angles = { 0, 0, 0 };
 
 // motor's values set by PID's:
 uint16_t motor_1_value;
@@ -100,10 +102,10 @@ uint32_t motors_rpm[MOTORS_COUNT];
 float motors_error[MOTORS_COUNT];
 
 // pointers for motor's values:
-uint16_t *motor_1_value_pointer;
-uint16_t *motor_2_value_pointer;
-uint16_t *motor_3_value_pointer;
-uint16_t *motor_4_value_pointer;
+uint16_t* motor_1_value_pointer;
+uint16_t* motor_2_value_pointer;
+uint16_t* motor_3_value_pointer;
+uint16_t* motor_4_value_pointer;
 
 int16_t Gyro_Acc[GYRO_ACC_SIZE]; // table for measurements 3 gyro, 3 accelerometer, 1 temperature
 
@@ -113,36 +115,36 @@ bool ibus_received = false;
 
 //-----------------FILTERS-------------------
 #if defined(USE_FIR_FILTERS)
-const float GYRO_FILTER_X_COEF[GYRO_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
-const float GYRO_FILTER_Y_COEF[GYRO_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
-const float GYRO_FILTER_Z_COEF[GYRO_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
+const float GYRO_FILTER_X_COEF[GYRO_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
+const float GYRO_FILTER_Y_COEF[GYRO_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
+const float GYRO_FILTER_Z_COEF[GYRO_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
 
-const float ACC_FILTER_X_COEF[ACC_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
-const float ACC_FILTER_Y_COEF[ACC_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
-const float ACC_FILTER_Z_COEF[ACC_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
+const float ACC_FILTER_X_COEF[ACC_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
+const float ACC_FILTER_Y_COEF[ACC_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
+const float ACC_FILTER_Z_COEF[ACC_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
 
-const float D_TERM_FILTER_COEF[D_TERM_FILTERS_ORDER] = {0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f};
+const float D_TERM_FILTER_COEF[D_TERM_FILTERS_ORDER] = { 0.135250f, 0.216229f, 0.234301f, 0.234301f, 0.216229f, 0.135250f };
 
 #elif defined(USE_IIR_FILTERS)
 
-const float GYRO_FILTER_X_FORW_COEF[GYRO_FILTERS_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
-const float GYRO_FILTER_Y_FORW_COEF[GYRO_FILTERS_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
-const float GYRO_FILTER_Z_FORW_COEF[GYRO_FILTERS_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
+const float GYRO_FILTER_X_FORW_COEF[GYRO_FILTERS_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
+const float GYRO_FILTER_Y_FORW_COEF[GYRO_FILTERS_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
+const float GYRO_FILTER_Z_FORW_COEF[GYRO_FILTERS_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
 
-const float GYRO_FILTER_X_BACK_COEF[GYRO_FILTERS_ORDER] = {-1.56101807f, 0.6413515f};
-const float GYRO_FILTER_Y_BACK_COEF[GYRO_FILTERS_ORDER] = {-1.56101807f, 0.6413515f};
-const float GYRO_FILTER_Z_BACK_COEF[GYRO_FILTERS_ORDER] = {-1.56101807f, 0.6413515f};
+const float GYRO_FILTER_X_BACK_COEF[GYRO_FILTERS_ORDER] = { -1.56101807f, 0.6413515f };
+const float GYRO_FILTER_Y_BACK_COEF[GYRO_FILTERS_ORDER] = { -1.56101807f, 0.6413515f };
+const float GYRO_FILTER_Z_BACK_COEF[GYRO_FILTERS_ORDER] = { -1.56101807f, 0.6413515f };
 
-const float ACC_FILTER_X_FORW_COEF[ACC_FILTERS_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
-const float ACC_FILTER_Y_FORW_COEF[ACC_FILTERS_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
-const float ACC_FILTER_Z_FORW_COEF[ACC_FILTERS_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
+const float ACC_FILTER_X_FORW_COEF[ACC_FILTERS_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
+const float ACC_FILTER_Y_FORW_COEF[ACC_FILTERS_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
+const float ACC_FILTER_Z_FORW_COEF[ACC_FILTERS_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
 
-const float ACC_FILTER_X_BACK_COEF[ACC_FILTERS_ORDER] = {-1.56101807f, 0.6413515f};
-const float ACC_FILTER_Y_BACK_COEF[ACC_FILTERS_ORDER] = {-1.56101807f, 0.6413515f};
-const float ACC_FILTER_Z_BACK_COEF[ACC_FILTERS_ORDER] = {-1.56101807f, 0.6413515f};
+const float ACC_FILTER_X_BACK_COEF[ACC_FILTERS_ORDER] = { -1.56101807f, 0.6413515f };
+const float ACC_FILTER_Y_BACK_COEF[ACC_FILTERS_ORDER] = { -1.56101807f, 0.6413515f };
+const float ACC_FILTER_Z_BACK_COEF[ACC_FILTERS_ORDER] = { -1.56101807f, 0.6413515f };
 
-const float D_TERM_FILTER_FORW_COEF[D_TERM_FILTER_ORDER + 1] = {0.02008336f, 0.04016673f, 0.02008336f};
-const float D_TERM_FILTER_BACK_COEF[D_TERM_FILTER_ORDER] = {-1.56101807f, 0.6413515f};
+const float D_TERM_FILTER_FORW_COEF[D_TERM_FILTER_ORDER + 1] = { 0.02008336f, 0.04016673f, 0.02008336f };
+const float D_TERM_FILTER_BACK_COEF[D_TERM_FILTER_ORDER] = { -1.56101807f, 0.6413515f };
 
 #endif
 

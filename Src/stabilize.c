@@ -8,7 +8,7 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "MPU6000.h"
-#include "quaternions.h"
+#include "math/quaternions.h"
 #include "flash.h"
 #include "stabilize.h"
 #include "tasks.h"

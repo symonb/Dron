@@ -14,10 +14,12 @@ set(MAIN_SRC
     global_variables.c
     i2c1.c
     ibus.c
+    math/statistics.c 
+    math/quaternions.c
     motors.c
     MPU6000.c
     OSD.c
-    quaternions.c
+   
     rx.c
     scheduler.c
     stabilize.c

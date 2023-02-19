@@ -46,16 +46,16 @@ static RPM_filter_t rpm_filter_acc;
 
 #endif
 
-static void biquad_filter_update(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
-static void biquad_filter_copy_coefficients(biquad_Filter_t *copy_from_filter, biquad_Filter_t *copy_to_filter);
-static void RPM_filter_update(RPM_filter_t *filter);
+static void biquad_filter_update(biquad_Filter_t* filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
+static void biquad_filter_copy_coefficients(biquad_Filter_t* copy_from_filter, biquad_Filter_t* copy_to_filter);
+static void RPM_filter_update(RPM_filter_t* filter);
 
-void FIR_filter_init(FIR_Filter *fir)
+void FIR_filter_init(FIR_Filter* fir)
 {
 
 	//	Allocate memory for arrays
-	fir->buffer = (float *)malloc(sizeof(fir->buffer) * fir->length);
-	fir->impulse_response = (float *)malloc(
+	fir->buffer = (float*)malloc(sizeof(fir->buffer) * fir->length);
+	fir->impulse_response = (float*)malloc(
 		sizeof(fir->impulse_response) * fir->length);
 
 	//	Clear filter buffer
@@ -72,7 +72,7 @@ void FIR_filter_init(FIR_Filter *fir)
 	fir->output = 0.0f;
 }
 
-float FIR_filter_apply(FIR_Filter *fir, float input)
+float FIR_filter_apply(FIR_Filter* fir, float input)
 {
 	//	Add new data to buffer
 	fir->buffer[fir->buffer_index] = input;
@@ -105,16 +105,16 @@ float FIR_filter_apply(FIR_Filter *fir, float input)
 	return fir->output;
 }
 
-void IIR_filter_init(IIR_Filter *iir)
+void IIR_filter_init(IIR_Filter* iir)
 {
 	//	Allocate memory for arrays
-	iir->buffer_input = (float *)malloc(
+	iir->buffer_input = (float*)malloc(
 		sizeof(iir->buffer_input) * (iir->filter_order + 1));
-	iir->buffer_output = (float *)malloc(
+	iir->buffer_output = (float*)malloc(
 		sizeof(iir->buffer_output) * (iir->filter_order));
-	iir->forward_coefficients = (float *)malloc(
+	iir->forward_coefficients = (float*)malloc(
 		sizeof(iir->forward_coefficients) * (iir->filter_order + 1));
-	iir->feedback_coefficients = (float *)malloc(
+	iir->feedback_coefficients = (float*)malloc(
 		sizeof(iir->feedback_coefficients) * (iir->filter_order));
 
 	//	Clear filter buffers and coefficients
@@ -136,7 +136,7 @@ void IIR_filter_init(IIR_Filter *iir)
 	iir->output = 0.0f;
 }
 
-float IIR_filter_apply(IIR_Filter *iir, float input)
+float IIR_filter_apply(IIR_Filter* iir, float input)
 {
 	//	Add new data to buffer_input:
 	iir->buffer_input[iir->buffer_index] = input;
@@ -194,7 +194,7 @@ float IIR_filter_apply(IIR_Filter *iir, float input)
 	return iir->output;
 }
 
-void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
+void biquad_filter_init(biquad_Filter_t* filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
 {
 	biquad_filter_update(filter, filter_type, filter_frequency_Hz, quality_factor, sampling_frequency_Hz);
 
@@ -205,7 +205,7 @@ void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type,
 	filter->y2 = 0;
 }
 
-static void biquad_filter_update(biquad_Filter_t *filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
+static void biquad_filter_update(biquad_Filter_t* filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz)
 {
 	// save filter info:
 	filter->frequency = filter_frequency_Hz;
@@ -281,7 +281,7 @@ static void biquad_filter_update(biquad_Filter_t *filter, biquad_Filter_type fil
 	filter->a2 /= filter->a0;
 }
 
-float biquad_filter_apply_DF1(biquad_Filter_t *filter, float input)
+float biquad_filter_apply_DF1(biquad_Filter_t* filter, float input)
 {
 	/* compute result */
 	const float result = filter->b0 * input + filter->b1 * filter->x1 + filter->b2 * filter->x2 - filter->a1 * filter->y1 - filter->a2 * filter->y2;
@@ -297,7 +297,7 @@ float biquad_filter_apply_DF1(biquad_Filter_t *filter, float input)
 	return result;
 }
 
-float biquad_filter_apply_DF2(biquad_Filter_t *filter, float input)
+float biquad_filter_apply_DF2(biquad_Filter_t* filter, float input)
 {
 	//	this is transposed direct form 2 is a little more precised for float number implementation:
 
@@ -309,7 +309,7 @@ float biquad_filter_apply_DF2(biquad_Filter_t *filter, float input)
 	return result;
 }
 
-static void biquad_filter_copy_coefficients(biquad_Filter_t *copy_from_filter, biquad_Filter_t *copy_to_filter)
+static void biquad_filter_copy_coefficients(biquad_Filter_t* copy_from_filter, biquad_Filter_t* copy_to_filter)
 {
 	copy_to_filter->a0 = copy_from_filter->a0;
 	copy_to_filter->a1 = copy_from_filter->a1;
@@ -320,7 +320,7 @@ static void biquad_filter_copy_coefficients(biquad_Filter_t *copy_from_filter, b
 	copy_to_filter->b2 = copy_from_filter->b2;
 }
 
-void RPM_filter_init(RPM_filter_t *filter, uint16_t sampling_frequency_Hz)
+void RPM_filter_init(RPM_filter_t* filter, uint16_t sampling_frequency_Hz)
 {
 	filter->harmonics = RPM_MAX_HARMONICS;
 	filter->q_factor = RPM_Q_FACTOR;
@@ -340,7 +340,7 @@ void RPM_filter_init(RPM_filter_t *filter, uint16_t sampling_frequency_Hz)
 	}
 }
 
-static void RPM_filter_update(RPM_filter_t *filter)
+static void RPM_filter_update(RPM_filter_t* filter)
 {
 	const uint8_t sec_in_min = 60; // for conversion from Hz to rpm
 	float frequency;			   // frequency for filtering
@@ -393,7 +393,7 @@ static void RPM_filter_update(RPM_filter_t *filter)
 	}
 }
 
-float RPM_filter_apply(RPM_filter_t *filter, uint8_t axis, float input)
+float RPM_filter_apply(RPM_filter_t* filter, uint8_t axis, float input)
 {
 	float result = input;
 	// Iterate over all notches on axis and apply each one to value.
@@ -587,41 +587,41 @@ void Gyro_Acc_filters_setup()
 #endif
 }
 
-void Gyro_Acc_filtering(float *temporary)
+void Gyro_Acc_filtering(float* temporary)
 {
 #if defined(USE_FIR_FILTERS)
 	Gyro_Acc[0] = FIR_filter_apply(&filter_gyro_X,
-								   temporary[0] - GYRO_ROLL_OFFSET);
+		temporary[0] - gyro_1.offset.roll);
 	Gyro_Acc[1] = FIR_filter_apply(&filter_gyro_Y,
-								   temporary[1] - GYRO_PITCH_OFFSET);
+		temporary[1] - gyro_1.offset.pitch);
 	Gyro_Acc[2] = FIR_filter_apply(&filter_gyro_Z,
-								   temporary[2] - GYRO_YAW_OFFSET);
+		temporary[2] - gyro_1.offset.yaw);
 	Gyro_Acc[3] = FIR_filter_apply(&filter_acc_X,
-								   temporary[3] - ACC_ROLL_OFFSET);
+		temporary[3] - ACC_ROLL_OFFSET);
 	Gyro_Acc[4] = FIR_filter_apply(&filter_acc_Y,
-								   temporary[4] - ACC_PITCH_OFFSET);
+		temporary[4] - ACC_PITCH_OFFSET);
 	Gyro_Acc[5] = FIR_filter_apply(&filter_acc_Z,
-								   temporary[5] - ACC_YAW_OFFSET);
+		temporary[5] - ACC_YAW_OFFSET);
 
 #elif defined(USE_IIR_FILTERS)
 
 	Gyro_Acc[0] = IIR_filter_apply(&filter_gyro_X,
-								   temporary[0] - GYRO_ROLL_OFFSET);
+		temporary[0] - gyro_1.offset.roll);
 	Gyro_Acc[1] = IIR_filter_apply(&filter_gyro_Y,
-								   temporary[1] - GYRO_PITCH_OFFSET);
+		temporary[1] - gyro_1.offset.pitch);
 	Gyro_Acc[2] = IIR_filter_apply(&filter_gyro_Z,
-								   temporary[2] - GYRO_YAW_OFFSET);
+		temporary[2] - gyro_1.offset.yaw);
 	Gyro_Acc[3] = IIR_filter_apply(&filter_acc_X,
-								   temporary[3] - ACC_ROLL_OFFSET);
+		temporary[3] - ACC_ROLL_OFFSET);
 	Gyro_Acc[4] = IIR_filter_apply(&filter_acc_Y,
-								   temporary[4] - ACC_PITCH_OFFSET);
+		temporary[4] - ACC_PITCH_OFFSET);
 	Gyro_Acc[5] = IIR_filter_apply(&filter_acc_Z,
-								   temporary[5] - ACC_YAW_OFFSET);
+		temporary[5] - ACC_YAW_OFFSET);
 
 #elif defined(USE_BIQUAD_FILTERS)
-	Gyro_Acc[0] = biquad_filter_apply_DF2(&filter_gyro_X, temporary[0] - GYRO_ROLL_OFFSET);
-	Gyro_Acc[1] = biquad_filter_apply_DF2(&filter_gyro_Y, temporary[1] - GYRO_PITCH_OFFSET);
-	Gyro_Acc[2] = biquad_filter_apply_DF2(&filter_gyro_Z, temporary[2] - GYRO_YAW_OFFSET);
+	Gyro_Acc[0] = biquad_filter_apply_DF2(&filter_gyro_X, temporary[0] - gyro_1.offset.roll);
+	Gyro_Acc[1] = biquad_filter_apply_DF2(&filter_gyro_Y, temporary[1] - gyro_1.offset.pitch);
+	Gyro_Acc[2] = biquad_filter_apply_DF2(&filter_gyro_Z, temporary[2] - gyro_1.offset.yaw);
 
 	Gyro_Acc[3] = biquad_filter_apply_DF2(&filter_acc_X, temporary[3] - ACC_ROLL_OFFSET);
 	Gyro_Acc[4] = biquad_filter_apply_DF2(&filter_acc_Y, temporary[4] - ACC_PITCH_OFFSET);
@@ -692,7 +692,7 @@ void setup_D_term_filters()
 #endif
 }
 
-void D_term_filtering(ThreeF *input)
+void D_term_filtering(ThreeF* input)
 {
 #if defined(USE_FIR_FILTERS)
 	input->pitch = FIR_filter_apply(&filter_D_term_pitch, input->pitch);

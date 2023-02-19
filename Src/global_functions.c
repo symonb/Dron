@@ -140,20 +140,20 @@ void delay_micro(uint16_t delay_time)
 	}
 }
 
-bool failsafe_PID_loop(timeUs_t *dt)
+bool failsafe_PID_loop(timeUs_t* dt)
 {
 
 	if (*dt > SEC_TO_US(2. / FREQUENCY_MAIN_LOOP))
 	{
 		*dt = SEC_TO_US(2. / FREQUENCY_MAIN_LOOP);
-		FailSafe_status = PID_LOOP_TIMEOUT;
+		FailSafe_status = FS_PID_LOOP_TIMEOUT;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 		return true;
 	}
 	return false;
 }
 
-void anti_windup(ThreeF *sum_err, PIDF *R_PIDF, PIDF *P_PIDF, PIDF *Y_PIDF)
+void anti_windup(ThreeF* sum_err, PIDF* R_PIDF, PIDF* P_PIDF, PIDF* Y_PIDF)
 {
 	if (ARMING_STATUS == ARMED)
 	{
@@ -329,20 +329,20 @@ void EXTI15_10_IRQHandler()
 
 		switch (FailSafe_status)
 		{
-		case NO_FAILSAFE:
+		case FS_NO_FAILSAFE:
 			break;
 
-		case INCORRECT_CHANNELS_VALUES: // BAD_CHANNELS_VALUES
+		case FS_INCORRECT_CHANNELS_VALUES: // BAD_CHANNELS_VALUES
 
 			motor_1_value_pointer = &MOTOR_OFF;
 			motor_2_value_pointer = &MOTOR_OFF;
 			motor_3_value_pointer = &MOTOR_OFF;
 			motor_4_value_pointer = &MOTOR_OFF;
 
-			err_counter[INCORRECT_CHANNELS_VALUES]++;
-			FailSafe_status = NO_FAILSAFE;
+			err_counter[FS_INCORRECT_CHANNELS_VALUES]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case RX_TIMEOUT: // RX_TIMEOUT
+		case FS_RX_TIMEOUT: // FS_RX_TIMEOUT
 
 			ARMING_STATUS = DISARMED;
 
@@ -351,36 +351,40 @@ void EXTI15_10_IRQHandler()
 			motor_3_value_pointer = &MOTOR_OFF;
 			motor_4_value_pointer = &MOTOR_OFF;
 
-			err_counter[RX_TIMEOUT]++;
-			FailSafe_status = NO_FAILSAFE;
+			err_counter[FS_RX_TIMEOUT]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case NO_PREARM:
-			err_counter[NO_PREARM]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_NO_PREARM:
+			err_counter[FS_NO_PREARM]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case SETUP_ERROR:
-			err_counter[SETUP_ERROR]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_SETUP_ERROR:
+			err_counter[FS_SETUP_ERROR]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case I2C_ERROR:
-			err_counter[I2C_ERROR]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_I2C_ERROR:
+			err_counter[FS_I2C_ERROR]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case SPI_IMU_ERROR:
-			err_counter[SPI_IMU_ERROR]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_SPI_IMU_ERROR:
+			err_counter[FS_SPI_IMU_ERROR]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case SPI_FLASH_ERROR:
-			err_counter[SPI_FLASH_ERROR]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_SPI_FLASH_ERROR:
+			err_counter[FS_SPI_FLASH_ERROR]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case SPI_OSD_ERROR:
-			err_counter[SPI_OSD_ERROR]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_SPI_OSD_ERROR:
+			err_counter[FS_SPI_OSD_ERROR]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case PID_LOOP_TIMEOUT:
-			err_counter[PID_LOOP_TIMEOUT]++;
-			FailSafe_status = NO_FAILSAFE;
+		case FS_PID_LOOP_TIMEOUT:
+			err_counter[FS_PID_LOOP_TIMEOUT]++;
+			FailSafe_status = FS_NO_FAILSAFE;
+			break;
+		case FS_GYRO_CALIBRATION:
+			err_counter[FS_GYRO_CALIBRATION]++;
+			FailSafe_status = FS_NO_FAILSAFE;
 			break;
 		}
 	}

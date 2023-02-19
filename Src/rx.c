@@ -17,14 +17,18 @@ void failsafe_RX()
         }
         else if (channels[ARM_CHANNEL] > ARM_VALUE)
         {
-            FailSafe_status = NO_PREARM;
+            FailSafe_status = FS_NO_PREARM;
             EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
     }
 
     if (ARMING_STATUS == PREARMED)
     {
-        if (channels[ARM_CHANNEL] > ARM_VALUE)
+        if (gyro_1.calibrated == false) {
+            FailSafe_status = FS_GYRO_CALIBRATION;
+            EXTI->SWIER |= EXTI_SWIER_SWIER15;
+        }
+        else if (channels[ARM_CHANNEL] > ARM_VALUE)
         {
             ARMING_STATUS = ARMED;
         }
@@ -48,7 +52,11 @@ void failsafe_RX()
     }
     if (ARMING_STATUS == PREARMED)
     {
-        if (channels[ARM_CHANNEL] > ARM_VALUE)
+        if (gyro_1.calibrated == false) {
+            FailSafe_status = FS_GYRO_CALIBRATION;
+            EXTI->SWIER |= EXTI_SWIER_SWIER15;
+        }
+        else if (channels[ARM_CHANNEL] > ARM_VALUE)
         {
             ARMING_STATUS = ARMED;
         }
@@ -72,13 +80,13 @@ void failsafe_RX()
             motor_4_value_pointer = &MOTOR_OFF;
         }
         else if (channels[0] <= MIN_RX_SIGNAL ||
-                 channels[0] >= MAX_RX_SIGNAL ||
-                 channels[1] <= MIN_RX_SIGNAL ||
-                 channels[1] >= MAX_RX_SIGNAL ||
-                 channels[2] <= MIN_RX_SIGNAL ||
-                 channels[2] >= MAX_RX_SIGNAL ||
-                 channels[3] <= MIN_RX_SIGNAL ||
-                 channels[3] >= MAX_RX_SIGNAL)
+            channels[0] >= MAX_RX_SIGNAL ||
+            channels[1] <= MIN_RX_SIGNAL ||
+            channels[1] >= MAX_RX_SIGNAL ||
+            channels[2] <= MIN_RX_SIGNAL ||
+            channels[2] >= MAX_RX_SIGNAL ||
+            channels[3] <= MIN_RX_SIGNAL ||
+            channels[3] >= MAX_RX_SIGNAL)
         {
 
             for (uint8_t i = 0; i < CHANNELS; i++)
@@ -86,7 +94,7 @@ void failsafe_RX()
                 channels[i] = channels_previous_values[i];
             }
 
-            FailSafe_status = INCORRECT_CHANNELS_VALUES;
+            FailSafe_status = FS_INCORRECT_CHANNELS_VALUES;
             EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
         else
