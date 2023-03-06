@@ -324,6 +324,8 @@ void RPM_filter_init(RPM_filter_t* filter, uint16_t sampling_frequency_Hz)
 {
 	filter->harmonics = RPM_MAX_HARMONICS;
 	filter->q_factor = RPM_Q_FACTOR;
+	filter->frequency = sampling_frequency_Hz;
+	filter->max_filtered_frequency = 0.48 * sampling_frequency_Hz;
 	const float default_freq = 100; // only for initialization doesn't really matter
 
 	// initialize notch filters:
@@ -353,10 +355,10 @@ static void RPM_filter_update(RPM_filter_t* filter)
 			frequency = (float)motors_rpm[motor] * (harmonic + 1) / sec_in_min;
 			if (frequency > RPM_MIN_FREQUENCY_HZ)
 			{
-				if (frequency < MAX_FREQUENCY_FOR_FILTERING)
+				if (frequency < filter->max_filtered_frequency)
 				{
 					// each axis has the same noises from motors, so compute it once and next copy values:
-					biquad_filter_update(&(filter->notch_filters[0][motor][harmonic]), BIQUAD_NOTCH, frequency, filter->q_factor, FREQUENCY_IMU_READING);
+					biquad_filter_update(&(filter->notch_filters[0][motor][harmonic]), BIQUAD_NOTCH, frequency, filter->q_factor, filter->frequency);
 					biquad_filter_copy_coefficients(&(filter->notch_filters[0][motor][harmonic]), &(filter->notch_filters[1][motor][harmonic]));
 					biquad_filter_copy_coefficients(&(filter->notch_filters[0][motor][harmonic]), &(filter->notch_filters[2][motor][harmonic]));
 
@@ -569,25 +571,25 @@ void Gyro_Acc_filters_setup()
 
 #elif defined(USE_BIQUAD_FILTERS)
 
-	biquad_filter_init(&filter_gyro_X, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
-	biquad_filter_init(&filter_gyro_Y, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
-	biquad_filter_init(&filter_gyro_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+	biquad_filter_init(&filter_gyro_X, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_MAIN_LOOP);
+	biquad_filter_init(&filter_gyro_Y, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_MAIN_LOOP);
+	biquad_filter_init(&filter_gyro_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_MAIN_LOOP);
 
-	biquad_filter_init(&filter_acc_X, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
-	biquad_filter_init(&filter_acc_Y, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
-	biquad_filter_init(&filter_acc_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_IMU_READING);
+	biquad_filter_init(&filter_acc_X, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_STABILIZATION_LOOP);
+	biquad_filter_init(&filter_acc_Y, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_STABILIZATION_LOOP);
+	biquad_filter_init(&filter_acc_Z, BIQUAD_LPF, BIQUAD_LPF_CUTOFF, BIQUAD_LPF_Q, FREQUENCY_STABILIZATION_LOOP);
 
 #endif
 
 #if defined(USE_RPM_FILTER)
-	RPM_filter_init(&rpm_filter_gyro, FREQUENCY_IMU_READING);
+	RPM_filter_init(&rpm_filter_gyro, FREQUENCY_MAIN_LOOP);
 
-	RPM_filter_init(&rpm_filter_acc, FREQUENCY_IMU_READING);
+	RPM_filter_init(&rpm_filter_acc, FREQUENCY_STABILIZATION_LOOP);
 
 #endif
 }
 
-void Gyro_Acc_filtering(float* temporary)
+void gyro_filtering(const float* temporary)
 {
 #if defined(USE_FIR_FILTERS)
 	Gyro_Acc[0] = FIR_filter_apply(&filter_gyro_X,
@@ -596,12 +598,6 @@ void Gyro_Acc_filtering(float* temporary)
 		temporary[1] - gyro_1.offset.pitch);
 	Gyro_Acc[2] = FIR_filter_apply(&filter_gyro_Z,
 		temporary[2] - gyro_1.offset.yaw);
-	Gyro_Acc[3] = FIR_filter_apply(&filter_acc_X,
-		temporary[3] - ACC_ROLL_OFFSET);
-	Gyro_Acc[4] = FIR_filter_apply(&filter_acc_Y,
-		temporary[4] - ACC_PITCH_OFFSET);
-	Gyro_Acc[5] = FIR_filter_apply(&filter_acc_Z,
-		temporary[5] - ACC_YAW_OFFSET);
 
 #elif defined(USE_IIR_FILTERS)
 
@@ -611,32 +607,52 @@ void Gyro_Acc_filtering(float* temporary)
 		temporary[1] - gyro_1.offset.pitch);
 	Gyro_Acc[2] = IIR_filter_apply(&filter_gyro_Z,
 		temporary[2] - gyro_1.offset.yaw);
-	Gyro_Acc[3] = IIR_filter_apply(&filter_acc_X,
-		temporary[3] - ACC_ROLL_OFFSET);
-	Gyro_Acc[4] = IIR_filter_apply(&filter_acc_Y,
-		temporary[4] - ACC_PITCH_OFFSET);
-	Gyro_Acc[5] = IIR_filter_apply(&filter_acc_Z,
-		temporary[5] - ACC_YAW_OFFSET);
 
 #elif defined(USE_BIQUAD_FILTERS)
 	Gyro_Acc[0] = biquad_filter_apply_DF2(&filter_gyro_X, temporary[0] - gyro_1.offset.roll);
 	Gyro_Acc[1] = biquad_filter_apply_DF2(&filter_gyro_Y, temporary[1] - gyro_1.offset.pitch);
 	Gyro_Acc[2] = biquad_filter_apply_DF2(&filter_gyro_Z, temporary[2] - gyro_1.offset.yaw);
-
-	Gyro_Acc[3] = biquad_filter_apply_DF2(&filter_acc_X, temporary[3] - ACC_ROLL_OFFSET);
-	Gyro_Acc[4] = biquad_filter_apply_DF2(&filter_acc_Y, temporary[4] - ACC_PITCH_OFFSET);
-	Gyro_Acc[5] = biquad_filter_apply_DF2(&filter_acc_Z, temporary[5] - ACC_YAW_OFFSET);
 #endif
 #if defined(USE_RPM_FILTER)
 
 	// update coefficients:
 	RPM_filter_update(&rpm_filter_gyro);
-	RPM_filter_update(&rpm_filter_acc);
 	// next apply rpm filtering:
 	Gyro_Acc[0] = RPM_filter_apply(&rpm_filter_gyro, 0, Gyro_Acc[0]);
 	Gyro_Acc[1] = RPM_filter_apply(&rpm_filter_gyro, 1, Gyro_Acc[1]);
 	Gyro_Acc[2] = RPM_filter_apply(&rpm_filter_gyro, 2, Gyro_Acc[2]);
+#endif
+}
 
+void acc_filtering(const float* temporary)
+{
+#if defined(USE_FIR_FILTERS)
+	Gyro_Acc[3] = FIR_filter_apply(&filter_acc_X,
+		temporary[0] - ACC_ROLL_OFFSET);
+	Gyro_Acc[4] = FIR_filter_apply(&filter_acc_Y,
+		temporary[1] - ACC_PITCH_OFFSET);
+	Gyro_Acc[5] = FIR_filter_apply(&filter_acc_Z,
+		temporary[2] - ACC_YAW_OFFSET);
+
+#elif defined(USE_IIR_FILTERS)
+
+	Gyro_Acc[3] = IIR_filter_apply(&filter_acc_X,
+		temporary[0] - ACC_ROLL_OFFSET);
+	Gyro_Acc[4] = IIR_filter_apply(&filter_acc_Y,
+		temporary[1] - ACC_PITCH_OFFSET);
+	Gyro_Acc[5] = IIR_filter_apply(&filter_acc_Z,
+		temporary[2] - ACC_YAW_OFFSET);
+
+#elif defined(USE_BIQUAD_FILTERS)
+	Gyro_Acc[3] = biquad_filter_apply_DF2(&filter_acc_X, temporary[0] - ACC_ROLL_OFFSET);
+	Gyro_Acc[4] = biquad_filter_apply_DF2(&filter_acc_Y, temporary[1] - ACC_PITCH_OFFSET);
+	Gyro_Acc[5] = biquad_filter_apply_DF2(&filter_acc_Z, temporary[2] - ACC_YAW_OFFSET);
+#endif
+#if defined(USE_RPM_FILTER)
+
+	// update coefficients:
+	RPM_filter_update(&rpm_filter_acc);
+	// next apply rpm filtering:
 	Gyro_Acc[3] = RPM_filter_apply(&rpm_filter_acc, 0, Gyro_Acc[3]);
 	Gyro_Acc[4] = RPM_filter_apply(&rpm_filter_acc, 1, Gyro_Acc[4]);
 	Gyro_Acc[5] = RPM_filter_apply(&rpm_filter_acc, 2, Gyro_Acc[5]);

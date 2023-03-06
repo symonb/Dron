@@ -25,7 +25,7 @@ static bool add_to_queue(task_t* task, scheduler_t* scheduler);
 static task_t* queue_first(scheduler_t* scheduler);
 static task_t* queue_next(scheduler_t* scheduler);
 
-scheduler_t main_scheduler;
+scheduler_t main_scheduler = { .system_load = 100 };
 static uint8_t task_queue_pos;
 static timeUs_t idle_time_counter = 0;
 
@@ -51,7 +51,8 @@ bool scheduler_initialization(scheduler_t* scheduler)
 	scheduler->task_queue[0] = NULL;
 	scheduler->task_queue_size = 0;
 
-	add_to_queue(&all_tasks[TASK_GYRO_ACC_FILTER], scheduler);
+	add_to_queue(&all_tasks[TASK_GYRO_UPDATE], scheduler);
+	add_to_queue(&all_tasks[TASK_ACC_UPDATE], scheduler);
 	add_to_queue(&all_tasks[TASK_IBUS_SAVE], scheduler);
 	add_to_queue(&all_tasks[TASK_MAIN_LOOP], scheduler);
 	add_to_queue(&all_tasks[TASK_STABILIZATION_LOOP], scheduler);
@@ -73,6 +74,7 @@ void scheduler_reset_tasks_statistics(scheduler_t* scheduler)
 		scheduler->task_queue[i]->dynamic_priority = 0;
 		scheduler->task_queue[i]->last_execution = get_Global_Time();
 		scheduler->task_queue[i]->avg_execution_time = 0;
+		scheduler->task_queue[i]->avg_delayed_cycles = 0;
 	}
 }
 
@@ -89,8 +91,9 @@ void scheduler_execute(scheduler_t* scheduler)
 		time_before_execution = get_Global_Time();
 		// execute task function:
 		scheduler->current_task->task_fun(time_before_execution);
-		// update task params:
+		// update task stats:
 		scheduler->current_task->last_execution = time_before_execution;
+		scheduler->current_task->avg_delayed_cycles = scheduler->current_task->avg_delayed_cycles * 0.95f + (scheduler->current_task->dynamic_priority / scheduler->current_task->static_priority - 1) * 0.05f;
 		scheduler->current_task->dynamic_priority = 0;
 		scheduler->current_task->avg_execution_time = scheduler->current_task->avg_execution_time * 0.95f + (get_Global_Time() - time_before_execution) * 0.05f;
 	}
@@ -117,37 +120,39 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 		{ //	if .check_fun() return true (if not dynamic priority will stay 0):
 			if (task->check_fun(current_time, current_time - task->last_execution))
 			{
-				if (task->static_priority == TASK_PRIORITY_REALTIME && (current_time - task->last_execution) > task->desired_period)
+				//	update dynamic priority (dividing int so if not >1 will stay 0):
+				task->dynamic_priority = (current_time - task->last_execution) / (task->desired_period) * task->static_priority;
+
+				if (task->static_priority == TASK_PRIORITY_REALTIME && task->dynamic_priority > 0)
 				{
 					//	If realtime tasks occurs don't care which one will be first.
 					//	They can overwrite each other, just set current_task as realtime:
 					scheduler->current_task = task;
 					// lock scheduling since realtime task will be done:
 					real_time_task_lock = true;
+					// break FOR LOOP and execute this task (don't bother updating rest of the tasks): 
+					break;
 				}
-				//	update dynamic priority:
-				else
-				{
-					task->dynamic_priority = (current_time - task->last_execution) / (task->desired_period) * task->static_priority;
-				}
+
 			}
 		}
-		//	realtime tasks handling:
-		else if (task->static_priority == TASK_PRIORITY_REALTIME)
+		// tasks without check_fun():
+		else
 		{
-			if ((current_time - task->last_execution) > task->desired_period)
+			// update dynamic priority (if time hasn't come yet will stay 0):
+			task->dynamic_priority = (current_time - task->last_execution) / (task->desired_period) * task->static_priority;
+
+			//	realtime tasks handling:
+			if (task->static_priority == TASK_PRIORITY_REALTIME && task->dynamic_priority > 0)
 			{
 				//	If realtime tasks occurs don't care which one will be first.
 				//	They can overwrite each other, just set current_task as realtime:
 				scheduler->current_task = task;
 				// lock scheduling since realtime task will be done:
 				real_time_task_lock = true;
+				// break FOR LOOP and execute this task (don't bother updating rest of the tasks): 
+				break;
 			}
-		}
-		//	all other tasks handling:
-		else
-		{ // update dynamic priority (if time hasn't come yet will stay 0):
-			task->dynamic_priority = (current_time - task->last_execution) / (task->desired_period) * task->static_priority;
 		}
 
 		// update current task (if there is no realtime tasks):

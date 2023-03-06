@@ -17,7 +17,9 @@ flight_mode_e flight_mode;
 
 enum arming_t ARMING_STATUS;
 
-gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false };
+gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_data_flag = false, .id = 0, .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
+acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_data_flag = false, .id = 0 , .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
+
 
 //----------TIME VARIABLES--------
 volatile timeUs_t Global_Time = 0;
@@ -151,8 +153,6 @@ const float D_TERM_FILTER_BACK_COEF[D_TERM_FILTER_ORDER] = { -1.56101807f, 0.641
 //---------------I2C1---------------
 uint8_t I2C1_read_write_flag = 1;
 uint8_t I2C1_read_buffer[I2C1_BUFFER_SIZE];
-
-bool imu_received = false;
 
 bool transmitting_is_Done = true;
 #if defined(ESC_PROTOCOL_DSHOT)

@@ -115,17 +115,17 @@ void TIM5_IRQHandler()
 	}
 }
 
-uint64_t get_Global_Time()
+timeUs_t get_Global_Time()
 {
 	// gives time in [us] with accuracy of 1 [us]
 	return (Global_Time + TIM5->CNT);
 }
 
-void delay_mili(uint32_t delay_time)
+void delay_mili(timeMs_t delay_time)
 {
 	// wait for time [ms]
-	uint64_t t = get_Global_Time();
-	while ((get_Global_Time() - t) < (uint64_t)delay_time * 1000)
+	timeUs_t t = get_Global_Time();
+	while ((get_Global_Time() - t) < (timeUs_t)delay_time * 1000)
 	{
 		;
 	}

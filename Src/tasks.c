@@ -25,7 +25,8 @@
 static void main_PID_fun(timeUs_t current_time);
 static void stabilization_fun(timeUs_t current_time);
 static bool stabilization_check_fun(timeUs_t current_time, timeUs_t delta_time);
-static bool gyro_acc_filtering_check_fun(timeUs_t current_time, timeUs_t delta_time);
+static bool gyro_update_check_fun(timeUs_t current_time, timeUs_t delta_time);
+static bool acc_update_check_fun(timeUs_t current_time, timeUs_t delta_time);
 static void ibus_save_enable(timeUs_t current_time);
 static bool ibus_saving_fun(timeUs_t current_time, timeUs_t delta_time);
 static void telemetry_fun(timeUs_t time);
@@ -39,14 +40,15 @@ static bool gyro_calibration_check_fun(timeUs_t current_time, timeUs_t delta_tim
 task_t all_tasks[TASKS_COUNT] =
 { [TASK_SYSTEM] = DEFINE_TASK("SYSTEM CHECK", task_system_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_SYSTEM_CHECK)),
  [TASK_IBUS_SAVE] = DEFINE_TASK("IBUS SAVING", ibus_save_enable, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_RX_READING)),
- [TASK_GYRO_ACC_FILTER] = DEFINE_TASK("GYRO ACC FILTERING", rewrite_Gyro_Acc_data, gyro_acc_filtering_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_IMU_READING)),
+ [TASK_GYRO_UPDATE] = DEFINE_TASK("GYRO READ&FILTER", gyro_update, gyro_update_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
+ [TASK_ACC_UPDATE] = DEFINE_TASK("ACC READ&FILTER", acc_update, acc_update_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
  [TASK_MAIN_LOOP] = DEFINE_TASK("MAIN LOOP", main_PID_fun, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
  [TASK_STABILIZATION_LOOP] = DEFINE_TASK("STABILIZATION LOOP", stabilization_fun, stabilization_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
  [TASK_UPDATE_MOTORS] = DEFINE_TASK("UPDATE MOTORS", update_motors, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_ESC_UPDATE)),
  [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE)),
  [TASK_BUZZER] = DEFINE_TASK("BUZZER", buzzer_fun, NULL, TASK_PRIORITY_IDLE, TASK_PERIOD_HZ(10)),
  [TASK_OSD] = DEFINE_TASK("OSD UPDATE", OSD_update_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_OSD_UPDATE)),
- [TASK_GYRO_CALIBRATION] = DEFINE_TASK("GYRO CALIBRATION", gyro_calibration_fun, gyro_calibration_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_IMU_READING)) };
+ [TASK_GYRO_CALIBRATION] = DEFINE_TASK("GYRO CALIBRATION", gyro_calibration_fun, gyro_calibration_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)) };
 
 static void main_PID_fun(timeUs_t current_time)
 {
@@ -80,9 +82,13 @@ static bool stabilization_check_fun(timeUs_t current_time, timeUs_t delta_time)
 	return false;
 }
 
-static bool gyro_acc_filtering_check_fun(timeUs_t current_time, timeUs_t delta_time)
+static bool gyro_update_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
-	return imu_received;
+	return gyro_1.new_data_flag;
+}
+static bool acc_update_check_fun(timeUs_t current_time, timeUs_t delta_time)
+{
+	return acc_1.new_data_flag;
 }
 
 static void ibus_save_enable(timeUs_t current_time)

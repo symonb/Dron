@@ -66,15 +66,28 @@ typedef enum
 
 typedef struct {
 	char* name;
+	uint8_t id;
+	Three raw_data;
 	ThreeF offset;
 	bool calibrated;
+	bool new_data_flag;
 } gyro_t;
+
+typedef struct {
+	char* name;
+	uint8_t id;
+	Three raw_data;
+	ThreeF offset;
+	bool calibrated;
+	bool new_data_flag;
+} acc_t;
 
 extern flight_mode_e flight_mode;
 
 extern enum arming_t ARMING_STATUS;
 
 extern gyro_t gyro_1;
+extern acc_t acc_1;
 
 typedef uint64_t timeUs_t;
 typedef uint32_t timeMs_t;
@@ -143,8 +156,6 @@ extern int16_t Gyro_Acc[];
 extern uint16_t table_to_send[];
 
 extern bool ibus_received;
-
-extern bool imu_received;
 
 //-------------------FILTERS--------------------
 #if defined(USE_FIR_FILTERS)

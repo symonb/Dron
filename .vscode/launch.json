@@ -2,6 +2,7 @@
     {
         "version": "0.2.0",
         "configurations": [
+
           { 
             "name": "Debug (OpenOCD)",
             "type": "cortex-debug",
@@ -9,7 +10,7 @@
             "servertype": "openocd",
             "cwd": "${workspaceFolder}",
             "runToEntryPoint":"main",
-            "showDevDebugOutput": "raw",
+            "showDevDebugOutput": "both",
             "preLaunchTask": "Make Firmware",
             "executable": "${workspaceFolder}/bin/main.elf",
             "configFiles": [

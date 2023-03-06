@@ -14,9 +14,9 @@
 typedef struct
 {
 	uint8_t length;			 //	how many previous samples will be taken into calculation
-	float *buffer;			 //	buffer for input measurements
+	float* buffer;			 //	buffer for input measurements
 	uint8_t buffer_index;	 //	variable to control position of the latest measurement
-	float *impulse_response; //	coefficients for inputs values
+	float* impulse_response; //	coefficients for inputs values
 	float output;			 //	final output value
 
 } FIR_Filter;
@@ -24,11 +24,11 @@ typedef struct
 typedef struct
 {
 	uint8_t filter_order;		  //	how many previous samples will be taken into calculation
-	float *buffer_input;		  //	buffer for input measurements
-	float *buffer_output;		  //	buffer for output values from filter
+	float* buffer_input;		  //	buffer for input measurements
+	float* buffer_output;		  //	buffer for output values from filter
 	uint8_t buffer_index;		  //	variable to control position of the latest measurement
-	float *forward_coefficients;  //	coefficients for inputs values
-	float *feedback_coefficients; //	coefficients for previous outputs values
+	float* forward_coefficients;  //	coefficients for inputs values
+	float* feedback_coefficients; //	coefficients for previous outputs values
 	float output;				  //	final output value
 
 } IIR_Filter;
@@ -72,26 +72,30 @@ typedef struct
 	float weight[3][MOTORS_COUNT][RPM_MAX_HARMONICS];				   // weight used to fade out filter (0 - filter is off, 1 - is used in 100%)
 	float q_factor;													   // q_factor for all notches
 	uint8_t harmonics;												   // number of filtered harmonics
+	uint16_t frequency;													// frequency that filter is running
+	uint16_t max_filtered_frequency;									// maximal frequency that can be filtered (Nyquist frequency ~0.5*frequency)
 
 } RPM_filter_t;
 
-void FIR_filter_init(FIR_Filter *fir);
-float FIR_filter_apply(FIR_Filter *fir, float input);
+void FIR_filter_init(FIR_Filter* fir);
+float FIR_filter_apply(FIR_Filter* fir, float input);
 
-void IIR_filter_init(IIR_Filter *fir);
-float IIR_filter_apply(IIR_Filter *fir, float input);
+void IIR_filter_init(IIR_Filter* fir);
+float IIR_filter_apply(IIR_Filter* fir, float input);
 
-void biquad_filter_init(biquad_Filter_t *filter, biquad_Filter_type filter_type, float center_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
-float biquad_filter_apply_DF1(biquad_Filter_t *filter, float input);
-float biquad_filter_apply_DF2(biquad_Filter_t *filter, float input);
+void biquad_filter_init(biquad_Filter_t* filter, biquad_Filter_type filter_type, float center_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
+float biquad_filter_apply_DF1(biquad_Filter_t* filter, float input);
+float biquad_filter_apply_DF2(biquad_Filter_t* filter, float input);
 
-void RPM_filter_init(RPM_filter_t *filter, uint16_t sampling_frequency_Hz);
-float RPM_filter_apply(RPM_filter_t *filter, uint8_t axis, float input);
+void RPM_filter_init(RPM_filter_t* filter, uint16_t sampling_frequency_Hz);
+float RPM_filter_apply(RPM_filter_t* filter, uint8_t axis, float input);
 
 void Gyro_Acc_filters_setup();
-void Gyro_Acc_filtering(float *temporary);
+void gyro_filtering(const float* temporary);
+void acc_filtering(const float* temporary);
+
 
 void setup_D_term_filters();
-void D_term_filtering(ThreeF *input);
+void D_term_filtering(ThreeF* input);
 
 #endif /* FILTERS_H_ */

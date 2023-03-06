@@ -28,7 +28,8 @@ typedef enum
 {
 	TASK_SYSTEM,
 	TASK_IBUS_SAVE,
-	TASK_GYRO_ACC_FILTER,
+	TASK_GYRO_UPDATE,
+	TASK_ACC_UPDATE,
 	TASK_MAIN_LOOP,
 	TASK_STABILIZATION_LOOP,
 	TASK_UPDATE_MOTORS,
@@ -51,7 +52,7 @@ typedef enum
 
 typedef struct
 {
-	const char *task_name;										   // task name
+	const char* task_name;										   // task name
 	void (*task_fun)(timeUs_t current_time);					   // main task function
 	bool (*check_fun)(timeUs_t current_time, timeUs_t delta_time); // function for checking event occurrence
 	taskPriority_e static_priority;								   // task basic priority
@@ -59,7 +60,7 @@ typedef struct
 	timeUs_t last_execution;									   // last time when this task was done
 	timeUs_t desired_period;									   // period that wishes to be achieved in [us]
 	float avg_execution_time;									   // average execution time of this task
-
+	float avg_delayed_cycles;									   // average delayed cycles for this task 
 } task_t;
 
 extern task_t all_tasks[];

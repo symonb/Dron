@@ -15,10 +15,10 @@
 #include "filters.h"
 #include "setup.h"
 
-/* IMPORTANT:
- APB2 max frequency is 84 [MHz], 168 [MHz] only for timers
- APB1 max frequency is 42 [MHz], 84 [MHz] only for timers
- */
+ /* IMPORTANT:
+  APB2 max frequency is 84 [MHz], 168 [MHz] only for timers
+  APB1 max frequency is 42 [MHz], 84 [MHz] only for timers
+  */
 
 static void setup_HSE();
 static void setup_PLL(); // clock setting
@@ -132,10 +132,10 @@ static void setup_PLL()
 	 * So as I want receive max. freq. 168 [MHz] PLLP has to be 2 (VCO_out 336 [MHz]), PLLN = 168 -> PLLN/PLLP = 168 [MHz] and PLLM is 4 since 8 [MHz]/PLLM = 2 [MHz]
 	 * Also PLL_48 has to be 48 [MHz] so PLLQ = 7 -> 336 [MHz] / 48 [MHz] = 7
 	 * */
-	/* (9) Enable the PLL */
-	/* (10) Wait until PLLRDY is set */
-	/* (11) Select PLL as system clock */
-	/* (12) Wait until the PLL is switched on */
+	 /* (9) Enable the PLL */
+	 /* (10) Wait until PLLRDY is set */
+	 /* (11) Select PLL as system clock */
+	 /* (12) Wait until the PLL is switched on */
 	if ((RCC->CFGR & RCC_CFGR_SWS) == RCC_CFGR_SWS_PLL) /* (1) */
 	{
 		RCC->CFGR = (RCC->CFGR & (uint32_t)(~RCC_CFGR_SW)) | RCC_CFGR_SW_HSI; /* (2) */
@@ -178,7 +178,7 @@ static void setup_GPIOA()
 	// enable GPIOA clock:
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 
-//	set mode (00-input; 01-output; 10-alternate):
+	//	set mode (00-input; 01-output; 10-alternate):
 #if !defined(ESC_PROTOCOL_BDSHOT)
 	GPIOA->MODER &= ~GPIO_MODER_MODER2;
 	GPIOA->MODER |= GPIO_MODER_MODER2_1;
@@ -217,22 +217,24 @@ static void setup_GPIOA()
 	GPIOA->AFR[1] &= ~0x000FFF00;
 	GPIOA->AFR[1] |= 0x00077700;
 
-	// pull up (01) pull down (10)
+	// pull up (01) pull down (10):
 
-	// set high on PIN4 (SPI CS)
+	// set high on PIN4 (SPI CS):
 	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
 
-	// set speed (max speed):
+	//	output type (0 - push-pull, 1 - open-drain):
+
+	// set speed (11 - max speed):
 	GPIOA->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR2 |
-					   GPIO_OSPEEDER_OSPEEDR3 |
-					   GPIO_OSPEEDER_OSPEEDR4 |
-					   GPIO_OSPEEDER_OSPEEDR5 |
-					   GPIO_OSPEEDER_OSPEEDR6 |
-					   GPIO_OSPEEDER_OSPEEDR7 |
-					   GPIO_OSPEEDER_OSPEEDR8 |
-					   GPIO_OSPEEDER_OSPEEDR10 |
-					   GPIO_OSPEEDER_OSPEEDR11 |
-					   GPIO_OSPEEDER_OSPEEDR12);
+		GPIO_OSPEEDER_OSPEEDR3 |
+		GPIO_OSPEEDER_OSPEEDR4 |
+		GPIO_OSPEEDER_OSPEEDR5 |
+		GPIO_OSPEEDER_OSPEEDR6 |
+		GPIO_OSPEEDER_OSPEEDR7 |
+		GPIO_OSPEEDER_OSPEEDR8 |
+		GPIO_OSPEEDER_OSPEEDR10 |
+		GPIO_OSPEEDER_OSPEEDR11 |
+		GPIO_OSPEEDER_OSPEEDR12);
 }
 
 static void setup_GPIOB()
@@ -240,7 +242,7 @@ static void setup_GPIOB()
 	// enable GPIOB clock:
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
 
-//	set mode (00-input; 01-output; 10-alternate):
+	//	set mode (00-input; 01-output; 10-alternate):
 #if !defined(ESC_PROTOCOL_BDSHOT)
 	GPIOB->MODER &= ~GPIO_MODER_MODER0;
 	GPIOB->MODER |= GPIO_MODER_MODER0_1;
@@ -285,12 +287,12 @@ static void setup_GPIOB()
 	GPIOB->AFR[1] &= ~0xFFF00F00;
 	GPIOB->AFR[1] |= 0x55500700;
 
-	// set high on PIN3 (SPI3 CS) and PIN12 (SPI2 CS):
+	// set high on PIN3 (SPI3 CS) and PIN12 (SPI2 CS) :
 	GPIOB->BSRRL |= GPIO_BSRR_BS_3;
 	GPIOB->BSRRL |= GPIO_BSRR_BS_12;
 
 	// (00 no pull down, no pull up; 01 pull-up; 10 pull-down ):
-	// pull-up SDA and SCL lines
+	// pull-up SDA and SCL lines 
 	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR6);
 	GPIOB->PUPDR |= GPIO_PUPDR_PUPDR6_0;
 	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR7);
@@ -302,15 +304,15 @@ static void setup_GPIOB()
 
 	// set speed:
 	GPIOB->OSPEEDR |= (GPIO_OSPEEDER_OSPEEDR0 |
-					   GPIO_OSPEEDER_OSPEEDR1 |
-					   GPIO_OSPEEDER_OSPEEDR3 |
-					   GPIO_OSPEEDER_OSPEEDR4 |
-					   GPIO_OSPEEDER_OSPEEDR5 |
-					   GPIO_OSPEEDER_OSPEEDR10 |
-					   GPIO_OSPEEDER_OSPEEDR12 |
-					   GPIO_OSPEEDER_OSPEEDR13 |
-					   GPIO_OSPEEDER_OSPEEDR14 |
-					   GPIO_OSPEEDER_OSPEEDR15);
+		GPIO_OSPEEDER_OSPEEDR1 |
+		GPIO_OSPEEDER_OSPEEDR3 |
+		GPIO_OSPEEDER_OSPEEDR4 |
+		GPIO_OSPEEDER_OSPEEDR5 |
+		GPIO_OSPEEDER_OSPEEDR10 |
+		GPIO_OSPEEDER_OSPEEDR12 |
+		GPIO_OSPEEDER_OSPEEDR13 |
+		GPIO_OSPEEDER_OSPEEDR14 |
+		GPIO_OSPEEDER_OSPEEDR15);
 }
 
 static void setup_GPIOC()
@@ -351,35 +353,37 @@ static void setup_GPIOC()
 	GPIOC->AFR[1] &= ~0x000FFF00;
 	GPIOC->AFR[1] |= 0x00066600;
 
-	// (00 no pull down, no pull up; 10 pull-down ):
+	// (00 no pull down, no pull up; 10 pull-down; 01 pull-up):
 	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR4);
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR4_1;
 	GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPDR5);
 	GPIOC->PUPDR |= GPIO_PUPDR_PUPDR5_1;
 
+	//	output type (0 - push-pull, 1 - open-drain):
+
 	//(11-max speed):
 	GPIOC->OSPEEDR |= GPIO_OSPEEDER_OSPEEDR0 |
-					  GPIO_OSPEEDER_OSPEEDR1 |
-					  GPIO_OSPEEDER_OSPEEDR4 |
-					  GPIO_OSPEEDER_OSPEEDR5 |
-					  GPIO_OSPEEDER_OSPEEDR6 |
-					  GPIO_OSPEEDER_OSPEEDR7 |
-					  GPIO_OSPEEDER_OSPEEDR10 |
-					  GPIO_OSPEEDER_OSPEEDR11 |
-					  GPIO_OSPEEDER_OSPEEDR12;
+		GPIO_OSPEEDER_OSPEEDR1 |
+		GPIO_OSPEEDER_OSPEEDR4 |
+		GPIO_OSPEEDER_OSPEEDR5 |
+		GPIO_OSPEEDER_OSPEEDR6 |
+		GPIO_OSPEEDER_OSPEEDR7 |
+		GPIO_OSPEEDER_OSPEEDR10 |
+		GPIO_OSPEEDER_OSPEEDR11 |
+		GPIO_OSPEEDER_OSPEEDR12;
 }
 
 static void setup_TIM5(void)
 {
 	// enable TIM5 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;
-	// Timer clock is 84Mhz
+	// Timer clock is 84 [MHz]
 	// 32bit cnt register
 	// register is buffered and only overflow generate interrupt:
 	TIM5->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
 	TIM5->PSC = 84 - 1;		 // every 1 us 1 count
-	TIM5->ARR = 1000000 - 1; // 1 period is 1 [s] long
+	TIM5->ARR = 10000000 - 1; // 1 period is 10 [s] long
 
 	//	interrupt enable:
 	TIM5->DIER |= TIM_DIER_UIE;
@@ -456,7 +460,7 @@ static void setup_BDshot()
 	TIM1->CR1 = 0x0;
 	TIM1->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
-// DMA request:
+	// DMA request:
 #if defined(BIT_BANGING_V1)
 	TIM1->DIER |= TIM_DIER_CC1DE; // channel 1 request
 
@@ -494,7 +498,7 @@ static void setup_BDshot()
 	TIM8->CR1 = 0x0;
 	TIM8->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
-// DMA request:
+	// DMA request:
 #if defined(BIT_BANGING_V1)
 	TIM8->DIER |= TIM_DIER_CC1DE; // channel 1 request
 
@@ -748,7 +752,7 @@ static void setup_USART1()
 	USART1->BRR = 0x2D9;		   // 84 000 000 / 115 200/16 = 45.5729 so 45 is mantissa 0x2D and fraction 16*0.5729=~9 =0x9 so BRR is 0x9
 	USART1->CR3 |= USART_CR3_DMAR; // uncomment for DMA reading
 	USART1->CR1 |= USART_CR1_IDLEIE |
-				   USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
+		USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_TE | USART_CR1_UE;
 }
 
 static void setup_USART3()
@@ -768,7 +772,7 @@ static void setup_USART6()
 	USART6->BRR = 0x2D9; // 84 000 000 / 115 200/16 = 45.5729 so 45 is mantissa 0x2D and fraction 16*0.5729=~9 =0x9 so BRR is 0x9
 	USART6->CR3 |= USART_CR3_DMAT;
 	USART6->CR1 |= USART_CR1_RXNEIE |
-				   USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_UE;
+		USART_CR1_RE | USART_CR1_TE | USART_CR1_IDLEIE | USART_CR1_UE;
 
 } //
 
@@ -776,10 +780,10 @@ static void setup_SPI1()
 {
 	RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
-	SPI1->CR1 |= SPI_CR1_BR_2 | SPI_CR1_BR_1;											 // APB2 is 84 [MHz] and max frequency of MPU6000 registers is 1 [MHz] (84/128<1 [MHz]) later (for sensors reading) it can be speed up to 20 [MHz] (84/8=10.5 [MHz])
+	SPI1->CR1 |= SPI_CR1_BR_2 | SPI_CR1_BR_1;											 // APB2 is 84 [MHz] and max frequency of MPU6000 registers is 1 [MHz] (84/128<1 [MHz])
 	SPI1->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL | SPI_CR1_CPHA; // NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 
-	// SPI1->CR2 |= SPI_CR2_RXDMAEN;
+	SPI1->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
 }
 
 static void setup_SPI2()
@@ -837,7 +841,7 @@ static void setup_DMA()
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN;
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
 
-// SPI3 - flash:
+	// SPI3 - flash:
 #if defined(USE_FLASH_BLACKBOX)
 #if !defined(USE_I2C1)
 	// reading
@@ -862,7 +866,7 @@ static void setup_DMA()
 
 #endif
 
-// DSHOT:
+	// DSHOT:
 #if defined(ESC_PROTOCOL_DSHOT)
 	//	motor1:
 	DMA1_Stream6->CR = 0x0;
@@ -913,8 +917,8 @@ static void setup_DMA()
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF6;
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF7;
 
-//-----------------------------END NORMAL DSHOT------------------------------------
-// bidirectional DSHOT:
+	//-----------------------------END NORMAL DSHOT------------------------------------
+	// bidirectional DSHOT:
 #elif defined(ESC_PROTOCOL_BDSHOT)
 	// for TIM1
 	DMA2_Stream6->CR = 0x0;
@@ -980,11 +984,13 @@ static void setup_DMA()
 	DMA2_Stream5->M0AR = (uint32_t)(&rxBuf[1]);
 	DMA2_Stream5->NDTR = 31;
 
-	//	SPI1 - IMU reading: not used
-	DMA2_Stream0->CR |= DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_PL_1;
+	//	SPI1 - IMU reading:
+	DMA2_Stream0->CR |= DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	DMA2_Stream0->PAR = (uint32_t)(&(SPI1->DR));
-	DMA2_Stream0->M0AR = (uint32_t)(read_write_tab);
-	DMA2_Stream0->NDTR = 14;
+	// address and number of bytes will be set before each transmission
+	DMA2_Stream3->CR |= DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA2_Stream3->PAR = (uint32_t)(&(SPI1->DR));
+
 
 	//	ADC1:
 	DMA2_Stream4->CR |= DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1;
@@ -992,7 +998,7 @@ static void setup_DMA()
 	DMA2_Stream4->M0AR = (uint32_t)(ADC1_buffer);
 	DMA2_Stream4->NDTR = 2;
 
-// I2C1:
+	// I2C1:
 #if defined(USE_I2C1)
 	// reading
 	DMA1_Stream0->CR = 0x0;
@@ -1123,6 +1129,12 @@ void setup_NVIC_2()
 
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 	NVIC_SetPriority(DMA1_Stream7_IRQn, 13);
+
+	NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+	NVIC_SetPriority(DMA2_Stream0_IRQn, 12);
+
+	NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+	NVIC_SetPriority(DMA2_Stream3_IRQn, 12);
 
 	NVIC_EnableIRQ(DMA2_Stream4_IRQn);
 	NVIC_SetPriority(DMA2_Stream4_IRQn, 18);

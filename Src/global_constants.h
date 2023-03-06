@@ -153,10 +153,9 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_MAIN_LOOP 700			 //[Hz]   IF YOU'RE USING PWM MAX. IS 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
+#define FREQUENCY_MAIN_LOOP 1500			//[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 1[kHz]
 #define FREQUENCY_STABILIZATION_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 700		 //[Hz]
-#define FREQUENCY_IMU_READING 700		 //[Hz]
+#define FREQUENCY_ESC_UPDATE 1500		 //[Hz]	SCHOULD BE AT LEAST AS MAIN_LOOP
 #define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible (>150)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 	30	 	//[Hz]
@@ -229,7 +228,6 @@ enum blackbox_t
 #define I2C1_BUFFER_SIZE 10
 
 //-------------------FILTERS------------------
-#define MAX_FREQUENCY_FOR_FILTERING 0.48f * FREQUENCY_IMU_READING // maximal frequency that can be filtered (almost Nyquist frequency)
 #define USE_BIQUAD_FILTERS										  // USE_FIR_FILTERS or USE_IIR_FILTERS or USE_BIQUAD_FILTERS
 #if defined(USE_FIR_FILTERS) || defined(USE_IIR_FILTERS)
 #define GYRO_FILTERS_ORDER 2
@@ -254,8 +252,8 @@ enum blackbox_t
 //-----------OFFSETS and CALIBRATIONS VALUE----------
 #define PITCH_OFFSET -7
 #define ROLL_OFFSET 0
-#define GYRO_STARTUP_CALIB_DURATION 1.5 // time when gyro bias is measured in [s]
-#define GYRO_STARTUP_CALIB_MAX_DEV 48 // maximum deviation accepted after gyro calibration
+#define GYRO_STARTUP_CALIB_DURATION 1.5f // time when gyro bias is measured in [s]
+#define GYRO_STARTUP_CALIB_MAX_DEV 60 // maximum deviation accepted after gyro calibration
 
 //	average error on each drone' axis:
 
