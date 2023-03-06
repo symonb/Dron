@@ -198,13 +198,13 @@ void set_motors(ThreeF corr)
 
 	//	Make corrections:
 	//	right back:
-	motor_1_value = Throttle * 2 - corr.roll + corr.pitch - corr.yaw;
+	motor_1_value = receiver.Throttle * 2 - corr.roll + corr.pitch - corr.yaw;
 	//	right front:
-	motor_2_value = Throttle * 2 - corr.roll - corr.pitch + corr.yaw;
+	motor_2_value = receiver.Throttle * 2 - corr.roll - corr.pitch + corr.yaw;
 	//	left back:
-	motor_3_value = Throttle * 2 + corr.roll + corr.pitch + corr.yaw;
+	motor_3_value = receiver.Throttle * 2 + corr.roll + corr.pitch + corr.yaw;
 	//	left front:
-	motor_4_value = Throttle * 2 + corr.roll - corr.pitch - corr.yaw;
+	motor_4_value = receiver.Throttle * 2 + corr.roll - corr.pitch - corr.yaw;
 
 	if (motor_1_value < IDLE_VALUE * 2)
 	{

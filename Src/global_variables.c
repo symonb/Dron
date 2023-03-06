@@ -17,8 +17,8 @@ flight_mode_e flight_mode;
 
 enum arming_t ARMING_STATUS;
 
-gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_data_flag = false, .id = 0, .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
-acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_data_flag = false, .id = 0 , .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
+gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_raw_data_flag = false,.address = 0, .rev_id = 0, .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
+acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_raw_data_flag = false, .id = 0 , .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
 
 
 //----------TIME VARIABLES--------
@@ -47,40 +47,7 @@ float MCU_temperature = 0;
 
 bool buzzer_active = false;
 
-uint16_t channels[14] = {
-	1500,
-	1500,
-	1000,
-	1500,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-};
-uint16_t channels_previous_values[14] = {
-	1500,
-	1500,
-	1000,
-	1500,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-	1000,
-};
-
-int16_t Throttle = 1000;
+rx_t receiver = { .number_of_channels = 14, .type = RX_IBUS };
 
 ThreeF global_euler_angles = { 0, 0, 0 };
 
@@ -113,7 +80,7 @@ int16_t Gyro_Acc[GYRO_ACC_SIZE]; // table for measurements 3 gyro, 3 acceleromet
 
 uint16_t table_to_send[ALL_ELEMENTS_TO_SEND];
 
-bool ibus_received = false;
+
 
 //-----------------FILTERS-------------------
 #if defined(USE_FIR_FILTERS)

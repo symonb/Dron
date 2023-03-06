@@ -21,20 +21,20 @@ static ThreeF corrections(float);
 // static PIDF P_PIDF = {200, 300, 2, 1};
 // static PIDF Y_PIDF = {1000, 50, 0.5, 1};
 
-static PIDF R_PIDF = {500, 0, 25, 0}; // 590 30 55 0
-static PIDF P_PIDF = {700, 0, 40, 0}; // 750 30 65 0
-static PIDF Y_PIDF = {700, 0, 0, 0};  // 1100 30 30 0
+static PIDF R_PIDF = { 500, 0, 25, 0 }; // 590 30 55 0
+static PIDF P_PIDF = { 700, 0, 40, 0 }; // 750 30 65 0
+static PIDF Y_PIDF = { 700, 0, 0, 0 };  // 1100 30 30 0
 
 // 3s
 // static PIDF R_PIDF = { 350, 400, 5, 5};
 // static PIDF P_PIDF = { 350, 400, 5, 5};
 // static PIDF Y_PIDF = { 1000, 50, 0.5, 0.5 };
 
-static ThreeF err = {0, 0, 0};
-static ThreeF sum_err = {0, 0, 0};
-static ThreeF D_corr = {0, 0, 0};
-static ThreeF last_D_corr = {0, 0, 0};
-static ThreeF F_corr = {0, 0, 0};
+static ThreeF err = { 0, 0, 0 };
+static ThreeF sum_err = { 0, 0, 0 };
+static ThreeF D_corr = { 0, 0, 0 };
+static ThreeF last_D_corr = { 0, 0, 0 };
+static ThreeF F_corr = { 0, 0, 0 };
 
 void acro(timeUs_t dt_us)
 {
@@ -47,8 +47,8 @@ void acro(timeUs_t dt_us)
 
 static ThreeF corrections(float dt)
 {
-	static ThreeF corr = {0, 0, 0};
-	static Three last_measurement = {0, 0, 0};
+	static ThreeF corr = { 0, 0, 0 };
+	static Three last_measurement = { 0, 0, 0 };
 
 	if (flight_mode == FLIGHT_MODE_ACRO)
 	{
@@ -76,9 +76,9 @@ static ThreeF corrections(float dt)
 	D_corr.pitch = (last_measurement.pitch - Gyro_Acc[1]) * 0.0305185f / RATES_MAX_RATE_P / dt;
 	D_corr.yaw = (last_measurement.yaw - Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y / dt;
 
-	F_corr.roll = (channels[0] - channels_previous_values[0]) * 0.002f / dt;
-	F_corr.pitch = (channels[1] - channels_previous_values[1]) * 0.002f / dt;
-	F_corr.yaw = (channels[3] - channels_previous_values[3]) * 0.002f / dt;
+	F_corr.roll = (receiver.channels[0] - receiver.channels_previous_values[0]) * 0.002f / dt;
+	F_corr.pitch = (receiver.channels[1] - receiver.channels_previous_values[1]) * 0.002f / dt;
+	F_corr.yaw = (receiver.channels[3] - receiver.channels_previous_values[3]) * 0.002f / dt;
 
 	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
 	D_term_filtering(&D_corr);
@@ -115,8 +115,8 @@ void send_telemetry_acro(timeUs_t time)
 	table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
 	table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
 	table_to_send[11] = (Gyro_Acc[2] / 32.768f / RATES_MAX_RATE_Y * 50) + 1000;
-	table_to_send[12] = channels[1] - 500;
-	table_to_send[13] = channels[0] - 500;
+	table_to_send[12] = receiver.channels[1] - 500;
+	table_to_send[13] = receiver.channels[0] - 500;
 
 	print(table_to_send, ALL_ELEMENTS_TO_SEND);
 }

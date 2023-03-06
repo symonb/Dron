@@ -103,7 +103,7 @@ void DMA2_Stream0_IRQHandler(void)
 		acc_1.raw_data.pitch = (int16_t)(rx_buffer[2] << 8 | rx_buffer[3]);
 		// Z acc axis:
 		acc_1.raw_data.yaw = (int16_t)(rx_buffer[4] << 8 | rx_buffer[5]);
-		acc_1.new_data_flag = true;
+		acc_1.new_raw_data_flag = true;
 
 		// X gyro axis:
 		gyro_1.raw_data.roll = (int16_t)(rx_buffer[8] << 8 | rx_buffer[9]);
@@ -111,7 +111,7 @@ void DMA2_Stream0_IRQHandler(void)
 		gyro_1.raw_data.pitch = (int16_t)(rx_buffer[10] << 8 | rx_buffer[11]);
 		// Z gyro axis:
 		gyro_1.raw_data.yaw = (int16_t)(rx_buffer[12] << 8 | rx_buffer[13]);
-		gyro_1.new_data_flag = true;
+		gyro_1.new_raw_data_flag = true;
 	}
 }
 
@@ -351,7 +351,9 @@ void MPU6000_SPI_read_DMA(uint8_t instruction, uint8_t* data, uint16_t size)
 //-------main MPU6000 setting-----------
 static void	check_gyro_version(gyro_t* gyro) {
 	SPI1_enable();
-	MPU6000_SPI_read(MPU6000_WHO_I_AM_READ, &(gyro->id), 1);
+	MPU6000_SPI_read(MPU6000_WHO_I_AM_READ, &(gyro->address), 1);
+	delay_micro(15);
+	MPU6000_SPI_read(MPU6000_PRODUCT_ID_READ, &(gyro->rev_id), 1);
 	SPI1_disable();
 }
 
@@ -367,6 +369,7 @@ static void setup_conf()
 	register_address = 0x6A;
 	data = 0x10;
 	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
 
 	// 0x6B - address of (107) Power Management 1 register:
 	// set 0x80 in this register (RESET) 
@@ -389,36 +392,42 @@ static void setup_conf()
 	register_address = 0x6B;
 	data = 0x03;
 	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
 
 	// // 0x6A - address of (106)  User Control register:
 	// //  reset FIFO
 	// register_address = 0x6A;
 	// data = 0x14;
 	// MPU6000_SPI_write(register_address, data);
+	// delay_micro(15);
 
 	// // 0x6A - address of (106)  User Control register:
 	// //  enable FIFO 
 	// register_address = 0x6A;
 	// data = 0x50;
 	// MPU6000_SPI_write(register_address,  data);
+	// delay_micro(15);
 
 	// 0x1A - address of (26) Configuration register:
 	// setting low pass filter in this register
 	register_address = 0x1A;
 	data = 0x00;
 	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
 
 	// 0x38 - address of (56) Interrupt Enable register:
 	//  setting interrupt source as Data Register
 	register_address = 0x38;
 	data = 0x01;
 	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
 
 	// // 0x23 - address of (35) FIFO Enable register:
 	// //  set data loaded to FIFO (gyro and acc)
 	// register_address = 0x23;
 	// data = 0x78;
 	// MPU6000_SPI_write(register_address, data);
+	// delay_micro(15);
 
 	SPI1_disable();
 }
@@ -461,7 +470,7 @@ void read_acc()
 	// Z acc axis:
 	acc_1.raw_data.yaw = (int16_t)(temp[4] << 8 | temp[5]);
 
-	acc_1.new_data_flag = true;
+	acc_1.new_raw_data_flag = true;
 
 	SPI1_disable();
 }
@@ -488,7 +497,7 @@ void read_gyro()
 	// Z gyro axis:
 	gyro_1.raw_data.yaw = (int16_t)(temp[4] << 8 | temp[5]);
 
-	gyro_1.new_data_flag = true;
+	gyro_1.new_raw_data_flag = true;
 	SPI1_disable();
 
 }
@@ -505,7 +514,7 @@ void read_all()
 	acc_1.raw_data.pitch = (int16_t)(rx_buffer[2] << 8 | rx_buffer[3]);
 	// Z acc axis:
 	acc_1.raw_data.yaw = (int16_t)(rx_buffer[4] << 8 | rx_buffer[5]);
-	acc_1.new_data_flag = true;
+	acc_1.new_raw_data_flag = true;
 
 	// X gyro axis:
 	gyro_1.raw_data.roll = (int16_t)(rx_buffer[8] << 8 | rx_buffer[9]);
@@ -513,7 +522,7 @@ void read_all()
 	gyro_1.raw_data.pitch = (int16_t)(rx_buffer[10] << 8 | rx_buffer[11]);
 	// Z gyro axis:
 	gyro_1.raw_data.yaw = (int16_t)(rx_buffer[12] << 8 | rx_buffer[13]);
-	gyro_1.new_data_flag = true;
+	gyro_1.new_raw_data_flag = true;
 
 	SPI1_disable();
 
@@ -534,8 +543,8 @@ void gyro_update(timeUs_t time)
 	}
 	gyro_filtering(temporary);
 
-	gyro_1.new_data_flag = false;
-	EXTI->IMR |= EXTI_IMR_MR4;
+	gyro_1.new_raw_data_flag = false;
+	gyro_1.new_filtered_data = true;
 }
 
 void acc_update(timeUs_t time)
@@ -547,11 +556,9 @@ void acc_update(timeUs_t time)
 		temporary[j] += acc_1.raw_data.pitch * transform_matrix[j][1];
 		temporary[j] += acc_1.raw_data.yaw * transform_matrix[j][2];
 	}
-
 	acc_filtering(temporary);
 
-	acc_1.new_data_flag = false;
-	EXTI->IMR |= EXTI_IMR_MR4;
+	acc_1.new_raw_data_flag = false;
 }
 
 void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time)

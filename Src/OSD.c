@@ -577,7 +577,7 @@ static void OSD_enable_auto_black_control()
 
 void OSD_print_logo()
 {
-	uint8_t OSD_LOGO_characters[96];
+	 uint8_t OSD_LOGO_characters[96];
 	for (uint8_t i = 0; i < 96; i++)
 	{
 		OSD_LOGO_characters[i] = 255 - 95 + i;
@@ -593,7 +593,7 @@ void OSD_print_logo()
 
 void OSD_print_battery_voltage()
 {
-	uint8_t battery_text_tab[11];
+	static uint8_t battery_text_tab[11];
 	OSD_characters_from_text("BAT:", battery_text_tab);
 	OSD_characters_from_float(main_battery.voltage_filtered, &battery_text_tab[4], 2);
 	OSD_write_to_Display_Memory_16bit_AI(battery_text_tab, OSD_BATTERY_VOLTAGE_PLACEMENT, 8);
@@ -606,7 +606,7 @@ void OSD_print_battery_voltage()
 
 void OSD_print_battery_cell_voltage()
 {
-	uint8_t battery_text_tab[10];
+	static uint8_t battery_text_tab[10];
 	OSD_characters_from_text("CELL:", battery_text_tab);
 	OSD_characters_from_float(main_battery.cell_voltage, &battery_text_tab[5], 1);
 	OSD_write_to_Display_Memory_16bit_AI(battery_text_tab, OSD_BATTERY_CELL_VOLTAGE_PLACEMENT, 9);
@@ -614,7 +614,7 @@ void OSD_print_battery_cell_voltage()
 
 void OSD_print_time()
 {
-	uint8_t time_text_tab[11];
+	static uint8_t time_text_tab[11];
 	OSD_characters_from_text("TIM:00:00", time_text_tab);
 	//	Calculate minutes:
 	OSD_characters_from_int(get_Global_Time() / 1000000 / 60, &time_text_tab[4], 2);
@@ -626,7 +626,7 @@ void OSD_print_time()
 
 void OSD_print_flight_mode()
 {
-	uint8_t text_tab[4];
+	static uint8_t text_tab[4];
 	switch (get_Flight_Mode())
 	{
 	case FLIGHT_MODE_ACRO:

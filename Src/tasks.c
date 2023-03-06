@@ -23,12 +23,13 @@
 #include "tasks.h"
 
 static void main_PID_fun(timeUs_t current_time);
+static bool main_PID_check_fun(timeUs_t current_time, timeUs_t delta_time);
 static void stabilization_fun(timeUs_t current_time);
 static bool stabilization_check_fun(timeUs_t current_time, timeUs_t delta_time);
 static bool gyro_update_check_fun(timeUs_t current_time, timeUs_t delta_time);
 static bool acc_update_check_fun(timeUs_t current_time, timeUs_t delta_time);
-static void ibus_save_enable(timeUs_t current_time);
-static bool ibus_saving_fun(timeUs_t current_time, timeUs_t delta_time);
+static void rx_save_fun(timeUs_t current_time);
+static bool rx_save_check_fun(timeUs_t current_time, timeUs_t delta_time);
 static void telemetry_fun(timeUs_t time);
 static void (*telemetry_fun_tab[FLIGHT_MODE_COUNT])(timeUs_t dt);
 static void buzzer_fun(timeUs_t time);
@@ -39,10 +40,10 @@ static bool gyro_calibration_check_fun(timeUs_t current_time, timeUs_t delta_tim
 // ------DEFINE ALL TASKS--------
 task_t all_tasks[TASKS_COUNT] =
 { [TASK_SYSTEM] = DEFINE_TASK("SYSTEM CHECK", task_system_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_SYSTEM_CHECK)),
- [TASK_IBUS_SAVE] = DEFINE_TASK("IBUS SAVING", ibus_save_enable, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_RX_READING)),
+ [TASK_IBUS_SAVE] = DEFINE_TASK("IBUS SAVING", rx_save_fun, rx_save_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_RX_READING)),
  [TASK_GYRO_UPDATE] = DEFINE_TASK("GYRO READ&FILTER", gyro_update, gyro_update_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
  [TASK_ACC_UPDATE] = DEFINE_TASK("ACC READ&FILTER", acc_update, acc_update_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
- [TASK_MAIN_LOOP] = DEFINE_TASK("MAIN LOOP", main_PID_fun, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
+ [TASK_MAIN_LOOP] = DEFINE_TASK("MAIN LOOP", main_PID_fun, main_PID_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
  [TASK_STABILIZATION_LOOP] = DEFINE_TASK("STABILIZATION LOOP", stabilization_fun, stabilization_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP)),
  [TASK_UPDATE_MOTORS] = DEFINE_TASK("UPDATE MOTORS", update_motors, NULL, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_ESC_UPDATE)),
  [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE)),
@@ -57,6 +58,11 @@ static void main_PID_fun(timeUs_t current_time)
 	dt = current_time - last_time;
 	last_time = current_time;
 	acro(dt);
+	gyro_1.new_filtered_data = false;
+}
+static bool main_PID_check_fun(timeUs_t current_time, timeUs_t delta_time)
+{
+	return gyro_1.new_filtered_data;
 }
 
 static void stabilization_fun(timeUs_t current_time)
@@ -84,29 +90,21 @@ static bool stabilization_check_fun(timeUs_t current_time, timeUs_t delta_time)
 
 static bool gyro_update_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
-	return gyro_1.new_data_flag;
+	return gyro_1.new_raw_data_flag;
 }
 static bool acc_update_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
-	return acc_1.new_data_flag;
+	return acc_1.new_raw_data_flag;
 }
 
-static void ibus_save_enable(timeUs_t current_time)
+static void rx_save_fun(timeUs_t current_time)
 {
-	//	When time comes (specified in task frequency) this function will allow for receiving RX.
-	//	Until succeed .check_fun() will be executed on each scheduler iteration:
-	all_tasks[TASK_IBUS_SAVE].check_fun = ibus_saving_fun;
+	Ibus_save(current_time);
 }
 
-static bool ibus_saving_fun(timeUs_t current_time, timeUs_t delta_time)
+static bool rx_save_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
-	//	This is the main function for ibus saving and will be executed until succeed:
-	if (Ibus_save(current_time))
-	{ // if succeed (ibus is received) turn off this function and let scheduler decide about next execution:
-		all_tasks[TASK_IBUS_SAVE].check_fun = NULL;
-	}
-	//	always return false:
-	return false;
+	return receiver.new_data_flag;
 }
 
 static void telemetry_fun(timeUs_t time)

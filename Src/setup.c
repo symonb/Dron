@@ -14,6 +14,7 @@
 #include "motors.h"
 #include "filters.h"
 #include "setup.h"
+#include "rx.h"
 
  /* IMPORTANT:
   APB2 max frequency is 84 [MHz], 168 [MHz] only for timers
@@ -82,6 +83,7 @@ void setup()
 	setup_OTG_USB_FS();
 	setup_DMA();
 	setup_D_term_filters();
+	setup_RX();
 }
 
 static void setup_HSE()

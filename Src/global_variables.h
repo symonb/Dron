@@ -66,11 +66,13 @@ typedef enum
 
 typedef struct {
 	char* name;
-	uint8_t id;
+	uint8_t	address;
+	uint8_t rev_id;
 	Three raw_data;
 	ThreeF offset;
 	bool calibrated;
-	bool new_data_flag;
+	bool new_raw_data_flag;
+	bool new_filtered_data;
 } gyro_t;
 
 typedef struct {
@@ -79,8 +81,28 @@ typedef struct {
 	Three raw_data;
 	ThreeF offset;
 	bool calibrated;
-	bool new_data_flag;
+	bool new_raw_data_flag;
 } acc_t;
+
+typedef enum
+{
+	RX_IBUS
+} rx_protocol_e;
+
+typedef struct
+{
+	rx_protocol_e type;
+	uint8_t number_of_channels;
+	uint8_t number_of_used_channels;
+	uint16_t* channels;
+	uint16_t* channels_previous_values;
+	int16_t Throttle;
+
+	bool new_data_flag;
+
+} rx_t;
+
+extern rx_t receiver;
 
 extern flight_mode_e flight_mode;
 
@@ -122,12 +144,6 @@ extern float MCU_temperature;
 
 extern bool buzzer_active;
 
-extern uint16_t channels[];
-
-extern uint16_t channels_previous_values[];
-
-extern int16_t Throttle;
-
 extern ThreeF global_euler_angles;
 
 extern ThreeF global_angles;
@@ -155,7 +171,6 @@ extern int16_t Gyro_Acc[];
 
 extern uint16_t table_to_send[];
 
-extern bool ibus_received;
 
 //-------------------FILTERS--------------------
 #if defined(USE_FIR_FILTERS)

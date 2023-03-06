@@ -24,8 +24,7 @@ void DMA2_Stream5_IRQHandler(void)
 		DMA2->HIFCR |= DMA_HIFCR_CTCIF5;
 		DMA2_Stream5->CR &= ~DMA_SxCR_EN;
 
-		ibus_received = true;
-
+		receiver.new_data_flag = true;
 	}
 }
 // for DMA:
@@ -61,7 +60,7 @@ void USART1_IRQHandler(void)
 	{
 		USART1->DR;
 
-		if (!ibus_received)
+		if (!receiver.new_data_flag)
 		{
 			USART1->CR1 |= USART_CR1_RXNEIE;
 			DMA2_Stream5->CR &= ~DMA_SxCR_EN;
@@ -80,7 +79,7 @@ bool Ibus_save(timeUs_t current_time)
 	}
 
 	// checking checksum and rewriting rxBuf to channels:
-	if (ibus_received)
+	if (receiver.new_data_flag)
 	{
 		time_flag3_1 = current_time;
 		checksum = 0xFFFF;
@@ -92,8 +91,8 @@ bool Ibus_save(timeUs_t current_time)
 		{
 			for (int8_t i = 0; i < CHANNELS; i++)
 			{
-				channels_previous_values[i] = channels[i];
-				channels[i] = (rxBuf[2 * (i + 1) + 1] << 8) + rxBuf[2 * (i + 1)];
+				receiver.channels_previous_values[i] = receiver.channels[i];
+				receiver.channels[i] = (rxBuf[2 * (i + 1) + 1] << 8) + rxBuf[2 * (i + 1)];
 			}
 
 			failsafe_RX();
@@ -101,7 +100,7 @@ bool Ibus_save(timeUs_t current_time)
 		}
 		//	unlock receiving new RX data:
 		rxindex = 0;
-		ibus_received = false;
+		receiver.new_data_flag = false;
 		USART1->CR1 |= USART_CR1_RXNEIE;
 
 		return true;

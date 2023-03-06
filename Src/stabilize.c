@@ -13,8 +13,8 @@
 #include "stabilize.h"
 #include "tasks.h"
 
-static Quaternion q_acc = {1, 0, 0, 0};
-static Quaternion q_gyro = {1, 0, 0, 0};
+static Quaternion q_acc = { 1, 0, 0, 0 };
+static Quaternion q_gyro = { 1, 0, 0, 0 };
 
 static Quaternion gyro_angles(Quaternion q_position, float dt);
 static Quaternion acc_angles();
@@ -26,12 +26,12 @@ static ThreeF corrections(float dt);
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt);
 
 // err values - difference between set value and measured value:
-static ThreeF err = {0, 0, 0};
-static ThreeF sum_err = {0, 0, 0};
-static ThreeF last_err = {0, 0, 0};
-static ThreeF D_corr = {0, 0, 0};
-static ThreeF F_corr = {0, 0, 0};
-static ThreeF last_D_corr = {0, 0, 0};
+static ThreeF err = { 0, 0, 0 };
+static ThreeF sum_err = { 0, 0, 0 };
+static ThreeF last_err = { 0, 0, 0 };
+static ThreeF D_corr = { 0, 0, 0 };
+static ThreeF F_corr = { 0, 0, 0 };
+static ThreeF last_D_corr = { 0, 0, 0 };
 
 // 4s
 //  DRONE 3D PRINT:
@@ -40,9 +40,9 @@ static ThreeF last_D_corr = {0, 0, 0};
 // static PIDF Y_PIDF = { 1200, 300, 200, 0 };
 
 // DRONE CARBON:
-static PIDF R_PIDF = {150, 190, 0.175, 0.2};
-static PIDF P_PIDF = {200, 210, 0.225, 0.25};
-static PIDF Y_PIDF = {500, 200, 70, 0};
+static PIDF R_PIDF = { 150, 190, 0.175, 0.2 };
+static PIDF P_PIDF = { 200, 210, 0.225, 0.25 };
+static PIDF Y_PIDF = { 500, 200, 70, 0 };
 
 void stabilize(timeUs_t dt_us)
 {
@@ -82,7 +82,7 @@ static Quaternion gyro_angles(Quaternion q_position, float dt)
 
 	// normalize quaternion:
 	q_position = quaternion_multiply(q_position,
-									 1.f / quaternion_norm(q_position));
+		1.f / quaternion_norm(q_position));
 
 	return q_position;
 }
@@ -90,12 +90,12 @@ static Quaternion gyro_angles(Quaternion q_position, float dt)
 static Quaternion acc_angles(Quaternion q_position)
 {
 
-	static ThreeF gravity_estimated = {0, 0, 0};
-	ThreeF acc_vector = {Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY};
+	static ThreeF gravity_estimated = { 0, 0, 0 };
+	ThreeF acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
 	static double norm;
 
 	gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
-													  quaternion_conjugate(q_position));
+		quaternion_conjugate(q_position));
 
 	// normalize vector:
 	norm = sqrtf(
@@ -122,7 +122,7 @@ static Quaternion acc_angles(Quaternion q_position)
 	}
 	// after LERP it is needed to normalize q_acc:
 	q_position = quaternion_multiply(q_position,
-									 1.f / quaternion_norm(q_position));
+		1.f / quaternion_norm(q_position));
 
 	return q_position;
 }
@@ -133,12 +133,12 @@ static void complementary_filter(float dt)
 	q_acc = acc_angles(q_gyro);
 
 	// to accomplish complementary filter q_acc need to have, a little effect so it need to be reduce by combining with identity quaternion =[1,0,0,0] which was multiplied with (1-ACC_PART) so:
-	const Quaternion IDENTITY_QUATERNION = {1 - ACC_PART, 0, 0, 0};
+	const Quaternion IDENTITY_QUATERNION = { 1 - ACC_PART, 0, 0, 0 };
 	Quaternion delta_q_acc;
 	delta_q_acc = quaternions_sum(IDENTITY_QUATERNION,
-								  quaternion_multiply(q_acc, ACC_PART));
+		quaternion_multiply(q_acc, ACC_PART));
 	delta_q_acc = quaternion_multiply(delta_q_acc,
-									  1.f / quaternion_norm(delta_q_acc));
+		1.f / quaternion_norm(delta_q_acc));
 
 	q_global_position = quaternions_multiplication(delta_q_acc, q_gyro);
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
@@ -165,7 +165,7 @@ static void madgwick_filter(float dt)
 
 	// normalize acc_reading:
 	acc_reading = quaternion_multiply(acc_reading,
-									  1.f / quaternion_norm(acc_reading));
+		1.f / quaternion_norm(acc_reading));
 
 #if defined(MAGDWICK_ORIGINAL)
 
@@ -191,20 +191,20 @@ static void madgwick_filter(float dt)
 
 	// normalize the gradient
 	delta_error_function = quaternion_multiply(delta_error_function,
-											   1.f / quaternion_norm(delta_error_function));
+		1.f / quaternion_norm(delta_error_function));
 
 	static float coefficient_Beta = 0.15; // 0.073 was
 
 	q_global_position = quaternions_sum(q_global_position,
-										quaternion_multiply(
-											quaternions_sub(q_prim,
-															quaternion_multiply(delta_error_function,
-																				coefficient_Beta)),
-											dt));
+		quaternion_multiply(
+			quaternions_sub(q_prim,
+				quaternion_multiply(delta_error_function,
+					coefficient_Beta)),
+			dt));
 
 	// normalize quaternion:
 	q_global_position = quaternion_multiply(q_global_position,
-											1.f / quaternion_norm(q_global_position));
+		1.f / quaternion_norm(q_global_position));
 
 	// for debugging compute Euler angles from quaternion:
 	global_euler_angles = Quaternion_to_Euler_angles(
@@ -231,19 +231,19 @@ static void madgwick_filter(float dt)
 
 	// normalize the gradient
 	delta_error_function = quaternion_multiply(delta_error_function,
-											   1.f / quaternion_norm(delta_error_function));
+		1.f / quaternion_norm(delta_error_function));
 
 	static float coefficient_Beta = 0.15f; // 0.073 was
 
 	q_global_position = quaternions_sum(q_global_position,
-										quaternion_multiply(
-											quaternions_sub(q_prim,
-															quaternion_multiply(delta_error_function,
-																				coefficient_Beta)),
-											dt));
+		quaternion_multiply(
+			quaternions_sub(q_prim,
+				quaternion_multiply(delta_error_function,
+					coefficient_Beta)),
+			dt));
 	// normalize quaternion:
 	q_global_position = quaternion_multiply(q_global_position,
-											1.f / quaternion_norm(q_global_position));
+		1.f / quaternion_norm(q_global_position));
 
 	// for debugging compute Euler angles from quaternion:
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
@@ -256,12 +256,12 @@ static void mahony_filter(float dt)
 	static Quaternion angular_velocity;
 
 	static Quaternion acc_reading;
-	static PID mahony_omega_PI = {1, 0.001, 0};
+	static PID mahony_omega_PI = { 1, 0.001, 0 };
 	static Quaternion omega_corr;
 	static Quaternion sum_omega_corr;
 	static Quaternion gravity_q;
-	static const ThreeF gravity_vector_global = {0, 0, 1};
-	static ThreeF gravity_vector = {0, 0, 1};
+	static const ThreeF gravity_vector_global = { 0, 0, 1 };
+	static ThreeF gravity_vector = { 0, 0, 1 };
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
@@ -275,7 +275,7 @@ static void mahony_filter(float dt)
 
 	// normalize acc_reading:
 	acc_reading = quaternion_multiply(acc_reading,
-									  1.f / quaternion_norm(acc_reading));
+		1.f / quaternion_norm(acc_reading));
 
 	// transform gravity vector from global frame to local frame (with use of gyro measurements):
 	q_prim = quaternion_multiply(
@@ -283,8 +283,8 @@ static void mahony_filter(float dt)
 		-0.5f);
 
 	gravity_vector = Rotate_Vector_with_Quaternion(gravity_vector_global,
-												   quaternions_sum(q_global_position,
-																   quaternion_multiply(q_prim, dt)));
+		quaternions_sum(q_global_position,
+			quaternion_multiply(q_prim, dt)));
 
 	gravity_q.w = 0;
 	gravity_q.x = gravity_vector.roll;
@@ -293,7 +293,7 @@ static void mahony_filter(float dt)
 
 	// normalize gravity_q:
 	gravity_q = quaternion_multiply(gravity_q,
-									1.f / quaternion_norm(gravity_q));
+		1.f / quaternion_norm(gravity_q));
 
 	// calculate value of correction:
 	//* NOTE: multiplication of pure quaternions is not giving pure quaternion, but vector part is equal to vectors multiplication *
@@ -314,11 +314,11 @@ static void mahony_filter(float dt)
 		-0.5f);
 
 	q_global_position = quaternions_sum(q_global_position,
-										quaternion_multiply(q_prim, dt));
+		quaternion_multiply(q_prim, dt));
 
 	// normalize quaternion:
 	q_global_position = quaternion_multiply(q_global_position,
-											1.f / quaternion_norm(q_global_position));
+		1.f / quaternion_norm(q_global_position));
 
 	// compute Euler angles from quaternion:
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
@@ -328,9 +328,9 @@ static ThreeF corrections(float dt)
 {
 	static ThreeF corr;
 
-	err.roll = ((channels[0] - 1500) / 500. - global_angles.roll / MAX_ROLL_ANGLE);
-	err.pitch = ((channels[1] - 1500) / 500. - global_angles.pitch / MAX_PITCH_ANGLE);
-	err.yaw = (channels[3] - 1500) / 500. - (Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y;
+	err.roll = ((receiver.channels[0] - 1500) / 500. - global_angles.roll / MAX_ROLL_ANGLE);
+	err.pitch = ((receiver.channels[1] - 1500) / 500. - global_angles.pitch / MAX_PITCH_ANGLE);
+	err.yaw = (receiver.channels[3] - 1500) / 500. - (Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y;
 
 	//	estimate Integral by sum (I term):
 	sum_err.roll += err.roll * dt;
@@ -342,8 +342,8 @@ static ThreeF corrections(float dt)
 	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
 	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
 
-	F_corr.roll = (channels[0] - channels_previous_values[0]) * 0.002f / dt;
-	F_corr.pitch = (channels[1] - channels_previous_values[1]) * 0.002f / dt;
+	F_corr.roll = (receiver.channels[0] - receiver.channels_previous_values[0]) * 0.002f / dt;
+	F_corr.pitch = (receiver.channels[1] - receiver.channels_previous_values[1]) * 0.002f / dt;
 	F_corr.yaw = 0;
 
 	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
@@ -408,10 +408,10 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 
 	// to achieve the shortest path it is required to choose between q and -q, so at first check cos(alfa) between quaternions:
 	if (quaternions_skalar_multiplication(position_quaternion,
-										  quaternion_conjugate(set_position_quaternion)) < 0)
+		quaternion_conjugate(set_position_quaternion)) < 0)
 	{
 		set_position_quaternion = quaternion_multiply(set_position_quaternion,
-													  -1);
+			-1);
 	}
 	// compute error quaternion (quaternion by which actual position quaternion has to be multiplied to achieve desired position quaternion):
 	error_quaternion = quaternions_multiplication(
@@ -422,15 +422,15 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 
 	// to achieve the shortest path it is required to choose between q and -q, so at first check cos(alfa) between quaternions:
 	if (quaternions_skalar_multiplication(position_quaternion,
-										  set_position_quaternion) < 0)
+		set_position_quaternion) < 0)
 	{
 		set_position_quaternion = quaternion_multiply(set_position_quaternion,
-													  -1);
+			-1);
 	}
 
 	// compute error quaternion (quaternion by which actual position quaternion has to be multiplied to achieve desired position quaternion):
 	error_quaternion = quaternions_multiplication(position_quaternion,
-												  quaternion_conjugate(set_position_quaternion));
+		quaternion_conjugate(set_position_quaternion));
 
 #endif
 
@@ -457,8 +457,8 @@ void send_telemetry_stabilize(timeUs_t time)
 	table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
 	table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
 	table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
-	table_to_send[12] = channels[1] - 500;
-	table_to_send[13] = channels[0] - 500;
+	table_to_send[12] = receiver.channels[1] - 500;
+	table_to_send[13] = receiver.channels[0] - 500;
 
 	print(table_to_send, ALL_ELEMENTS_TO_SEND);
 }
