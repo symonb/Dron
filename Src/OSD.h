@@ -8,9 +8,8 @@
 #ifndef OSD_H_
 #define OSD_H_
 
-//-------MACROS FOR OSD MAX7456-------------
-//-------ADDRESSES OF REGISTERS-------------
-#define OSD_DUMMY_BYTE 0xFF
+ //-------MACROS FOR OSD MAX7456-------------
+ //-------ADDRESSES OF REGISTERS-------------
 #define OSD_VM0 0x00   // Video Mode 0
 #define OSD_VM1 0x01   // Video Mode 1
 #define OSD_HOS 0x02   // Horizontal Offset
@@ -57,15 +56,15 @@
 
 void setup_OSD();
 void OSD_SPI_write(uint8_t instruction, uint8_t data);
-void OSD_SPI_read(uint8_t instruction, uint8_t *memory_address);
-void OSD_write_new_character(uint8_t *new_character_table, uint8_t character_number);
-void OSD_read_character(uint8_t *table_to_save_character, uint8_t character_number);
+void OSD_SPI_read(uint8_t instruction, uint8_t* memory_address);
+void OSD_write_new_character(uint8_t* new_character_table, uint8_t character_number);
+void OSD_read_character(uint8_t* table_to_save_character, uint8_t character_number);
 void OSD_clear_Display_Memory();
 
 void OSD_write_to_Display_Memory_8bit(uint8_t character_number, uint16_t character_position_on_display, uint8_t attributes);
 
 void OSD_write_to_Display_Memory_16bit(uint8_t character_number, uint16_t character_position_on_display);
-void OSD_write_to_Display_Memory_16bit_AI(uint8_t *character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
+void OSD_write_to_Display_Memory_16bit_AI(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
 bool is_OSD_busy();
 void OSD_print_logo();
 void OSD_print_battery_voltage();
@@ -73,5 +72,6 @@ void OSD_print_battery_cell_voltage();
 void OSD_print_time();
 void OSD_print_flight_mode();
 void OSD_print_warnings();
+void OSD_update_logo_characters();
 
 #endif /* OSD_H_ */

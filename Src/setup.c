@@ -28,11 +28,17 @@ static void setup_GPIOA();		 // GPIOA (pin 2 - TIM2_CH3; pin 3 - TIM2_CH4; pin 4
 static void setup_GPIOB();		 // GPIOB (pin 0 - TIM3_CH3; pin 1 - TIM3_CH4; pin 3 - CS_SPI3; pin 4 -  LED; pin 5 - blue LED; pin 6 - I2C1_SCL; pin 7 - I2C1_SDA; pin 10 - TX USART3, pin 12 - CS_SPI2, pin 13 - SCLK_SPI2, pin 14 - MISO_SPI2, pin 15 - MOSI_SPI2)
 static void setup_GPIOC();		 // GPIOC (pin 0 - invert RX; pin 1 - battery voltage (ADC123_IN11) pin 4 - EXTI (INT MPU6000); pin 5 - USB detection; pin 6 - TX USART6; pin 7 - RX USART6; pin 10 - SCLK_SPI3; pin 11 - MISO_SPI3; pin 12 - MOSI_SPI3)
 static void setup_TIM5();		 // setup TIM5 global time and delay functions
+#if defined(ESC_PROTOCOL_PWM)	
 static void setup_PWM();		 // if you use PWM for ESC
+#elif defined(ESC_PROTOCOL_BDSHOT)
 static void setup_BDshot();		 //	if you use Bidirectional DShot for ESC
+#elif defined(ESC_PROTOCOL_DSHOT)
 static void setup_Dshot();		 // if you use Dshot for ESC
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
 static void setup_Dshot_burst(); // if Dshot is capable of burst transfer
+#elif defined(ESC_PROTOCOL_ONESHOT125)
 static void setup_OneShot125();	 // if you use OneShot125 for ESC
+#endif
 static void setup_USART1();		 // USART for radioreceiver
 static void setup_USART3();		 // USART for communication via (3Dradio or bluetooth) - UNUSED
 static void setup_USART6();		 // USART for communication via (3Dradio or bluetooth)
@@ -394,7 +400,7 @@ static void setup_TIM5(void)
 	TIM5->EGR |= TIM_EGR_UG;
 	TIM5->CR1 |= TIM_CR1_CEN;
 }
-
+#if defined(ESC_PROTOCOL_PWM)	
 static void setup_PWM()
 {
 	// enable TIM2 clock:
@@ -449,7 +455,7 @@ static void setup_PWM()
 	TIM3->EGR |= TIM_EGR_UG;
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
-
+#elif defined(ESC_PROTOCOL_BDSHOT)
 static void setup_BDshot()
 {
 	//	TIM1 - only for generating time basement all outputs are set by GPIOs:
@@ -527,7 +533,7 @@ static void setup_BDshot()
 	TIM8->EGR |= TIM_EGR_UG;
 	TIM8->CR1 |= TIM_CR1_CEN;
 }
-
+#elif defined(ESC_PROTOCOL_DSHOT)
 static void setup_Dshot()
 {
 	//	TIM2:
@@ -597,6 +603,7 @@ static void setup_Dshot()
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
 
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
 static void setup_Dshot_burst()
 {
 
@@ -672,7 +679,7 @@ static void setup_Dshot_burst()
 	TIM3->EGR |= TIM_EGR_UG;
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
-
+#elif defined(ESC_PROTOCOL_ONESHOT125)
 static void setup_OneShot125()
 {
 
@@ -746,6 +753,7 @@ static void setup_OneShot125()
 	TIM3->EGR |= TIM_EGR_UG;
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
+#endif
 
 static void setup_USART1()
 {
@@ -923,19 +931,9 @@ static void setup_DMA()
 	// bidirectional DSHOT:
 #elif defined(ESC_PROTOCOL_BDSHOT)
 	// for TIM1
-	DMA2_Stream6->CR = 0x0;
-	while (DMA2_Stream6->CR & DMA_SxCR_EN)
-	{
-		; // wait
-	}
 	DMA2_Stream6->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	// all the other parameters will be set afterward
 
-	DMA2_Stream2->CR = 0x0;
-	while (DMA2_Stream2->CR & DMA_SxCR_EN)
-	{
-		; // wait
-	}
 	DMA2_Stream2->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	// all the other parameters will be set afterward
 
@@ -993,6 +991,10 @@ static void setup_DMA()
 	DMA2_Stream3->CR |= DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	DMA2_Stream3->PAR = (uint32_t)(&(SPI1->DR));
 
+	//	SPI2 - OSD transmission
+	DMA1_Stream4->CR |= DMA_SxCR_DIR_0 | DMA_SxCR_MINC | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA1_Stream4->PAR = (uint32_t)(&(SPI2->DR));
+	// address and number of bytes will be set before each transmission
 
 	//	ADC1:
 	DMA2_Stream4->CR |= DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1;
@@ -1003,11 +1005,6 @@ static void setup_DMA()
 	// I2C1:
 #if defined(USE_I2C1)
 	// reading
-	DMA1_Stream0->CR = 0x0;
-	while (DMA1_Stream0->CR & DMA_SxCR_EN)
-	{
-		; // wait
-	}
 	DMA1_Stream0->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	DMA1_Stream0->PAR = (uint32_t)(&(I2C1->DR));
 	DMA1_Stream0->M0AR = (uint32_t)(I2C1_read_buffer); // it will be set during reception anyway
@@ -1089,6 +1086,7 @@ void setup_NVIC_1()
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
 	NVIC_SetPriority(EXTI15_10_IRQn, 8);
 }
+
 void setup_NVIC_2()
 {
 	//	nvic interrupt enable (USART6 interrupt):
@@ -1125,6 +1123,8 @@ void setup_NVIC_2()
 #if defined(USE_FLASH_BLACKBOX)
 	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
 #endif
+	NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+	NVIC_SetPriority(DMA1_Stream4_IRQn, 17);
 
 	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 	NVIC_SetPriority(DMA1_Stream6_IRQn, 14);

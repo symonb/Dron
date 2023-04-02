@@ -16,7 +16,7 @@
 #include "tasks.h"
 #include "adc1.h"
 #include "battery.h"
-#include "connection.h"
+#include "telemetry.h"
 #include "scheduler.h"
 
 static void scheduler_reschedule(scheduler_t* scheduler);

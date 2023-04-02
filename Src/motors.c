@@ -3,16 +3,22 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "motors.h"
-
+#if defined(ESC_PROTOCOL_BDSHOT)||defined(ESC_PROTOCOL_DSHOT) || defined(ESC_PROTOCOL_DSHOT_BURST)
 static uint16_t calculate_Dshot_checksum(uint16_t value);
 static uint16_t prepare_Dshot_package(uint16_t value);
+#endif
+#if defined(ESC_PROTOCOL_DSHOT)
 static void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
-static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)
 static void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
+#elif defined(ESC_PROTOCOL_PWM) || defined(ESC_PROTOCOL_ONESHOT125)
 static void prepare_OneShot_PWM();
+#elif defined(ESC_PROTOCOL_BDSHOT)
+static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
 static bool BDshot_check_checksum(uint16_t value);
 static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_shift);
 static void read_BDshot_response(uint32_t value, uint8_t motor);
+#endif
 
 #if defined(ESC_PROTOCOL_DSHOT)
 //	motor 1
@@ -207,9 +213,9 @@ void update_motors(timeUs_t current_time)
     update_motors_rpm();
 
     fill_bb_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),
-                         prepare_Dshot_package(*motor_2_value_pointer),
-                         prepare_Dshot_package(*motor_3_value_pointer),
-                         prepare_Dshot_package(*motor_4_value_pointer));
+        prepare_Dshot_package(*motor_2_value_pointer),
+        prepare_Dshot_package(*motor_3_value_pointer),
+        prepare_Dshot_package(*motor_4_value_pointer));
 
     bdshot_reception_1 = true;
     bdshot_reception_2 = true;
@@ -288,9 +294,9 @@ void update_motors(timeUs_t current_time)
     //	Dshot:
 
     fill_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),
-                      prepare_Dshot_package(*motor_2_value_pointer),
-                      prepare_Dshot_package(*motor_3_value_pointer),
-                      prepare_Dshot_package(*motor_4_value_pointer));
+        prepare_Dshot_package(*motor_2_value_pointer),
+        prepare_Dshot_package(*motor_3_value_pointer),
+        prepare_Dshot_package(*motor_4_value_pointer));
 
     DMA1_Stream6->PAR = (uint32_t)(&(TIM2->CCR4));
     DMA1_Stream6->M0AR = (uint32_t)(dshot_buffer_1);
@@ -367,7 +373,7 @@ uint16_t prepare_Dshot_package(uint16_t value)
 }
 #if defined(ESC_PROTOCOL_DSHOT)
 static void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
-                              uint16_t m4_value)
+    uint16_t m4_value)
 {
     for (uint8_t i = 2; i < DSHOT_BUFFER_LENGTH; i++)
     {
@@ -440,7 +446,7 @@ void preset_bb_Dshot_buffers()
 }
 
 static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
-                                 uint16_t m4_value)
+    uint16_t m4_value)
 {
     // Each bite is preset (lowering edge at first and rising edge after DSHOT_1_length rest values are 0 so there will be no changes in GPIO uotput registers).
     // Now it is needed to only decide about rising edge after DSHOT_0_length (if bit is 0) or seting 0 so LOW state will stay until DSHOT_1_length.
@@ -505,7 +511,7 @@ void preset_bb_Dshot_buffers()
 }
 
 static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
-                                 uint16_t m4_value)
+    uint16_t m4_value)
 {
     // each bite frame is divided in sections where slope can vary:
     for (uint8_t i = 0; i < (DSHOT_BB_BUFFER_LENGTH - 2); i++) // last 2 bits are always high (logic 0)
@@ -657,7 +663,7 @@ static void read_BDshot_response(uint32_t value, uint8_t motor)
 #define iv 0xFFFFFFFF
     static const uint32_t GCR_table[32] = {
         iv, iv, iv, iv, iv, iv, iv, iv, iv, 9, 10, 11, iv, 13, 14, 15,
-        iv, iv, 2, 3, iv, 5, 6, 7, iv, 0, 8, 1, iv, 4, 12, iv};
+        iv, iv, 2, 3, iv, 5, 6, 7, iv, 0, 8, 1, iv, 4, 12, iv };
 
     value = (value ^ (value >> 1)); // now we have GCR value
 
@@ -686,7 +692,7 @@ static void read_BDshot_response(uint32_t value, uint8_t motor)
 
 #if defined(ESC_PROTOCOL_BDSHOT_BURST)
 static void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,
-                                    uint16_t m3_value, uint16_t m4_value)
+    uint16_t m3_value, uint16_t m4_value)
 {
 
     // buffer array looks like this [first bit motor1; first bit motor2 ;...; last bit motor1;last bit motor2]

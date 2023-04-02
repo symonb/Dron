@@ -13,21 +13,14 @@
 #include "filters.h"
 #include "flash.h"
 #include "math/statistics.h"
+#include "drivers/SPI1.h"
 #include "MPU6000.h"
 
 static void	check_gyro_version(gyro_t* gyro);
 static void setup_conf();
 static void setup_gyro();
 static void setup_acc();
-static void SPI1_enable();
-static void SPI1_disable();
-static void CS_IMU_enable();
-static void CS_IMU_disable();
-static void SPI1_transmit(uint8_t* data, int size);
-static void SPI1_receive(uint8_t* data, int size);
-static void SPI1_receive_DMA(uint8_t* data, uint16_t size);
-static bool failsafe_CONF();
-static bool failsafe_SPI();
+
 #if defined(IMU_TEST)
 static void MPU6000_self_test_configuration();
 static void MPU6000_self_test_measurements();
@@ -88,7 +81,8 @@ static void MPU6000_self_test_measurements();
 static float transform_matrix[3][3] = { {-1, 0, 0}, {0, -1, 0}, {0, 0, 1} };
 static uint8_t rx_buffer[14];
 
-// RX:
+// ------SPI1 with DMA usage-----
+// reception:
 void DMA2_Stream0_IRQHandler(void)
 {
 	// if stream0 transfer is completed:
@@ -114,8 +108,7 @@ void DMA2_Stream0_IRQHandler(void)
 		gyro_1.new_raw_data_flag = true;
 	}
 }
-
-// TX:
+// transmission:
 void DMA2_Stream3_IRQHandler(void)
 {
 	// if stream3 transfer is completed:
@@ -124,10 +117,12 @@ void DMA2_Stream3_IRQHandler(void)
 		DMA2->LIFCR |= DMA_LIFCR_CTCIF3;
 		DMA2_Stream3->CR &= ~DMA_SxCR_EN;
 
-		CS_IMU_disable();
+		CS_SPI1_disable();
 		SPI1_disable();
 	}
 }
+//--------END--------
+
 
 
 void EXTI4_IRQHandler()
@@ -175,165 +170,27 @@ void setup_MPU6000()
 
 }
 
-static void SPI1_enable()
-{
-	SPI1->CR1 |= SPI_CR1_SPE; //	enabling SPI1
-}
-
-static void SPI1_disable()
-{
-	SPI1->CR1 &= ~SPI_CR1_SPE; //	disabling SPI1
-}
-
-static void CS_IMU_enable()
-{
-	GPIOA->BSRRH |= GPIO_BSRR_BS_4;
-}
-
-static void CS_IMU_disable()
-{
-	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
-}
-
-static void SPI1_transmit(uint8_t* data, int size)
-{
-	//----------------STEPS--------------------
-	/* 1 Wait for TXE bit to set in the Status Register
-	 * 2 Write the Register Adress (&~x80 for writing) to the Data register
-	 * 3 Write first byte that you want send to slave
-	 * 4 Receive 1 data - it is anything (slave started sending it when received first bit of first byte so it is not interesting byte for sure) ignore it
-	 * 5 Send second data and repeat until you receive all data you wanted
-	 * 6 After last transmission you need to clear DR and wait until everything stop (more inf. in datasheet)
-	 * */
-	int i = 0;
-
-	while (i < size)
-	{
-		time_flag4_1 = get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_TXE))
-		{
-			if (failsafe_SPI())
-			{
-				break; // wait
-			}
-		}
-		SPI1->DR = data[i]; // data sending as soon as TX flag is set
-		i++;
-	}
-
-	time_flag4_1 = get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	time_flag4_1 = get_Global_Time();
-	while (((SPI1->SR) & SPI_SR_BSY))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	SPI1->DR;
-	SPI1->SR;
-}
-
-static void SPI1_receive(uint8_t* data, int size)
-{
-	/*
-	 * 1 Wait for TXE and send dummy data, wait for RXNE and receive your data. Repeat until you receive all data
-	 * 2 Wait for TXE and BSY flag
-	 * */
-	while (size > 0)
-	{
-		time_flag4_1 = get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_TXE))
-		{
-			if (failsafe_SPI())
-			{
-				break; // wait
-			}
-		}
-		SPI1->DR = 0xAA; // send anything IMPORTANT!
-		time_flag4_1 = get_Global_Time();
-		while (!((SPI1->SR) & SPI_SR_RXNE))
-		{
-			if (failsafe_SPI())
-			{
-				break; // wait
-			}
-		}
-		*data++ = SPI1->DR;
-		size--;
-		// if (size == 1) {
-		// 	SPI1_disable();
-		// }
-	}
-
-
-	// wait for TXE flag
-	time_flag4_1 = get_Global_Time();
-	while (!((SPI1->SR) & SPI_SR_TXE))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	// wait for BSY flag
-	time_flag4_1 = get_Global_Time();
-	while (((SPI1->SR) & SPI_SR_BSY))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	SPI1->DR;
-	SPI1->SR;
-
-}
-
-static void SPI1_receive_DMA(uint8_t* data, uint16_t size)
-{
-	// set parameters of reception:
-	DMA2_Stream0->M0AR = (uint32_t)(data);
-	DMA2_Stream0->NDTR = size;
-
-	DMA2_Stream3->M0AR = (uint32_t)(rx_buffer);
-	DMA2_Stream3->NDTR = size;
-
-	SPI1_enable();
-	// enable DMA:
-
-	DMA2_Stream0->CR |= DMA_SxCR_EN;
-	DMA2_Stream3->CR |= DMA_SxCR_EN;
-}
-
 void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value)
 {
 	static uint8_t data[2];
 	data[0] = adress_of_register & 0x7F; // first bit of 1 byte has to be write (0) or read(1)
 	data[1] = value;
-	CS_IMU_enable();
+	CS_SPI1_enable();
 	SPI1_transmit(data, 2);
-	CS_IMU_disable();
+	CS_SPI1_disable();
 }
 
 void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t* data,
 	uint16_t size)
 {
-	CS_IMU_enable();
+	CS_SPI1_enable();
 	SPI1_transmit(&adress_of_register, 1);
 
 	// SPI1->CR1 |= SPI_CR1_RXONLY;
 
 	SPI1_receive(data, size);
 
-	CS_IMU_disable();
+	CS_SPI1_disable();
 
 
 }
@@ -342,7 +199,7 @@ void MPU6000_SPI_read_DMA(uint8_t instruction, uint8_t* data, uint16_t size)
 {
 	// RXONLY mode doesn't work so full duplex DMA:
 	SPI1_enable();
-	CS_IMU_enable();
+	CS_SPI1_enable();
 	SPI1_transmit(&instruction, 1);
 	SPI1_disable();
 	SPI1_receive_DMA(data, size);
@@ -361,7 +218,6 @@ static void setup_conf()
 {
 	// enable SPI1
 	SPI1_enable();
-	uint8_t test;
 	uint8_t data;
 	uint8_t register_address;
 	// 0x6A - address of (106)  User Control register:
@@ -603,29 +459,7 @@ void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time)
 
 }
 
-static bool failsafe_CONF()
-{
-	//	waiting as Data will be sent or failsafe if set time passed
-	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
-	{
-		FailSafe_status = FS_SETUP_ERROR;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-		return true;
-	}
-	return false;
-}
 
-static bool failsafe_SPI()
-{
-	//	waiting as Data will be sent or failsafe if set time passed
-	if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
-	{
-		FailSafe_status = FS_SPI_IMU_ERROR;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-		return true;
-	}
-	return false;
-}
 #if defined(IMU_TEST)
 
 static void MPU6000_self_test_configuration()

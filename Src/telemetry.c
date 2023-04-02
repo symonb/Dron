@@ -1,5 +1,5 @@
 /*
- * connection.c
+ * telemetry.c
  *
  *  Created on: 17.03.2021
  *      Author: symon
@@ -8,7 +8,7 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
-#include "connection.h"
+#include "telemetry.h"
 #include "flash.h"
 
 uint8_t table_of_bytes_to_sent[2 * ALL_ELEMENTS_TO_SEND + 4];
@@ -116,7 +116,7 @@ void USART3_IRQHandler(void)
 	if (USART3->SR & USART_SR_IDLE)
 	{
 		USART3->DR; // If not read usart will crush
-					// DMA1_StreamX->CR &= ~DMA_SxCR_EN;     // Disable DMA on stream X
+		// DMA1_StreamX->CR &= ~DMA_SxCR_EN;     // Disable DMA on stream X
 	}
 }
 
@@ -144,7 +144,7 @@ void print(uint16_t x[], uint8_t data_to_send)
 	DMA2_Stream7->NDTR = 2 * ALL_ELEMENTS_TO_SEND + 4;
 
 	DMA2_Stream7->CR |= DMA_SxCR_EN; // DMA option
-									 // USART6->CR1 |= USART_CR1_TXEIE;			//Interrupt option
+	// USART6->CR1 |= USART_CR1_TXEIE;			//Interrupt option
 }
 
 void print_flash(uint8_t data_pack_size)
@@ -169,7 +169,7 @@ void print_flash(uint8_t data_pack_size)
 			toggle_BLUE_LED();
 			// read data from flash:
 			flash_read_data(FLASH_READ_DATA, read_address, flash_read_buffer,
-							256);
+				256);
 			read_address += 0x100;
 			transmitting_is_Done = 0;
 

@@ -9,6 +9,7 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
+#include"stdlib.h"
 #include "filters.h"
 
 #if defined(USE_FIR_FILTERS)

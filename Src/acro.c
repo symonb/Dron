@@ -12,6 +12,7 @@
 #include "global_functions.h"
 #include "MPU6000.h"
 #include "filters.h"
+#include "telemetry.h"
 #include "acro.h"
 
 static ThreeF corrections(float);
@@ -24,11 +25,6 @@ static ThreeF corrections(float);
 static PIDF R_PIDF = { 500, 0, 25, 0 }; // 590 30 55 0
 static PIDF P_PIDF = { 700, 0, 40, 0 }; // 750 30 65 0
 static PIDF Y_PIDF = { 700, 0, 0, 0 };  // 1100 30 30 0
-
-// 3s
-// static PIDF R_PIDF = { 350, 400, 5, 5};
-// static PIDF P_PIDF = { 350, 400, 5, 5};
-// static PIDF Y_PIDF = { 1000, 50, 0.5, 0.5 };
 
 static ThreeF err = { 0, 0, 0 };
 static ThreeF sum_err = { 0, 0, 0 };

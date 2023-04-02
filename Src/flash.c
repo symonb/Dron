@@ -11,18 +11,12 @@
 #include "global_functions.h"
 #include <string.h>
 #include <math.h>
+#include "drivers/SPI3.h"
 #include "flash.h"
 
-static void CS_flash_disable();
-static void CS_flash_enable();
-static void SPI3_enable();
-static void SPI3_disable();
-static void SPI_transmit(uint8_t* data, uint8_t size);
-static void SPI_transmit_DMA(uint8_t* data, int size);
-static void SPI_receive(uint8_t* data, int size);
-static void SPI_receive_DMA(uint8_t* data, int size);
+
 static void flash_write_enable();
-static bool failsafe_SPI();
+
 
 // RX:
 #if !defined(USE_I2C1)
@@ -37,7 +31,7 @@ void DMA1_Stream0_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (!((SPI3->SR) & SPI_SR_TXE))
 		{
-			if (failsafe_SPI())
+			if (failsafe_SPI3())
 			{
 				break; // wait
 			}
@@ -45,7 +39,7 @@ void DMA1_Stream0_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (((SPI3->SR) & SPI_SR_BSY))
 		{
-			if (failsafe_SPI())
+			if (failsafe_SPI3())
 			{
 				break; // wait
 			}
@@ -54,7 +48,7 @@ void DMA1_Stream0_IRQHandler(void)
 		SPI3->SR;
 		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
 
-		CS_flash_disable();
+		CS_SPI3_disable();
 		SPI3_disable();
 	}
 }
@@ -72,7 +66,7 @@ void DMA1_Stream5_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (!((SPI3->SR) & SPI_SR_TXE))
 		{
-			if (failsafe_SPI())
+			if (failsafe_SPI3())
 			{
 				break; // wait
 			}
@@ -80,7 +74,7 @@ void DMA1_Stream5_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (((SPI3->SR) & SPI_SR_BSY))
 		{
-			if (failsafe_SPI())
+			if (failsafe_SPI3())
 			{
 				break; // wait
 			}
@@ -90,7 +84,7 @@ void DMA1_Stream5_IRQHandler(void)
 		DMA1_Stream5->CR &= ~DMA_SxCR_EN;
 		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
 
-		CS_flash_disable();
+		CS_SPI3_disable();
 		SPI3_disable();
 	}
 }
@@ -104,147 +98,6 @@ bool is_flash_busy()
 	return false;
 }
 
-static void CS_flash_enable()
-{
-	GPIOB->BSRRH |= GPIO_BSRR_BS_3;
-}
-
-static void CS_flash_disable()
-{
-	GPIOB->BSRRL |= GPIO_BSRR_BS_3;
-}
-
-static void SPI3_enable()
-{
-	SPI3->CR1 |= SPI_CR1_SPE; //	enabling SPI3
-}
-
-static void SPI3_disable()
-{
-	SPI3->CR1 &= ~SPI_CR1_SPE; //	disabling SPI3
-}
-
-static void SPI_transmit(uint8_t* data, uint8_t size)
-{
-
-	int i = 0;
-
-	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	SPI3->DR = data[i]; // first data
-	i++;
-
-	while (i < size)
-	{
-		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_TXE))
-		{
-			if (failsafe_SPI())
-			{
-				break; // wait
-			}
-		}
-		SPI3->DR = data[i]; // second and following data sending as soon as TX flag is set
-		i++;
-	}
-
-	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	time_flag5_1 = get_Global_Time();
-	while (((SPI3->SR) & SPI_SR_BSY))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	SPI3->DR;
-	SPI3->SR;
-}
-
-static void SPI_transmit_DMA(uint8_t* data, int size)
-{
-
-	DMA1_Stream5->M0AR = (uint32_t)(data);
-	DMA1_Stream5->NDTR = size;
-	DMA1_Stream5->CR |= DMA_SxCR_EN;
-}
-
-static void SPI_receive(uint8_t* data, int size)
-{
-
-	while (size > 0)
-	{
-
-		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_TXE))
-		{
-			if (failsafe_SPI())
-			{
-				break; // wait
-			}
-		}
-		SPI3->DR = FLASH_DUMMY_BYTE; // send anything IMPORTANT!
-		time_flag5_1 = get_Global_Time();
-		while (!((SPI3->SR) & SPI_SR_RXNE))
-		{
-			if (failsafe_SPI())
-			{
-				break; // wait
-			}
-		}
-		*data++ = SPI3->DR;
-		size--;
-	}
-
-	// wait for TXE flag
-	time_flag5_1 = get_Global_Time();
-	while (!((SPI3->SR) & SPI_SR_TXE))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-	// wait for BSY flag
-	time_flag5_1 = get_Global_Time();
-	while (((SPI3->SR) & SPI_SR_BSY))
-	{
-		if (failsafe_SPI())
-		{
-			break; // wait
-		}
-	}
-
-	SPI3->DR;
-	SPI3->SR;
-}
-
-#if !defined(USE_I2C1)
-static void SPI_receive_DMA(uint8_t* data, int size)
-{
-
-	DMA1_Stream0->M0AR = (uint32_t)(data);
-	DMA1_Stream0->NDTR = size;
-	DMA1_Stream0->CR |= DMA_SxCR_EN;
-
-	DMA1_Stream5->M0AR = (uint32_t)(data);
-	DMA1_Stream5->NDTR = size;
-	DMA1_Stream5->CR |= DMA_SxCR_EN;
-}
-#endif
 
 void flash_SPI_write(uint8_t instruction, uint8_t* data, uint8_t size)
 {
@@ -253,12 +106,12 @@ void flash_SPI_write(uint8_t instruction, uint8_t* data, uint8_t size)
 	flash_write_enable();
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_transmit(data, size);
+	SPI3_transmit(&instruction, 1);
+	SPI3_transmit(data, size);
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 }
 
@@ -269,23 +122,23 @@ void flash_SPI_write_DMA(uint8_t instruction, uint8_t* data, int size)
 	flash_write_enable();
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_transmit_DMA(data, size);
+	SPI3_transmit(&instruction, 1);
+	SPI3_transmit_DMA(data, size);
 }
 
 void flash_SPI_read(uint8_t instruction, uint8_t* memory_address,
 	int number_of_bytes)
 {
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_transmit(memory_address, 3);
-	SPI_receive(memory_address, number_of_bytes);
+	SPI3_transmit(&instruction, 1);
+	SPI3_transmit(memory_address, 3);
+	SPI3_receive(memory_address, number_of_bytes);
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 }
 
@@ -294,10 +147,10 @@ void flash_SPI_read_DMA(uint8_t instruction, uint8_t* data, int size)
 {
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_receive_DMA(data, size);
+	SPI3_transmit(&instruction, 1);
+	SPI3_receive_DMA(data, size);
 }
 #endif
 
@@ -307,11 +160,11 @@ static void flash_write_enable()
 	uint8_t instruction = FLASH_WRITE_ENABLE;
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
+	SPI3_transmit(&instruction, 1);
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 }
 
@@ -322,12 +175,12 @@ void flash_erase(uint8_t instruction, uint8_t* address)
 	flash_write_enable();
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_transmit(address, 3);
+	SPI3_transmit(&instruction, 1);
+	SPI3_transmit(address, 3);
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 }
 
@@ -340,11 +193,11 @@ void flash_full_chip_erase()
 	flash_write_enable();
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
+	SPI3_transmit(&instruction, 1);
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 }
 
@@ -353,13 +206,13 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	uint8_t status;
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
 	// wait for TXE flag before sending anything
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
-		if (failsafe_SPI())
+		if (failsafe_SPI3())
 		{
 			break; // wait
 		}
@@ -370,7 +223,7 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
-		if (failsafe_SPI())
+		if (failsafe_SPI3())
 		{
 			break; // wait
 		}
@@ -382,7 +235,7 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_RXNE))
 	{
-		if (failsafe_SPI())
+		if (failsafe_SPI3())
 		{
 			break; // wait
 		}
@@ -394,7 +247,7 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
-		if (failsafe_SPI())
+		if (failsafe_SPI3())
 		{
 			break; // wait
 		}
@@ -403,7 +256,7 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_RXNE))
 	{
-		if (failsafe_SPI())
+		if (failsafe_SPI3())
 		{
 			break; // wait
 		}
@@ -412,7 +265,7 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	status = SPI3->DR;
 	SPI3->SR;
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 
 	return status;
@@ -426,18 +279,7 @@ void flash_read_unique_ID(uint8_t* memory_address)
 	memmove(memory_address, &temp[1], sizeof(temp[1]) * 8);
 }
 
-static bool failsafe_SPI()
-{
 
-	//	waiting as Data will be sent or failsafe (if set time passed)
-	if ((get_Global_Time() - time_flag5_1) >= SEC_TO_US(TIMEOUT_VALUE))
-	{
-		FailSafe_status = FS_SPI_FLASH_ERROR;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-		return true;
-	}
-	return false;
-}
 
 void flash_save_data(uint8_t instruction, uint32_t memory_address,
 	uint8_t* data, int number_of_bytes)
@@ -450,11 +292,11 @@ void flash_save_data(uint8_t instruction, uint32_t memory_address,
 	flash_write_enable();
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_transmit(memory_address_tab, 3);
-	SPI_transmit_DMA(data, number_of_bytes);
+	SPI3_transmit(&instruction, 1);
+	SPI3_transmit(memory_address_tab, 3);
+	SPI3_transmit_DMA(data, number_of_bytes);
 }
 
 void flash_read_data(uint8_t instruction, uint32_t memory_address,
@@ -465,13 +307,13 @@ void flash_read_data(uint8_t instruction, uint32_t memory_address,
 									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
 
 	SPI3_enable();
-	CS_flash_enable();
+	CS_SPI3_enable();
 
-	SPI_transmit(&instruction, 1);
-	SPI_transmit(memory_address_tab, 3);
-	SPI_receive(data, number_of_bytes);
+	SPI3_transmit(&instruction, 1);
+	SPI3_transmit(memory_address_tab, 3);
+	SPI3_receive(data, number_of_bytes);
 
-	CS_flash_disable();
+	CS_SPI3_disable();
 	SPI3_disable();
 }
 

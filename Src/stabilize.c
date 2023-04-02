@@ -10,28 +10,30 @@
 #include "MPU6000.h"
 #include "math/quaternions.h"
 #include "flash.h"
+#include "telemetry.h"
 #include "stabilize.h"
 #include "tasks.h"
 
+#if defined(STABILIZE_FILTER_COMPLEMENTARY)
 static Quaternion q_acc = { 1, 0, 0, 0 };
 static Quaternion q_gyro = { 1, 0, 0, 0 };
-
 static Quaternion gyro_angles(Quaternion q_position, float dt);
 static Quaternion acc_angles();
 static void complementary_filter(float dt);
+#elif defined(STABILIZE_FILTER_MAGDWICK)
 static void madgwick_filter(float dt);
+#elif defined(STABILIZE_FILTER_MAHONY)
 static void mahony_filter(float dt);
+#endif
 
-static ThreeF corrections(float dt);
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt);
 
 // err values - difference between set value and measured value:
 static ThreeF err = { 0, 0, 0 };
 static ThreeF sum_err = { 0, 0, 0 };
-static ThreeF last_err = { 0, 0, 0 };
 static ThreeF D_corr = { 0, 0, 0 };
-static ThreeF F_corr = { 0, 0, 0 };
-static ThreeF last_D_corr = { 0, 0, 0 };
+
+
 
 // 4s
 //  DRONE 3D PRINT:
@@ -64,6 +66,7 @@ void stabilize(timeUs_t dt_us)
 	desired_rotation_speed.yaw = temp;
 }
 
+#if defined(STABILIZE_FILTER_COMPLEMENTARY)
 static Quaternion gyro_angles(Quaternion q_position, float dt)
 {
 
@@ -89,7 +92,6 @@ static Quaternion gyro_angles(Quaternion q_position, float dt)
 
 static Quaternion acc_angles(Quaternion q_position)
 {
-
 	static ThreeF gravity_estimated = { 0, 0, 0 };
 	ThreeF acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
 	static double norm;
@@ -143,7 +145,7 @@ static void complementary_filter(float dt)
 	q_global_position = quaternions_multiplication(delta_q_acc, q_gyro);
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
 }
-
+#elif defined(STABILIZE_FILTER_MAGDWICK)
 static void madgwick_filter(float dt)
 {
 
@@ -250,6 +252,7 @@ static void madgwick_filter(float dt)
 #endif
 }
 
+#elif defined(STABILIZE_FILTER_MAHONY)
 static void mahony_filter(float dt)
 {
 	static Quaternion q_prim;
@@ -323,47 +326,7 @@ static void mahony_filter(float dt)
 	// compute Euler angles from quaternion:
 	global_euler_angles = Quaternion_to_Euler_angles(q_global_position);
 }
-
-static ThreeF corrections(float dt)
-{
-	static ThreeF corr;
-
-	err.roll = ((receiver.channels[0] - 1500) / 500. - global_angles.roll / MAX_ROLL_ANGLE);
-	err.pitch = ((receiver.channels[1] - 1500) / 500. - global_angles.pitch / MAX_PITCH_ANGLE);
-	err.yaw = (receiver.channels[3] - 1500) / 500. - (Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y;
-
-	//	estimate Integral by sum (I term):
-	sum_err.roll += err.roll * dt;
-	sum_err.pitch += err.pitch * dt;
-	sum_err.yaw += err.yaw * dt;
-
-	// D correction will be divide for measurements and set-point corrections:
-	D_corr.roll = -Gyro_Acc[0] * 0.0305185f;
-	D_corr.pitch = -Gyro_Acc[1] * 0.0305185f;
-	D_corr.yaw = (err.yaw - last_err.yaw) / dt;
-
-	F_corr.roll = (receiver.channels[0] - receiver.channels_previous_values[0]) * 0.002f / dt;
-	F_corr.pitch = (receiver.channels[1] - receiver.channels_previous_values[1]) * 0.002f / dt;
-	F_corr.yaw = 0;
-
-	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
-
-	//	calculate corrections:
-	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll + R_PIDF.D * D_corr.roll) * 2;
-	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch + P_PIDF.D * D_corr.pitch) * 2;
-	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw + Y_PIDF.D * D_corr.yaw) * 2;
-
-	//	set current errors as last errors:
-	last_err.roll = err.roll;
-	last_err.pitch = err.pitch;
-	last_err.yaw = err.yaw;
-
-	last_D_corr.roll = D_corr.roll;
-	last_D_corr.pitch = D_corr.pitch;
-	last_D_corr.yaw = D_corr.yaw;
-
-	return corr;
-}
+#endif
 
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt)
 {

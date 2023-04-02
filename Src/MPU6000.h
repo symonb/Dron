@@ -1,14 +1,9 @@
-/*
- * MPU6000.h
- *
- *  Created on: 03.01.2021
- *      Author: filip
- */
+
 
 #ifndef MPU6000_H_
 #define MPU6000_H_
 
- // registers:
+// registers:
 #define MPU6000_ACCEL_READ 0x3B|0x80
 #define MPU6000_TEMP_READ  0x41|0x80
 #define MPU6000_GYRO_READ  0x43|0x80

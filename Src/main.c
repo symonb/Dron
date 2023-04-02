@@ -16,17 +16,17 @@
 #include "stabilize.h"
 #include "acro.h"
 #include "ibus.h"
-#include "connection.h"
+#include "telemetry.h"
 #include "MPU6000.h"
 #include "flash.h"
 #include "tasks.h"
-#include "i2c1.h"
+#include "drivers/i2c1.h"
 #include "scheduler.h"
 #include "adc1.h"
 
 #include "OSD.h"
 
-void main(void)
+int main(void)
 {
 	setup();
 	turn_OFF_BLUE_LED();
@@ -42,4 +42,5 @@ void main(void)
 	{
 		scheduler_execute(&main_scheduler);
 	}
+
 }

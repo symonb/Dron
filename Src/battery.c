@@ -4,7 +4,7 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "stdlib.h"
-
+#include "math.h"
 #include "battery.h"
 
 //-------------BATTERY------------
@@ -15,7 +15,7 @@ battery_t main_battery = {
     .voltage_stable = false,
     .cells_number = 0,
     .cell_voltage = 0,
-    .BATTERY_STATUS = BATTERY_NOT_CONNECTED};
+    .BATTERY_STATUS = BATTERY_NOT_CONNECTED };
 
 void battery_manage()
 {

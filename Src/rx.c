@@ -2,6 +2,8 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
+#include "flash.h"
+#include "stdlib.h"
 #include "rx.h"
 
 
@@ -202,5 +204,5 @@ static bool RX_initialization(rx_t* receiver, uint8_t channels_to_use) {
     }
     receiver->Throttle = MIN_RX_SIGNAL;
     receiver->new_data_flag = false;
-
+    return true;
 }

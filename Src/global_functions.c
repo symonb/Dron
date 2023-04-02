@@ -140,18 +140,6 @@ void delay_micro(uint16_t delay_time)
 	}
 }
 
-bool failsafe_PID_loop(timeUs_t* dt)
-{
-
-	if (*dt > SEC_TO_US(2. / FREQUENCY_MAIN_LOOP))
-	{
-		*dt = SEC_TO_US(2. / FREQUENCY_MAIN_LOOP);
-		FailSafe_status = FS_PID_LOOP_TIMEOUT;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-		return true;
-	}
-	return false;
-}
 
 void anti_windup(ThreeF* sum_err, PIDF* R_PIDF, PIDF* P_PIDF, PIDF* Y_PIDF)
 {
@@ -358,10 +346,6 @@ void EXTI15_10_IRQHandler()
 			err_counter[FS_NO_PREARM]++;
 			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case FS_SETUP_ERROR:
-			err_counter[FS_SETUP_ERROR]++;
-			FailSafe_status = FS_NO_FAILSAFE;
-			break;
 		case FS_I2C_ERROR:
 			err_counter[FS_I2C_ERROR]++;
 			FailSafe_status = FS_NO_FAILSAFE;
@@ -378,36 +362,13 @@ void EXTI15_10_IRQHandler()
 			err_counter[FS_SPI_OSD_ERROR]++;
 			FailSafe_status = FS_NO_FAILSAFE;
 			break;
-		case FS_PID_LOOP_TIMEOUT:
-			err_counter[FS_PID_LOOP_TIMEOUT]++;
-			FailSafe_status = FS_NO_FAILSAFE;
-			break;
 		case FS_GYRO_CALIBRATION:
 			err_counter[FS_GYRO_CALIBRATION]++;
 			FailSafe_status = FS_NO_FAILSAFE;
+			break;
+		default:
 			break;
 		}
 	}
 }
 
-void DMA1_Stream4_IRQHandler(void)
-{
-
-	if (DMA1->HISR & DMA_HISR_TCIF4)
-	{
-		DMA1->HIFCR |= DMA_HIFCR_CTCIF4;
-		DMA1_Stream4->CR &= ~DMA_SxCR_EN;
-	}
-	if (DMA1->HISR & DMA_HISR_HTIF4)
-	{
-		DMA1->HIFCR |= DMA_HIFCR_CHTIF4;
-	}
-	if (DMA1->HISR & DMA_HISR_DMEIF4)
-	{
-		DMA1->HIFCR |= DMA_HIFCR_CDMEIF4;
-	}
-	if (DMA1->HISR & DMA_HISR_TEIF4)
-	{
-		DMA1->HIFCR |= DMA_HIFCR_CTEIF4;
-	}
-}

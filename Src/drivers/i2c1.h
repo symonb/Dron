@@ -9,7 +9,7 @@
 #define I2C1_H_
 
 #include "stdbool.h"
-// Macros for sensor commands
+ // Macros for sensor commands
 
 #define PRE_SENS_RESET 0x1E
 #define PRE_SENS_ADC_READ 0x00
@@ -44,11 +44,11 @@
 
 
 void pressure_sensor_reset();
-void pressure_sensor_PROM_read(uint8_t *data);
-void pressure_sensor_ADC_read(uint8_t *data);
-void temp_sensor_ADC_read(uint8_t *data);
-void pressure_and_temp_calculation(uint8_t *raw_data, float *pressure, float *temperature );
-bool get_coefficients(uint8_t *data);
+void pressure_sensor_PROM_read(uint8_t* data);
+void pressure_sensor_ADC_read(uint8_t* data);
+void temp_sensor_ADC_read(uint8_t* data);
+void pressure_and_temp_calculation(uint8_t* raw_data, float* pressure, float* temperature);
+bool get_coefficients(uint8_t* data);
 void calibrate_sensor();
 
 extern float depth_ses_temperature;

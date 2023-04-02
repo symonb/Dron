@@ -104,7 +104,7 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #endif
 
 //------------ESC_PROTOCOLS----------
-#define ESC_PROTOCOL_BDSHOT // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125, ESC_PROTOCOL_BDSHOT, ESC_PROTOCOL_DSHOT, ESC_PROTOCOL_DSHOT_BURST - nieskonczone
+#define ESC_PROTOCOL_BDSHOT // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125, ESC_PROTOCOL_BDSHOT, ESC_PROTOCOL_DSHOT, ESC_PROTOCOL_DSHOT_BURST (not ended yet)
 #define BIT_BANGING_V1
 #define DSHOT_MODE 300 // 150 300 600 1200
 
@@ -153,9 +153,9 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_MAIN_LOOP 2000			//[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
+#define FREQUENCY_MAIN_LOOP 1500			//[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
 #define FREQUENCY_STABILIZATION_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 2000		 //[Hz]	SCHOULD BE AT LEAST AS MAIN_LOOP
+#define FREQUENCY_ESC_UPDATE 1500		 //[Hz]	SCHOULD BE AT LEAST AS MAIN_LOOP
 #define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible (>150)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 	30	 	//[Hz]
@@ -169,12 +169,10 @@ enum failsafe_t
 	FS_INCORRECT_CHANNELS_VALUES,
 	FS_RX_TIMEOUT,
 	FS_NO_PREARM,
-	FS_SETUP_ERROR,
 	FS_I2C_ERROR,
 	FS_SPI_IMU_ERROR,
 	FS_SPI_FLASH_ERROR,
 	FS_SPI_OSD_ERROR,
-	FS_PID_LOOP_TIMEOUT,
 	FS_GYRO_CALIBRATION,
 	FAILSAFES_COUNTER
 };
