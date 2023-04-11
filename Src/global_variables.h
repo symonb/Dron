@@ -92,7 +92,7 @@ typedef enum
 typedef struct
 {
 	rx_protocol_e type;
-	uint8_t number_of_channels;
+	const uint8_t number_of_channels;
 	uint8_t number_of_used_channels;
 	uint16_t* channels;
 	uint16_t* channels_previous_values;
@@ -104,9 +104,9 @@ typedef struct
 
 extern rx_t receiver;
 
-extern flight_mode_e flight_mode;
+extern volatile flight_mode_e flight_mode;
 
-extern enum arming_t ARMING_STATUS;
+extern volatile enum arming_t ARMING_STATUS;
 
 extern gyro_t gyro_1;
 extern acc_t acc_1;
@@ -236,7 +236,7 @@ extern uint16_t flash_write_counter;
 extern uint8_t flash_read_buffer[];
 extern uint16_t flash_read_counter;
 
-extern enum blackbox_t BLACKBOX_STATUS;
+extern volatile enum blackbox_t BLACKBOX_STATUS;
 extern uint32_t flash_global_write_address;
 
 extern float global_variable_monitor[];

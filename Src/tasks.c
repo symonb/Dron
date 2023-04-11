@@ -54,12 +54,12 @@ task_t all_tasks[TASKS_COUNT] =
 static void main_PID_fun(timeUs_t current_time)
 {
 	static timeUs_t last_time;
-	static timeUs_t dt;
-	dt = current_time - last_time;
+	timeUs_t dt = current_time - last_time;
 	last_time = current_time;
 	acro(dt);
 	gyro_1.new_filtered_data = false;
 }
+
 static bool main_PID_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
 	return gyro_1.new_filtered_data;
@@ -68,8 +68,7 @@ static bool main_PID_check_fun(timeUs_t current_time, timeUs_t delta_time)
 static void stabilization_fun(timeUs_t current_time)
 {
 	static timeUs_t last_time;
-	static timeUs_t dt;
-	dt = current_time - last_time;
+	timeUs_t dt = current_time - last_time;
 	//	prevent too big dt (e.g first iteration after being inactive):
 	if (dt > 1.5f * TASK_PERIOD_HZ(FREQUENCY_STABILIZATION_LOOP))
 	{
@@ -90,8 +89,10 @@ static bool stabilization_check_fun(timeUs_t current_time, timeUs_t delta_time)
 
 static bool gyro_update_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
+
 	return gyro_1.new_raw_data_flag;
 }
+
 static bool acc_update_check_fun(timeUs_t current_time, timeUs_t delta_time)
 {
 	return acc_1.new_raw_data_flag;
@@ -119,9 +120,9 @@ static void (*telemetry_fun_tab[FLIGHT_MODE_COUNT])(timeUs_t dt) =
 
 static void buzzer_fun(timeUs_t time)
 {
-	static timeUs_t previous_time;
 	if (main_battery.BATTERY_STATUS == BATTERY_LOW)
 	{
+		static timeUs_t previous_time;
 		if (time - previous_time >= BUZZER_TIME_ON)
 		{
 			turn_off_BUZZER();

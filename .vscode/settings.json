@@ -4,5 +4,5 @@
     "files.associations": {
         "global_functions.h": "c"
     },
-    //"cortex-debug.stm32cubeprogrammer": "C:/Program Files/STMicroelectronics/STM32Cube/STM32CubeProgrammer"
+    
 }

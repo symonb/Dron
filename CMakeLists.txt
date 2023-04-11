@@ -1,29 +1,35 @@
 cmake_minimum_required(VERSION 3.16)
 set(CMAKE_SYSTEM_NAME Generic)
 
-set(CMAKE_C_COMPILER_WORKS 1)
+# turn off compiler checking (compiler is working):
+set(CMAKE_C_COMPILER_WORKS TRUE)
+# set C standard:
 set(CMAKE_C_STANDARD 17)
+# set directory for binary files (variable):
 set(BUILD_DIR ${CMAKE_SOURCE_DIR}/bin)
+# set path for build files:
 set(EXECUTABLE_OUTPUT_PATH ${BUILD_DIR})
+# create targets variables:
 set(TARGET "main")
-
 set(TARGET_ELF "${TARGET}.elf")
 set(TARGET_HEX "${TARGET}.hex")
 set(TARGET_BIN "${TARGET}.bin")
 
+# create project name (DRON) and define required languages for building (C and assembler - ASM should be at the end):
 project(DRON C ASM)
 
+# create main SRC variable:
 set(MAIN_SRC_DIR "${CMAKE_SOURCE_DIR}/Src")
 
 set(LD_include "-lc -lm -lnosys")
 
 set(linker_script "${CMAKE_SOURCE_DIR}/STM32F405RGTx_FLASH.ld")
 
-set(MCU_flags "-mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb ")
+set(MCU_flags "-mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb")
 
-set(C_flags "${MCU_flags} -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -D__FPU_PRESENT")
+set(C_flags "${MCU_flags} -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -D__FPU_PRESENT -fanalyzer --save-temps")
 set(AS_flags "${MCU_flags} -Wall -fdata-sections -ffunction-sections")
-set(LD_flags "${MCU_flags} -specs=nano.specs -specs=nosys.specs  -T${linker_script} ${LD_include} -Wl,--print-memory-usage -u _printf_float")
+set(LD_flags "${MCU_flags} -specs=nano.specs -specs=nosys.specs  -T${linker_script} ${LD_include} -Wl,--print-memory-usage -u _printf_float ")
 
 macro(main_sources var)
     set(${var} ${ARGN})

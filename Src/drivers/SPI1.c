@@ -27,7 +27,7 @@ void CS_SPI1_disable()
     GPIOA->BSRRL |= GPIO_BSRR_BS_4;
 }
 
-void SPI1_transmit(uint8_t* data, int size)
+void SPI1_transmit(const uint8_t* data, int size)
 {
     //----------------STEPS--------------------
     /* 1 Wait for TXE bit to set in the Status Register
@@ -126,6 +126,9 @@ void SPI1_receive(uint8_t* data, int size)
 
 void SPI1_receive_DMA(uint8_t* data, uint16_t size)
 {
+    // disable DMA:
+    DMA2_Stream0->CR &= ~DMA_SxCR_EN;
+    DMA2_Stream3->CR &= ~DMA_SxCR_EN;
     // set parameters of reception:
     DMA2_Stream0->M0AR = (uint32_t)(data);
     DMA2_Stream0->NDTR = size;

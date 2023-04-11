@@ -141,7 +141,7 @@ void delay_micro(uint16_t delay_time)
 }
 
 
-void anti_windup(ThreeF* sum_err, PIDF* R_PIDF, PIDF* P_PIDF, PIDF* Y_PIDF)
+void anti_windup(ThreeF* sum_err, const PIDF* R_PIDF, const PIDF* P_PIDF, const PIDF* Y_PIDF)
 {
 	if (ARMING_STATUS == ARMED)
 	{

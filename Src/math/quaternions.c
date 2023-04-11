@@ -13,37 +13,34 @@
 
 #include <math.h>
 
-
-
-
 ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q) {
 
-		vector.roll = (q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z)
-				* vector.roll + 2 * (q.x * q.y - q.w * q.z) * vector.pitch
-				+ 2 * (q.x * q.z + q.w * q.y) * vector.yaw;
-		vector.pitch = 2 * (q.x * q.y + q.w * q.z) * vector.roll
-				+ (q.w * q.w - q.x * q.x + q.y * q.y - q.z * q.z) * vector.pitch
-				+ 2 * (q.y * q.z - q.w * q.x) * vector.yaw;
-		vector.yaw = 2 * (q.x * q.z - q.w * q.y) * vector.roll
-				+ 2 * (q.y * q.z + q.w * q.x) * vector.pitch
-				+ (q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z) * vector.yaw;
+	vector.roll = (q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z)
+		* vector.roll + 2 * (q.x * q.y - q.w * q.z) * vector.pitch
+		+ 2 * (q.x * q.z + q.w * q.y) * vector.yaw;
+	vector.pitch = 2 * (q.x * q.y + q.w * q.z) * vector.roll
+		+ (q.w * q.w - q.x * q.x + q.y * q.y - q.z * q.z) * vector.pitch
+		+ 2 * (q.y * q.z - q.w * q.x) * vector.yaw;
+	vector.yaw = 2 * (q.x * q.z - q.w * q.y) * vector.roll
+		+ 2 * (q.y * q.z + q.w * q.x) * vector.pitch
+		+ (q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z) * vector.yaw;
 	return vector;
 }
 
 
 ThreeF Quaternion_to_Euler_angles(Quaternion q) {
-	static ThreeF angles;
+	ThreeF angles;
 
-// yaw (z-axis rotation)
+	// yaw (z-axis rotation)
 	float siny_cosp = 2 * (-q.w * q.z + q.x * q.y);
 	float cosy_cosp = q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z;
 	angles.yaw = atan2f(siny_cosp, cosy_cosp) * RAD_TO_DEG;
 
 
-// pitch (y-axis rotation)
+	// pitch (y-axis rotation)
 	angles.pitch = asinf(2 * (-q.w * q.y - q.x * q.z)) * RAD_TO_DEG;
 
-// roll (x-axis rotation)
+	// roll (x-axis rotation)
 	float sinr_cosp = 2 * (-q.w * q.x + q.y * q.z);
 	float cosr_cosp = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
 	angles.roll = atan2f(sinr_cosp, cosr_cosp) * RAD_TO_DEG;

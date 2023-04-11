@@ -15,10 +15,8 @@
 #include "tasks.h"
 
 #if defined(STABILIZE_FILTER_COMPLEMENTARY)
-static Quaternion q_acc = { 1, 0, 0, 0 };
-static Quaternion q_gyro = { 1, 0, 0, 0 };
 static Quaternion gyro_angles(Quaternion q_position, float dt);
-static Quaternion acc_angles();
+static Quaternion acc_angles(Quaternion q_position);
 static void complementary_filter(float dt);
 #elif defined(STABILIZE_FILTER_MAGDWICK)
 static void madgwick_filter(float dt);
@@ -28,29 +26,11 @@ static void mahony_filter(float dt);
 
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt);
 
-// err values - difference between set value and measured value:
-static ThreeF err = { 0, 0, 0 };
-static ThreeF sum_err = { 0, 0, 0 };
-static ThreeF D_corr = { 0, 0, 0 };
 
-
-
-// 4s
-//  DRONE 3D PRINT:
-// static PIDF R_PIDF = { 260, 180, 0.27, 2.5 };
-// static PIDF P_PIDF = { 260, 180, 0.27, 2.5 };
-// static PIDF Y_PIDF = { 1200, 300, 200, 0 };
-
-// DRONE CARBON:
-static PIDF R_PIDF = { 150, 190, 0.175, 0.2 };
-static PIDF P_PIDF = { 200, 210, 0.225, 0.25 };
-static PIDF Y_PIDF = { 500, 200, 70, 0 };
 
 void stabilize(timeUs_t dt_us)
 {
-	static float dt;
-
-	dt = US_TO_SEC(dt_us);
+	float dt = US_TO_SEC(dt_us);
 
 #if defined(STABILIZE_FILTER_MAGDWICK)
 	madgwick_filter(dt);
@@ -70,8 +50,8 @@ void stabilize(timeUs_t dt_us)
 static Quaternion gyro_angles(Quaternion q_position, float dt)
 {
 
-	static Quaternion q_prim;
-	static Quaternion angular_velocity;
+	Quaternion q_prim;
+	Quaternion angular_velocity;
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
@@ -92,15 +72,15 @@ static Quaternion gyro_angles(Quaternion q_position, float dt)
 
 static Quaternion acc_angles(Quaternion q_position)
 {
-	static ThreeF gravity_estimated = { 0, 0, 0 };
+	ThreeF gravity_estimated = { 0, 0, 0 };
 	ThreeF acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
-	static double norm;
+	static Quaternion q_acc = { 1, 0, 0, 0 };
 
 	gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
 		quaternion_conjugate(q_position));
 
 	// normalize vector:
-	norm = sqrtf(
+	double norm = sqrtf(
 		gravity_estimated.roll * gravity_estimated.roll + gravity_estimated.pitch * gravity_estimated.pitch + gravity_estimated.yaw * gravity_estimated.yaw);
 	gravity_estimated.roll /= norm;
 	gravity_estimated.pitch /= norm;
@@ -123,16 +103,16 @@ static Quaternion acc_angles(Quaternion q_position)
 		q_position.z = (1 - acc_filter_rate) * q_acc.z + acc_filter_rate * (gravity_estimated.roll / sqrtf(2 * (1 - gravity_estimated.yaw)));
 	}
 	// after LERP it is needed to normalize q_acc:
-	q_position = quaternion_multiply(q_position,
+	q_acc = quaternion_multiply(q_position,
 		1.f / quaternion_norm(q_position));
 
-	return q_position;
+	return q_acc;
 }
 
 static void complementary_filter(float dt)
 {
-	q_gyro = gyro_angles(q_global_position, dt);
-	q_acc = acc_angles(q_gyro);
+	Quaternion q_gyro = gyro_angles(q_global_position, dt);
+	Quaternion q_acc = acc_angles(q_gyro);
 
 	// to accomplish complementary filter q_acc need to have, a little effect so it need to be reduce by combining with identity quaternion =[1,0,0,0] which was multiplied with (1-ACC_PART) so:
 	const Quaternion IDENTITY_QUATERNION = { 1 - ACC_PART, 0, 0, 0 };
@@ -149,16 +129,16 @@ static void complementary_filter(float dt)
 static void madgwick_filter(float dt)
 {
 
-	static Quaternion q_prim;
-	static Quaternion angular_velocity;
+	Quaternion q_prim;
+	Quaternion angular_velocity;
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
 	angular_velocity.y = Gyro_Acc[1] * GYRO_TO_RAD;
 	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
 
-	static float error_function[3];
-	static Quaternion acc_reading;
+	float error_function[3];
+	Quaternion acc_reading;
 
 	acc_reading.w = 0;
 	acc_reading.x = Gyro_Acc[3] * ACC_TO_GRAVITY;
@@ -181,7 +161,7 @@ static void madgwick_filter(float dt)
 	error_function[2] = 2 * (0.5f - q_global_position.x * q_global_position.x - q_global_position.y * q_global_position.y) - acc_reading.z;
 
 	// compute Jacobian^T*error_function:
-	static Quaternion delta_error_function;
+	Quaternion delta_error_function;
 
 	delta_error_function.w = -2 * q_global_position.y * error_function[0] + 2 * q_global_position.x * error_function[1];
 
@@ -195,7 +175,7 @@ static void madgwick_filter(float dt)
 	delta_error_function = quaternion_multiply(delta_error_function,
 		1.f / quaternion_norm(delta_error_function));
 
-	static float coefficient_Beta = 0.15; // 0.073 was
+	float coefficient_Beta = 0.15; // 0.073 was
 
 	q_global_position = quaternions_sum(q_global_position,
 		quaternion_multiply(
@@ -224,7 +204,7 @@ static void madgwick_filter(float dt)
 	error_function[2] = 2 * (0.5f - q_global_position.x * q_global_position.x - q_global_position.y * q_global_position.y) - acc_reading.z;
 
 	// compute Jacobian^T*error_function:
-	static Quaternion delta_error_function;
+	Quaternion delta_error_function;
 
 	delta_error_function.w = 2 * q_global_position.y * error_function[0] - 2 * q_global_position.x * error_function[1];
 	delta_error_function.x = 2 * q_global_position.z * error_function[0] - 2 * q_global_position.w * error_function[1] - 4 * q_global_position.x * error_function[2];
@@ -235,7 +215,7 @@ static void madgwick_filter(float dt)
 	delta_error_function = quaternion_multiply(delta_error_function,
 		1.f / quaternion_norm(delta_error_function));
 
-	static float coefficient_Beta = 0.15f; // 0.073 was
+	float coefficient_Beta = 0.15f; // 0.073f was
 
 	q_global_position = quaternions_sum(q_global_position,
 		quaternion_multiply(
@@ -255,16 +235,15 @@ static void madgwick_filter(float dt)
 #elif defined(STABILIZE_FILTER_MAHONY)
 static void mahony_filter(float dt)
 {
-	static Quaternion q_prim;
-	static Quaternion angular_velocity;
+	Quaternion q_prim;
+	Quaternion angular_velocity;
 
-	static Quaternion acc_reading;
-	static PID mahony_omega_PI = { 1, 0.001, 0 };
-	static Quaternion omega_corr;
+	Quaternion acc_reading;
+	const PID mahony_omega_PI = { 1, 0.001, 0 };
+	Quaternion omega_corr;
 	static Quaternion sum_omega_corr;
-	static Quaternion gravity_q;
-	static const ThreeF gravity_vector_global = { 0, 0, 1 };
-	static ThreeF gravity_vector = { 0, 0, 1 };
+	Quaternion gravity_q;
+	const ThreeF gravity_vector_global = { 0, 0, 1 };
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
@@ -285,7 +264,7 @@ static void mahony_filter(float dt)
 		quaternions_multiplication(angular_velocity, q_global_position),
 		-0.5f);
 
-	gravity_vector = Rotate_Vector_with_Quaternion(gravity_vector_global,
+	ThreeF gravity_vector = Rotate_Vector_with_Quaternion(gravity_vector_global,
 		quaternions_sum(q_global_position,
 			quaternion_multiply(q_prim, dt)));
 
@@ -330,8 +309,11 @@ static void mahony_filter(float dt)
 
 static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt)
 {
-	static Quaternion set_position_quaternion;
-	static Quaternion error_quaternion;
+	ThreeF err = { 0, 0, 0 };
+
+
+	Quaternion set_position_quaternion;
+	Quaternion error_quaternion;
 	static bool drone_was_armed;
 
 	desired_angles.yaw = global_euler_angles.yaw;
@@ -408,20 +390,20 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 void send_telemetry_stabilize(timeUs_t time)
 {
 	// FOR SECOND APP TO MONITOR ALL FREE ERROR PITCH ROLL YAW
-	table_to_send[0] = P_PIDF.P * err.pitch + 1000;
-	table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
-	table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;
-	table_to_send[3] = R_PIDF.P * err.roll + 1000;
-	table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
-	table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
-	table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50) + 1000;
-	table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50) + 1000;
-	table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
-	table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
-	table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
-	table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
-	table_to_send[12] = receiver.channels[1] - 500;
-	table_to_send[13] = receiver.channels[0] - 500;
+	// table_to_send[0] = P_PIDF.P * err.pitch + 1000;
+	// table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
+	// table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;
+	// table_to_send[3] = R_PIDF.P * err.roll + 1000;
+	// table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
+	// table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
+	// table_to_send[6] = (global_euler_angles.roll / MAX_ROLL_ANGLE * 50) + 1000;
+	// table_to_send[7] = (global_euler_angles.pitch / MAX_PITCH_ANGLE * 50) + 1000;
+	// table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
+	// table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
+	// table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
+	// table_to_send[11] = (10 * global_euler_angles.yaw) + 1500;
+	// table_to_send[12] = receiver.channels[1] - 500;
+	// table_to_send[13] = receiver.channels[0] - 500;
 
 	print(table_to_send, ALL_ELEMENTS_TO_SEND);
 }

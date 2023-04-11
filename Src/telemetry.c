@@ -12,8 +12,8 @@
 #include "flash.h"
 
 uint8_t table_of_bytes_to_sent[2 * ALL_ELEMENTS_TO_SEND + 4];
-static volatile int32_t txTransmitted;
-static volatile int32_t txSize;
+static int32_t txTransmitted;
+static int32_t txSize;
 static uint8_t bufor[50];
 
 void DMA2_Stream7_IRQHandler(void)
@@ -44,7 +44,7 @@ void USART6_IRQHandler(void)
 	if (USART_SR_RXNE & USART6->SR)
 	{
 		//	read actual value (flag will be automatically removed):
-		static uint8_t i;
+		uint8_t i = 0;
 
 		bufor[i] = USART6->DR;
 		switch (bufor[i])
@@ -120,7 +120,7 @@ void USART3_IRQHandler(void)
 	}
 }
 
-void print(uint16_t x[], uint8_t data_to_send)
+void print(const uint16_t x[], uint8_t data_to_send)
 {
 	uint16_t sum = 0;
 

@@ -70,7 +70,6 @@ void USART1_IRQHandler(void)
 
 bool Ibus_save(timeUs_t current_time)
 {
-	uint16_t checksum = 0xFFFF;
 
 	if ((current_time - time_flag3_1) >= SEC_TO_US(MAX_NO_SIGNAL_TIME))
 	{
@@ -82,7 +81,7 @@ bool Ibus_save(timeUs_t current_time)
 	if (receiver.new_data_flag)
 	{
 		time_flag3_1 = current_time;
-		checksum = 0xFFFF;
+		uint16_t checksum = 0xFFFF;
 		for (int8_t i = 0; i < 30; i++)
 		{
 			checksum -= rxBuf[i];

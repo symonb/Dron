@@ -153,9 +153,9 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_MAIN_LOOP 1500			//[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
+#define FREQUENCY_MAIN_LOOP 2000			//[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
 #define FREQUENCY_STABILIZATION_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 1500		 //[Hz]	SCHOULD BE AT LEAST AS MAIN_LOOP
+#define FREQUENCY_ESC_UPDATE 2000		 //[Hz]	SCHOULD BE AT LEAST AS MAIN_LOOP
 #define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible (>150)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 	30	 	//[Hz]
@@ -238,7 +238,8 @@ enum blackbox_t
 #endif
 // RPM filter:
 #if defined(ESC_PROTOCOL_BDSHOT)
-#define USE_RPM_FILTER // if you want use RPM_filter USE_RPM_FILTER
+#define USE_RPM_FILTER_GYRO // if you want use RPM_filter for gyro	USE_RPM_FILTER_GYRO
+#define USE_RPM_FILTER_ACC	// if you want use RPM_filter for acc USE_RPM_FILTER_ACC
 #endif
 #define RPM_MIN_FREQUENCY_HZ 50 // all frequencies <= than this value will not be filtered by RPM filter
 #define RPM_FADE_RANGE_HZ 50	// fade out notch when approaching RPM_MIN_FREQUENCY_HZ (turn it off for RPM_MIN_FREQUENCY_HZ)

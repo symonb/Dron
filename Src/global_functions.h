@@ -17,7 +17,7 @@ timeUs_t get_Global_Time();
 void TIM6_DAC_IRQHandler();
 void TIM7_IRQHandler();
 void set_motors(ThreeF);
-void anti_windup(ThreeF*, PIDF*, PIDF*, PIDF*);
+void anti_windup(ThreeF*, const PIDF*, const PIDF*, const PIDF*);
 void turn_ON_BLUE_LED();
 void turn_OFF_BLUE_LED();
 void turn_ON_RED_LED();

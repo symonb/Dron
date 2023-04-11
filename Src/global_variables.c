@@ -13,9 +13,9 @@
 
 double debug_variable_1;
 
-flight_mode_e flight_mode;
+volatile flight_mode_e flight_mode;
 
-enum arming_t ARMING_STATUS;
+volatile enum arming_t ARMING_STATUS;
 
 gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_raw_data_flag = false,.address = 0, .rev_id = 0, .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
 acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_raw_data_flag = false, .id = 0 , .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
@@ -71,10 +71,10 @@ uint32_t motors_rpm[MOTORS_COUNT];
 float motors_error[MOTORS_COUNT];
 
 // pointers for motor's values:
-uint16_t* motor_1_value_pointer;
-uint16_t* motor_2_value_pointer;
-uint16_t* motor_3_value_pointer;
-uint16_t* motor_4_value_pointer;
+uint16_t* motor_1_value_pointer = &MOTOR_OFF;
+uint16_t* motor_2_value_pointer = &MOTOR_OFF;
+uint16_t* motor_3_value_pointer = &MOTOR_OFF;
+uint16_t* motor_4_value_pointer = &MOTOR_OFF;
 
 int16_t Gyro_Acc[GYRO_ACC_SIZE]; // table for measurements 3 gyro, 3 accelerometer, 1 temperature
 
@@ -160,7 +160,7 @@ uint16_t flash_write_counter = 0;
 uint8_t flash_read_buffer[512];
 uint16_t flash_read_counter = 0;
 
-enum blackbox_t BLACKBOX_STATUS = BLACKBOX_IDLE;
+volatile enum blackbox_t BLACKBOX_STATUS = BLACKBOX_IDLE;
 
 uint32_t flash_global_write_address = 0x0;
 

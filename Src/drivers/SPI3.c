@@ -27,7 +27,7 @@ void SPI3_disable()
     SPI3->CR1 &= ~SPI_CR1_SPE; //	disabling SPI3
 }
 
-void SPI3_transmit(uint8_t* data, uint8_t size)
+void SPI3_transmit(const uint8_t* data, uint8_t size)
 {
 
     uint8_t  i = 0;

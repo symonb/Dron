@@ -39,12 +39,11 @@ static biquad_Filter_t filter_D_term_roll;
 static biquad_Filter_t filter_D_term_pitch;
 static biquad_Filter_t filter_D_term_yaw;
 #endif
-#if defined(USE_RPM_FILTER)
-
+#if defined(USE_RPM_FILTER_GYRO)
 static RPM_filter_t rpm_filter_gyro;
-
+#endif
+#if defined(USE_RPM_FILTER_ACC)
 static RPM_filter_t rpm_filter_acc;
-
 #endif
 
 static void biquad_filter_update(biquad_Filter_t* filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
@@ -55,9 +54,9 @@ void FIR_filter_init(FIR_Filter* fir)
 {
 
 	//	Allocate memory for arrays
-	fir->buffer = (float*)malloc(sizeof(fir->buffer) * fir->length);
+	fir->buffer = (float*)malloc(sizeof(*(fir->buffer)) * fir->length);
 	fir->impulse_response = (float*)malloc(
-		sizeof(fir->impulse_response) * fir->length);
+		sizeof(*(fir->impulse_response)) * fir->length);
 
 	//	Clear filter buffer
 	for (uint8_t i = 0; i < fir->length; i++)
@@ -110,13 +109,13 @@ void IIR_filter_init(IIR_Filter* iir)
 {
 	//	Allocate memory for arrays
 	iir->buffer_input = (float*)malloc(
-		sizeof(iir->buffer_input) * (iir->filter_order + 1));
+		sizeof(*(iir->buffer_input)) * (iir->filter_order + 1));
 	iir->buffer_output = (float*)malloc(
-		sizeof(iir->buffer_output) * (iir->filter_order));
+		sizeof(*(iir->buffer_output)) * (iir->filter_order));
 	iir->forward_coefficients = (float*)malloc(
-		sizeof(iir->forward_coefficients) * (iir->filter_order + 1));
+		sizeof(*(iir->forward_coefficients)) * (iir->filter_order + 1));
 	iir->feedback_coefficients = (float*)malloc(
-		sizeof(iir->feedback_coefficients) * (iir->filter_order));
+		sizeof(*(iir->feedback_coefficients)) * (iir->filter_order));
 
 	//	Clear filter buffers and coefficients
 
@@ -386,8 +385,6 @@ static void RPM_filter_update(RPM_filter_t* filter)
 			}
 			else
 			{
-				frequency = RPM_MIN_FREQUENCY_HZ;
-
 				filter->weight[0][motor][harmonic] = 0;
 				filter->weight[1][motor][harmonic] = 0;
 				filter->weight[2][motor][harmonic] = 0;
@@ -582,11 +579,11 @@ void Gyro_Acc_filters_setup()
 
 #endif
 
-#if defined(USE_RPM_FILTER)
+#if defined(USE_RPM_FILTER_GYRO)
 	RPM_filter_init(&rpm_filter_gyro, FREQUENCY_MAIN_LOOP);
-
+#endif
+#if defined(USE_RPM_FILTER_ACC)
 	RPM_filter_init(&rpm_filter_acc, FREQUENCY_STABILIZATION_LOOP);
-
 #endif
 }
 
@@ -614,7 +611,7 @@ void gyro_filtering(const float* temporary)
 	Gyro_Acc[1] = biquad_filter_apply_DF2(&filter_gyro_Y, temporary[1] - gyro_1.offset.pitch);
 	Gyro_Acc[2] = biquad_filter_apply_DF2(&filter_gyro_Z, temporary[2] - gyro_1.offset.yaw);
 #endif
-#if defined(USE_RPM_FILTER)
+#if defined(USE_RPM_FILTER_GYRO)
 
 	// update coefficients:
 	RPM_filter_update(&rpm_filter_gyro);
@@ -649,7 +646,7 @@ void acc_filtering(const float* temporary)
 	Gyro_Acc[4] = biquad_filter_apply_DF2(&filter_acc_Y, temporary[1] - ACC_PITCH_OFFSET);
 	Gyro_Acc[5] = biquad_filter_apply_DF2(&filter_acc_Z, temporary[2] - ACC_YAW_OFFSET);
 #endif
-#if defined(USE_RPM_FILTER)
+#if defined(USE_RPM_FILTER_ACC)
 
 	// update coefficients:
 	RPM_filter_update(&rpm_filter_acc);

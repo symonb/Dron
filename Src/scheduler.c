@@ -20,13 +20,10 @@
 #include "scheduler.h"
 
 static void scheduler_reschedule(scheduler_t* scheduler);
-static bool is_in_queue(task_t* task, scheduler_t* scheduler);
+static bool is_in_queue(const task_t* const task, scheduler_t* scheduler);
 static bool add_to_queue(task_t* task, scheduler_t* scheduler);
-static task_t* queue_first(scheduler_t* scheduler);
-static task_t* queue_next(scheduler_t* scheduler);
 
 scheduler_t main_scheduler = { .system_load = 100 };
-static uint8_t task_queue_pos;
 static timeUs_t idle_time_counter = 0;
 
 void task_system_fun(timeUs_t current_time)
@@ -80,15 +77,13 @@ void scheduler_reset_tasks_statistics(scheduler_t* scheduler)
 
 void scheduler_execute(scheduler_t* scheduler)
 {
-	static timeUs_t time_before_execution;
-
 	// reschedule scheduler to get next task:
 	scheduler_reschedule(scheduler);
 
 	// execute current task:
 	if (scheduler->current_task != NULL)
 	{
-		time_before_execution = get_Global_Time();
+		timeUs_t time_before_execution = get_Global_Time();
 		// execute task function:
 		scheduler->current_task->task_fun(time_before_execution);
 		// update task stats:
@@ -109,11 +104,11 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 {
 	//	reset variables:
 	timeUs_t current_time = get_Global_Time();
-	bool real_time_task_lock = false;
 	scheduler->current_task = NULL;
 
 	//	iterate throw all tasks update dynamic priority and choose current task:
-	for (task_t* task = queue_first(scheduler); task != NULL; task = queue_next(scheduler))
+	uint8_t i = 0;
+	for (task_t* task = scheduler->task_queue[i]; task != NULL; task = scheduler->task_queue[++i])
 	{
 		//	if task.check_fun() exists:
 		if (task->check_fun)
@@ -128,8 +123,6 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 					//	If realtime tasks occurs don't care which one will be first.
 					//	They can overwrite each other, just set current_task as realtime:
 					scheduler->current_task = task;
-					// lock scheduling since realtime task will be done:
-					real_time_task_lock = true;
 					// break FOR LOOP and execute this task (don't bother updating rest of the tasks): 
 					break;
 				}
@@ -148,25 +141,20 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 				//	If realtime tasks occurs don't care which one will be first.
 				//	They can overwrite each other, just set current_task as realtime:
 				scheduler->current_task = task;
-				// lock scheduling since realtime task will be done:
-				real_time_task_lock = true;
 				// break FOR LOOP and execute this task (don't bother updating rest of the tasks): 
 				break;
 			}
 		}
 
-		// update current task (if there is no realtime tasks):
-		if (!real_time_task_lock)
+		// update current task:
+		if ((scheduler->current_task == NULL && task->dynamic_priority > 0) || (task->dynamic_priority > scheduler->current_task->dynamic_priority))
 		{
-			if ((scheduler->current_task == NULL && task->dynamic_priority > 0) || (task->dynamic_priority > scheduler->current_task->dynamic_priority))
-			{
-				scheduler->current_task = task;
-			}
+			scheduler->current_task = task;
 		}
 	}
 }
 
-static bool is_in_queue(task_t* task, scheduler_t* scheduler)
+static bool is_in_queue(const task_t* const task, scheduler_t* scheduler)
 {
 	for (uint8_t i = 0; i < scheduler->task_queue_size; i++)
 		if (scheduler->task_queue[i] == task)
@@ -176,11 +164,11 @@ static bool is_in_queue(task_t* task, scheduler_t* scheduler)
 
 static bool add_to_queue(task_t* task, scheduler_t* scheduler)
 {
-
 	if (is_in_queue(task, scheduler) || scheduler->task_queue_size >= TASKS_COUNT) // make sure that we have space
 		return false;
 	for (uint8_t i = 0; i <= scheduler->task_queue_size; i++)
 	{
+		// set tasks in order of static priority (during rescheduling it will speed up process)
 		if (scheduler->task_queue[i] == NULL || (scheduler->task_queue[i]->static_priority < task->static_priority))
 		{
 			memmove(&scheduler->task_queue[i + 1], &(scheduler->task_queue[i]),
@@ -212,13 +200,6 @@ bool remove_from_queue(task_t* task, scheduler_t* scheduler)
 	return false;
 }
 
-static task_t* queue_first(scheduler_t* scheduler)
-{
-	task_queue_pos = 0;
-	return scheduler->task_queue[0];
-}
 
-static task_t* queue_next(scheduler_t* scheduler)
-{
-	return scheduler->task_queue[++task_queue_pos];
-}
+
+

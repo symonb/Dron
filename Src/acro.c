@@ -17,34 +17,26 @@
 
 static ThreeF corrections(float);
 
-// 4s
-// static PIDF R_PIDF = {180, 300, 1.1, 1};
-// static PIDF P_PIDF = {200, 300, 2, 1};
-// static PIDF Y_PIDF = {1000, 50, 0.5, 1};
-
-static PIDF R_PIDF = { 500, 0, 25, 0 }; // 590 30 55 0
-static PIDF P_PIDF = { 700, 0, 40, 0 }; // 750 30 65 0
-static PIDF Y_PIDF = { 700, 0, 0, 0 };  // 1100 30 30 0
-
-static ThreeF err = { 0, 0, 0 };
-static ThreeF sum_err = { 0, 0, 0 };
-static ThreeF D_corr = { 0, 0, 0 };
-static ThreeF last_D_corr = { 0, 0, 0 };
-static ThreeF F_corr = { 0, 0, 0 };
-
 void acro(timeUs_t dt_us)
 {
-	static float dt;
-
-	dt = US_TO_SEC(dt_us);
-
+	float dt = US_TO_SEC(dt_us);
 	set_motors(corrections(dt));
 }
 
 static ThreeF corrections(float dt)
 {
-	static ThreeF corr = { 0, 0, 0 };
+
+	ThreeF corr = { 0, 0, 0 };
 	static Three last_measurement = { 0, 0, 0 };
+
+	const PIDF R_PIDF = { 500, 0, 25, 0 }; // 590 30 55 0
+	const PIDF P_PIDF = { 700, 0, 40, 0 }; // 750 30 65 0
+	const PIDF Y_PIDF = { 700, 0, 0, 0 };  // 1100 30 30 0
+
+	ThreeF err = { 0, 0, 0 };
+	ThreeF sum_err = { 0, 0, 0 };
+	ThreeF D_corr = { 0, 0, 0 };
+	ThreeF F_corr = { 0, 0, 0 };
 
 	if (flight_mode == FLIGHT_MODE_ACRO)
 	{
@@ -90,29 +82,25 @@ static ThreeF corrections(float dt)
 	last_measurement.pitch = Gyro_Acc[1];
 	last_measurement.yaw = Gyro_Acc[2];
 
-	last_D_corr.roll = D_corr.roll;
-	last_D_corr.pitch = D_corr.pitch;
-	last_D_corr.yaw = D_corr.yaw;
-
 	return corr;
 }
 void send_telemetry_acro(timeUs_t time)
 {
-	// send corrections pitch P I D i roll P I D; angle_ratio; set_values
-	table_to_send[0] = P_PIDF.P * err.pitch + 1000;
-	table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
-	table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;
-	table_to_send[3] = R_PIDF.P * err.roll + 1000;
-	table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
-	table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
-	table_to_send[6] = (Gyro_Acc[0] / 32.768f / RATES_MAX_RATE_R * 50) + 1000;
-	table_to_send[7] = (Gyro_Acc[1] / 32.768f / RATES_MAX_RATE_P * 50) + 1000;
-	table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
-	table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
-	table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
-	table_to_send[11] = (Gyro_Acc[2] / 32.768f / RATES_MAX_RATE_Y * 50) + 1000;
-	table_to_send[12] = receiver.channels[1] - 500;
-	table_to_send[13] = receiver.channels[0] - 500;
+	// // send corrections pitch P I D i roll P I D; angle_ratio; set_values
+	// table_to_send[0] = P_PIDF.P * err.pitch + 1000;
+	// table_to_send[1] = P_PIDF.I * sum_err.pitch + 1000;
+	// table_to_send[2] = P_PIDF.D * D_corr.pitch + 1000;
+	// table_to_send[3] = R_PIDF.P * err.roll + 1000;
+	// table_to_send[4] = R_PIDF.I * sum_err.roll + 1000;
+	// table_to_send[5] = R_PIDF.D * D_corr.roll + 1000;
+	// table_to_send[6] = (Gyro_Acc[0] / 32.768f / RATES_MAX_RATE_R * 50) + 1000;
+	// table_to_send[7] = (Gyro_Acc[1] / 32.768f / RATES_MAX_RATE_P * 50) + 1000;
+	// table_to_send[8] = Y_PIDF.P * err.yaw + 1000;
+	// table_to_send[9] = Y_PIDF.I * sum_err.yaw + 1000;
+	// table_to_send[10] = Y_PIDF.D * D_corr.yaw + 1000;
+	// table_to_send[11] = (Gyro_Acc[2] / 32.768f / RATES_MAX_RATE_Y * 50) + 1000;
+	// table_to_send[12] = receiver.channels[1] - 500;
+	// table_to_send[13] = receiver.channels[0] - 500;
 
 	print(table_to_send, ALL_ELEMENTS_TO_SEND);
 }

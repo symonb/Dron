@@ -16,10 +16,10 @@
 #include "drivers/SPI1.h"
 #include "MPU6000.h"
 
+
+
 static void	check_gyro_version(gyro_t* gyro);
 static void setup_conf();
-static void setup_gyro();
-static void setup_acc();
 
 #if defined(IMU_TEST)
 static void MPU6000_self_test_configuration();
@@ -81,6 +81,7 @@ static void MPU6000_self_test_measurements();
 static float transform_matrix[3][3] = { {-1, 0, 0}, {0, -1, 0}, {0, 0, 1} };
 static uint8_t rx_buffer[14];
 
+
 // ------SPI1 with DMA usage-----
 // reception:
 void DMA2_Stream0_IRQHandler(void)
@@ -106,8 +107,12 @@ void DMA2_Stream0_IRQHandler(void)
 		// Z gyro axis:
 		gyro_1.raw_data.yaw = (int16_t)(rx_buffer[12] << 8 | rx_buffer[13]);
 		gyro_1.new_raw_data_flag = true;
+
+		CS_SPI1_disable();
+		SPI1_disable();
 	}
 }
+
 // transmission:
 void DMA2_Stream3_IRQHandler(void)
 {
@@ -116,13 +121,10 @@ void DMA2_Stream3_IRQHandler(void)
 	{
 		DMA2->LIFCR |= DMA_LIFCR_CTCIF3;
 		DMA2_Stream3->CR &= ~DMA_SxCR_EN;
-
-		CS_SPI1_disable();
-		SPI1_disable();
 	}
 }
-//--------END--------
 
+//--------END--------
 
 
 void EXTI4_IRQHandler()
@@ -130,25 +132,8 @@ void EXTI4_IRQHandler()
 	if ((EXTI->PR & EXTI_PR_PR4))
 	{
 		EXTI->PR |= EXTI_PR_PR4;	// clear this bit by setting it high
-
-		// test czy to blokowanie wzajemne jest w ogole konieczne
-		// sprawdzac ilosc wywolanych failsafeow od tego spi lub uarta dla ibusa 
-		// jak komunikacja bedzie bez problemu to nie bedzie failsafow
-
-		// lock RX reading while IMU reading:
-		USART1->CR1 &= ~USART_CR1_RXNEIE;
-		static timeUs_t flag;
-		if (get_Global_Time() - flag >= SEC_TO_US(10)) {
-			flag = get_Global_Time();
-			debug_variable_1 = 0;
-		}
-		debug_variable_1++;
-		// // lock interrupts from imu since they will be processed
-		// EXTI->IMR &= ~EXTI_IMR_MR4;
+		// start reading with DMA:
 		read_all_DMA();
-
-		// unlock RX reading while IMU reading
-		USART1->CR1 |= USART_CR1_RXNEIE;
 	}
 }
 
@@ -156,23 +141,20 @@ void setup_MPU6000()
 {
 	delay_mili(30); // MPU datasheet specifies 30ms
 
-
 	setup_conf();
+	// 	check device id and update variable:
 	check_gyro_version(&gyro_1);
-	setup_gyro();
-	setup_acc();
+
 	Gyro_Acc_filters_setup();
 	//change SPI speed up to 20 [MHz] for reading gyro and acc:
 	SPI1_disable();
 	SPI1->CR1 &= ~SPI_CR1_BR;
 	SPI1->CR1 |= SPI_CR1_BR_1;
-
-
 }
 
 void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value)
 {
-	static uint8_t data[2];
+	uint8_t data[2];
 	data[0] = adress_of_register & 0x7F; // first bit of 1 byte has to be write (0) or read(1)
 	data[1] = value;
 	CS_SPI1_enable();
@@ -191,11 +173,9 @@ void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t* data,
 	SPI1_receive(data, size);
 
 	CS_SPI1_disable();
-
-
 }
 
-void MPU6000_SPI_read_DMA(uint8_t instruction, uint8_t* data, uint16_t size)
+void MPU6000_SPI_read_DMA(const uint8_t instruction, uint8_t* data, uint16_t size)
 {
 	// RXONLY mode doesn't work so full duplex DMA:
 	SPI1_enable();
@@ -220,12 +200,6 @@ static void setup_conf()
 	SPI1_enable();
 	uint8_t data;
 	uint8_t register_address;
-	// 0x6A - address of (106)  User Control register:
-	//  disable I2C
-	register_address = 0x6A;
-	data = 0x10;
-	MPU6000_SPI_write(register_address, data);
-	delay_micro(15);
 
 	// 0x6B - address of (107) Power Management 1 register:
 	// set 0x80 in this register (RESET) 
@@ -250,6 +224,26 @@ static void setup_conf()
 	MPU6000_SPI_write(register_address, data);
 	delay_micro(15);
 
+	// 0x6A - address of (106)  User Control register:
+	//  disable I2C
+	register_address = 0x6A;
+	data = 0x10;
+	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
+
+	// 0x6C - address of (108) Power Menagment 2:
+	// theoretically it should be set by default but...
+	register_address = 0x6C;
+	data = 0x00;
+	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
+
+	// Acc sample rate = (gyro_sample rate)/(div_val + 1):
+	register_address = 0x19;
+	data = 0x00;
+	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
+
 	// // 0x6A - address of (106)  User Control register:
 	// //  reset FIFO
 	// register_address = 0x6A;
@@ -271,6 +265,25 @@ static void setup_conf()
 	MPU6000_SPI_write(register_address, data);
 	delay_micro(15);
 
+	// 0x1B- address of Gyroscope Configuration register:
+	// set +/-2000[deg/s]
+	register_address = 0x1B;
+	data = 0x18;
+	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
+
+	register_address = 0x1C;
+	data = 0x10;
+	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
+
+	// 0x37 - address of (55) Interrupt Pin Configuraation register:
+	//  int status cleared with any read command:
+	register_address = 0x37;
+	data = 0x10;
+	MPU6000_SPI_write(register_address, data);
+	delay_micro(15);
+
 	// 0x38 - address of (56) Interrupt Enable register:
 	//  setting interrupt source as Data Register
 	register_address = 0x38;
@@ -288,35 +301,10 @@ static void setup_conf()
 	SPI1_disable();
 }
 
-static void setup_gyro()
-{
-	//---------setting Gyro--------
-	SPI1_enable();
-	// 0x1B- address of Gyroscope Configuration register:
-	// set +/-2000[deg/s]
-	MPU6000_SPI_write(0x1B, 0x18);
-	delay_micro(15);
-	SPI1_disable();
-
-}
-
-static void setup_acc()
-{
-	//---------setting Accelerometer-----------
-
-	//	0x1C - address of Accelerometer Configuration register:
-	// set +/-8[g]
-	SPI1_enable();
-	MPU6000_SPI_write(0x1C, 0x10);
-	delay_micro(15);
-	SPI1_disable();
-
-}
-
 void read_acc()
 {
 	SPI1_enable();
-	static uint8_t temp[6];
+	uint8_t temp[6];
 	MPU6000_SPI_read(MPU6000_ACCEL_READ, temp, 6);
 
 	// X acc axis:
@@ -344,7 +332,7 @@ void read_temp()
 void read_gyro()
 {
 	SPI1_enable();
-	static uint8_t temp[6];
+	uint8_t temp[6];
 	MPU6000_SPI_read(MPU6000_GYRO_READ, temp, 6);
 	// X gyro axis:
 	gyro_1.raw_data.roll = (int16_t)(temp[0] << 8 | temp[1]);
@@ -360,6 +348,7 @@ void read_gyro()
 
 void read_all()
 {
+
 	SPI1_enable();
 	//	burst reading sensors:
 	MPU6000_SPI_read(MPU6000_ACCEL_READ, &rx_buffer[0], 14);
@@ -405,7 +394,7 @@ void gyro_update(timeUs_t time)
 
 void acc_update(timeUs_t time)
 {
-	static float temporary[3];
+	float temporary[3] = { 0,0,0 };
 	for (int j = 0; j < 3; j++)
 	{
 		temporary[j] = acc_1.raw_data.roll * transform_matrix[j][0];
@@ -478,7 +467,7 @@ static void MPU6000_self_test_configuration()
 
 }
 
-static void MPU6000_self_test_measurements(float temporary[])
+static void MPU6000_self_test_measurements(const float temporary[])
 {
 	static int i;
 	static float averagegyroX;
@@ -488,15 +477,16 @@ static void MPU6000_self_test_measurements(float temporary[])
 	static float averageaccY;
 	static float averageaccZ;
 
-	static float averagegyroX_ST;
-	static float averagegyroY_ST;
-	static float averagegyroZ_ST;
-	static float averageaccX_ST;
-	static float averageaccY_ST;
-	static float averageaccZ_ST;
+
 
 	if (i < 1000)
 	{
+		static float averagegyroX_ST;
+		static float averagegyroY_ST;
+		static float averagegyroZ_ST;
+		static float averageaccX_ST;
+		static float averageaccY_ST;
+		static float averageaccZ_ST;
 		averagegyroX_ST += temporary[0] / 1000;
 		averagegyroY_ST += temporary[1] / 1000;
 		averagegyroZ_ST += temporary[2] / 1000;
@@ -537,3 +527,5 @@ static void MPU6000_self_test_measurements(float temporary[])
 	}
 }
 #endif
+
+

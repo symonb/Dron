@@ -17,7 +17,6 @@
 
 static void flash_write_enable();
 
-
 // RX:
 #if !defined(USE_I2C1)
 void DMA1_Stream0_IRQHandler(void)

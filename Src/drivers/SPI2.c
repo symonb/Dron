@@ -27,7 +27,7 @@ void SPI2_disable()
     SPI2->CR1 &= ~SPI_CR1_SPE;
 }
 
-void SPI2_transmit(uint8_t* data, uint16_t size)
+void SPI2_transmit(const uint8_t* data, uint16_t size)
 {
     uint16_t i = 0;
 

@@ -15,7 +15,7 @@
 void setup_MPU6000();
 void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value);
 void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t* data, uint16_t size);
-void MPU6000_SPI_read_DMA(uint8_t adress_of_register, uint8_t* data, uint16_t size);
+void MPU6000_SPI_read_DMA(const uint8_t adress_of_register, uint8_t* data, uint16_t size);
 void gyro_update(timeUs_t time);
 void acc_update(timeUs_t time);
 void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time);

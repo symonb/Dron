@@ -16,7 +16,7 @@ static void prepare_OneShot_PWM();
 #elif defined(ESC_PROTOCOL_BDSHOT)
 static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
 static bool BDshot_check_checksum(uint16_t value);
-static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_shift);
+static uint32_t get_BDshot_response(const uint32_t raw_buffer[], const uint8_t motor_shift);
 static void read_BDshot_response(uint32_t value, uint8_t motor);
 #endif
 
@@ -597,7 +597,7 @@ void update_motors_rpm()
     read_BDshot_response(motor_4_response, 4);
 }
 
-static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_shift)
+static uint32_t get_BDshot_response(const uint32_t raw_buffer[], const uint8_t motor_shift)
 {
     // reception starts just after transmission, so there is a lot of HIGH samples. Find first LOW bit:
 
@@ -605,8 +605,7 @@ static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_s
     uint16_t previous_i = 0;
     uint16_t end_i = 0;
     uint32_t previous_value = 1;
-    uint32_t motor_response = 0;
-    uint8_t bits = 0;
+
 
     while (i < (int)(33 * BDSHOT_RESPONSE_BITRATE / 1000 * BDSHOT_RESPONSE_OVERSAMPLING))
     {
@@ -622,6 +621,8 @@ static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_s
     // if LOW edge was detected:
     if (previous_value == 0)
     {
+        uint32_t motor_response = 0;
+        uint8_t bits = 0;
         while (i < end_i)
         {
             // then look for changes in bits values and compute BDSHOT bits:

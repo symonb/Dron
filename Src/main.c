@@ -37,7 +37,6 @@ int main(void)
 	setup_NVIC_2();
 	delay_mili(100);
 	scheduler_initialization(&main_scheduler);
-
 	while (1)
 	{
 		scheduler_execute(&main_scheduler);
