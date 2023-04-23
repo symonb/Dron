@@ -2,7 +2,8 @@
     "cmake.generator": "MinGW Makefiles",
     "cortex-debug.variableUseNaturalFormat": true,
     "files.associations": {
-        "global_functions.h": "c"
+        "global_functions.h": "c",
+        "usb_device.h": "c"
     },
     
 }

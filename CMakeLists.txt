@@ -21,16 +21,23 @@ project(DRON C ASM)
 # create main SRC variable:
 set(MAIN_SRC_DIR "${CMAKE_SOURCE_DIR}/Src")
 
-set(LD_include "-lc -lm -lnosys")
+set(LINKER_DIR "${CMAKE_SOURCE_DIR}/link")
 
-set(linker_script "${CMAKE_SOURCE_DIR}/STM32F405RGTx_FLASH.ld")
+set(LD_include "-lc -lm -lnosys -L${LINKER_DIR}")
+
+set(linker_script "${LINKER_DIR}/STM32F405RGTx_FLASH.ld")
 
 set(MCU_flags "-mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb")
 
-set(C_flags "${MCU_flags} -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -D__FPU_PRESENT -fanalyzer --save-temps")
+
+# C defines (defines parse with cmd line not defined in files):
+set(C_DEFS "-DUSE_HAL_DRIVER -DSTM32F405xx")
+
+set(C_flags "${MCU_flags} ${C_DEFS} -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -fanalyzer ")
 set(AS_flags "${MCU_flags} -Wall -fdata-sections -ffunction-sections")
 set(LD_flags "${MCU_flags} -specs=nano.specs -specs=nosys.specs  -T${linker_script} ${LD_include} -Wl,--print-memory-usage -u _printf_float ")
 
+# macro for adding path for execatubles files defined in "${MAIN_SRC_DIR}/"
 macro(main_sources var)
     set(${var} ${ARGN})
     list(TRANSFORM ${var} PREPEND "${MAIN_SRC_DIR}/")
@@ -38,24 +45,57 @@ endmacro()
 
 add_subdirectory("${MAIN_SRC_DIR}")
 
+# add paths for executables files:
 main_sources(src "${MAIN_SRC}")
 
 add_executable(${TARGET_ELF}
-    Drivers/CMSIS/startup_stm32f405xx.s
-    Drivers/CMSIS/system_stm32f4xx.c
-    "${src}")
+    "${src}"
+    USB_files/USB_DEVICE/App/usb_device.c 
+    USB_files/USB_DEVICE/App/usbd_desc.c 
+    USB_files/USB_DEVICE/App/usbd_cdc_if.c 
+    USB_files/USB_DEVICE/Target/usbd_conf.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd_ex.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_usb.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c 
+    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c 
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c 
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c 
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c 
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c 
+)
 
 target_include_directories(${TARGET_ELF} PUBLIC
-    Src/Std_Periph/inc
     Src
-    Drivers/CMSIS/Device/ST/STM32F4xx/Include
-    Drivers/CMSIS/Include)
+    Src/startup
+    Drivers/Include
+    Drivers/CMSIS/DSP/Include
+    Drivers/STM32F4xx/Include
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Inc
+    USB_files/STM32F4xx_HAL_Driver/Inc
+    USB_files/STM32F4xx_HAL_Driver/Inc/Legacy
+    USB_files/USB_DEVICE/App
+    USB_files/USB_DEVICE/Target)
 
 set(CMAKE_C_FLAGS "${C_flags}")
 set(CMAKE_ASM_FLAGS "${AS_flags}")
 set(CMAKE_EXE_LINKER_FLAGS "${LD_flags}")
 
-target_link_libraries(${TARGET_ELF} PUBLIC "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/libarm_cortexM4lf_math.a")
+target_link_libraries(${TARGET_ELF} PUBLIC "${CMAKE_SOURCE_DIR}/Drivers/libarm_cortexM4lf_math.a")
 target_link_libraries(${TARGET_ELF} PUBLIC c m)
 
 set(OBJCOPY arm-none-eabi-objcopy)

@@ -19,12 +19,12 @@ void SPI1_disable()
 
 void CS_SPI1_enable()
 {
-    GPIOA->BSRRH |= GPIO_BSRR_BS_4;
+    GPIOA->BSRR |= GPIO_BSRR_BR_4;
 }
 
 void CS_SPI1_disable()
 {
-    GPIOA->BSRRL |= GPIO_BSRR_BS_4;
+    GPIOA->BSRR |= GPIO_BSRR_BS_4;
 }
 
 void SPI1_transmit(const uint8_t* data, int size)

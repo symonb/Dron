@@ -9,12 +9,12 @@
 
 void CS_SPI3_enable()
 {
-    GPIOB->BSRRH |= GPIO_BSRR_BS_3;
+    GPIOB->BSRR |= GPIO_BSRR_BR_3;
 }
 
 void CS_SPI3_disable()
 {
-    GPIOB->BSRRL |= GPIO_BSRR_BS_3;
+    GPIOB->BSRR |= GPIO_BSRR_BS_3;
 }
 
 void SPI3_enable()

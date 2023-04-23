@@ -21,12 +21,18 @@ set(MAIN_SRC
     motors.c
     MPU6000.c
     OSD.c
-    telemetry.c
-
     rx.c
     scheduler.c
     stabilize.c
+
+    startup/startup_stm32f405xx.s
+    startup/system_stm32f4xx.c
+    startup/stm32f4xx_it.c
+    startup/stm32f4xx_hal_msp.c
+
     tasks.c
+    telemetry.c
+    usb.c
 
     PARENT_SCOPE
 )

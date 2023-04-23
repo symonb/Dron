@@ -59,6 +59,7 @@ bool scheduler_initialization(scheduler_t* scheduler)
 	add_to_queue(&all_tasks[TASK_BUZZER], scheduler);
 	add_to_queue(&all_tasks[TASK_OSD], scheduler);
 	add_to_queue(&all_tasks[TASK_GYRO_CALIBRATION], scheduler);
+	add_to_queue(&all_tasks[TASK_USB_HANDLING], scheduler);
 
 	scheduler_reset_tasks_statistics(scheduler);
 

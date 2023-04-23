@@ -152,8 +152,6 @@ uint16_t MOTOR_OFF = 2000;
 
 //---------FLASH-----------
 
-bool USB_detected = false;
-
 uint8_t flash_write_buffer[512];
 uint16_t flash_write_counter = 0;
 

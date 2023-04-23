@@ -228,12 +228,12 @@ void update_motors(timeUs_t current_time)
 
 #if defined(BIT_BANGING_V1)
     DMA2_Stream6->CR |= DMA_SxCR_DIR_0;
-    DMA2_Stream6->PAR = (uint32_t)(&(GPIOA->BSRRL));
+    DMA2_Stream6->PAR = (uint32_t)(&(GPIOA->BSRR));
     DMA2_Stream6->M0AR = (uint32_t)(dshot_bb_buffer_1_4);
     DMA2_Stream6->NDTR = DSHOT_BB_BUFFER_LENGTH * DSHOT_BB_FRAME_SECTIONS;
 
     DMA2_Stream2->CR |= DMA_SxCR_DIR_0;
-    DMA2_Stream2->PAR = (uint32_t)(&(GPIOB->BSRRL));
+    DMA2_Stream2->PAR = (uint32_t)(&(GPIOB->BSRR));
     DMA2_Stream2->M0AR = (uint32_t)(dshot_bb_buffer_2_3);
     DMA2_Stream2->NDTR = DSHOT_BB_BUFFER_LENGTH * DSHOT_BB_FRAME_SECTIONS;
 

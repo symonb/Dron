@@ -74,4 +74,12 @@ void OSD_print_flight_mode();
 void OSD_print_warnings();
 void OSD_update_logo_characters();
 
+typedef struct
+{
+    char* chip_name;
+    bool calibrated;
+} osd_t;
+
+extern osd_t main_OSD;
+
 #endif /* OSD_H_ */

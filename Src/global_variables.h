@@ -229,7 +229,6 @@ extern enum failsafe_t FailSafe_status;
 extern uint16_t MOTOR_OFF;
 
 //----------FLASH----------
-extern bool USB_detected;
 
 extern uint8_t flash_write_buffer[];
 extern uint16_t flash_write_counter;

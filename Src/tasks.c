@@ -20,6 +20,7 @@
 #include "battery.h"
 #include "OSD.h"
 #include "motors.h"
+#include "usb.h"
 #include "tasks.h"
 
 static void main_PID_fun(timeUs_t current_time);
@@ -36,6 +37,7 @@ static void buzzer_fun(timeUs_t time);
 static void OSD_update_fun(timeUs_t time);
 static void gyro_calibration_fun(timeUs_t time);
 static bool gyro_calibration_check_fun(timeUs_t current_time, timeUs_t delta_time);
+static bool usb_check_fun(timeUs_t current_time, timeUs_t delta_time);
 
 // ------DEFINE ALL TASKS--------
 task_t all_tasks[TASKS_COUNT] =
@@ -49,7 +51,8 @@ task_t all_tasks[TASKS_COUNT] =
  [TASK_TELEMETRY] = DEFINE_TASK("TELEMETRY", telemetry_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_TELEMETRY_UPDATE)),
  [TASK_BUZZER] = DEFINE_TASK("BUZZER", buzzer_fun, NULL, TASK_PRIORITY_IDLE, TASK_PERIOD_HZ(10)),
  [TASK_OSD] = DEFINE_TASK("OSD UPDATE", OSD_update_fun, NULL, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_OSD_UPDATE)),
- [TASK_GYRO_CALIBRATION] = DEFINE_TASK("GYRO CALIBRATION", gyro_calibration_fun, gyro_calibration_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)) };
+ [TASK_GYRO_CALIBRATION] = DEFINE_TASK("GYRO CALIBRATION", gyro_calibration_fun, gyro_calibration_check_fun, TASK_PRIORITY_REALTIME, TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP)),
+[TASK_USB_HANDLING] = DEFINE_TASK("USB CONNECTION", usb_communication, usb_check_fun, TASK_PRIORITY_LOW, TASK_PERIOD_HZ(FREQUENCY_USB_CHECK)) };
 
 static void main_PID_fun(timeUs_t current_time)
 {
@@ -144,11 +147,17 @@ static void OSD_update_fun(timeUs_t time)
 { //	OSD chip works only when main power is connected:
 	if (main_battery.BATTERY_STATUS != BATTERY_NOT_CONNECTED)
 	{
+		if (!main_OSD.calibrated) {
+			setup_OSD();
+		}
 		OSD_print_battery_voltage();
 		OSD_print_battery_cell_voltage();
 		OSD_print_time();
 		OSD_print_flight_mode();
 		OSD_print_warnings();
+	}
+	else {
+		main_OSD.calibrated = false;
 	}
 }
 
@@ -166,4 +175,9 @@ static bool gyro_calibration_check_fun(timeUs_t current_time, timeUs_t delta_tim
 	}
 
 	return true;
+}
+
+static bool usb_check_fun(timeUs_t current_time, timeUs_t delta_time) {
+	// check if USB is connected:
+	return main_usb.connected;
 }

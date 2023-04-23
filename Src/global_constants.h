@@ -160,6 +160,7 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
 #define FREQUENCY_SYSTEM_CHECK 	30	 	//[Hz]
 #define FREQUENCY_OSD_UPDATE 30			 //[Hz]
+#define FREQUENCY_USB_CHECK 50			//[Hz]
 
 //------------FAILSAFE--------------------
 

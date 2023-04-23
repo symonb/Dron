@@ -9,12 +9,12 @@
 
 void CS_SPI2_enable()
 {
-    GPIOB->BSRRH |= GPIO_BSRR_BS_12;
+    GPIOB->BSRR |= GPIO_BSRR_BR_12;
 }
 
 void CS_SPI2_disable()
 {
-    GPIOB->BSRRL |= GPIO_BSRR_BS_12;
+    GPIOB->BSRR |= GPIO_BSRR_BS_12;
 }
 
 void SPI2_enable()
@@ -43,6 +43,16 @@ void SPI2_transmit(const uint8_t* data, uint16_t size)
         }
         SPI2->DR = data[i]; //  data sending as soon as TX flag is set
         i++;
+        // OSD chip special implementation:
+        time_flag6_1 = get_Global_Time();
+        while (!((SPI2->SR) & SPI_SR_TXE))
+        {
+            if (failsafe_SPI2())
+            {
+                break; // wait
+            }
+        }
+        SPI2->DR = 0xFF; // send anything
     }
 
     time_flag6_1 = get_Global_Time();
@@ -175,7 +185,6 @@ void SPI2_receive_one(uint8_t* data)
     }
     *data = SPI2->DR;
 }
-
 
 bool failsafe_SPI2()
 {

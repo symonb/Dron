@@ -49,7 +49,6 @@ static void setup_ADC1();
 static void setup_DMA();
 static void setup_EXTI();
 static void setup_I2C1();
-static void setup_OTG_USB_FS();
 
 extern uint8_t table_of_bytes_to_sent[2 * ALL_ELEMENTS_TO_SEND + 4];
 extern uint8_t read_write_tab[];
@@ -57,7 +56,6 @@ extern volatile uint8_t rxBuf[];
 
 void setup()
 {
-
 	setup_HSE();
 	setup_PLL();
 	setup_FPU();
@@ -86,7 +84,6 @@ void setup()
 	setup_ADC1();
 	setup_EXTI();
 	setup_I2C1();
-	setup_OTG_USB_FS();
 	setup_DMA();
 	setup_D_term_filters();
 	setup_RX();
@@ -137,7 +134,7 @@ static void setup_PLL()
 	 * 	1  [MHz] <= PLL_clock_in / PLLM 		 	  <=  2  [MHz] but 2 [MHz] is preferred
 	 * 100 [MHz] <= PLL_clock_in / PLLM * PLLN 		  <= 432 [MHz]
 	 *  			PLL_clock_in / PLLM * PLLN / PLLP <= 168 [MHz]
-	 * So as I want receive max. freq. 168 [MHz] PLLP has to be 2 (VCO_out 336 [MHz]), PLLN = 168 -> PLLN/PLLP = 168 [MHz] and PLLM is 4 since 8 [MHz]/PLLM = 2 [MHz]
+	 * So as I want receive max. freq. 168 [MHz] PLLP has to be 2 (VCO_out 336 [MHz]), PLLN = 168 and PLLM is 4 since 8 [MHz]/PLLM = 2 [MHz]
 	 * Also PLL_48 has to be 48 [MHz] so PLLQ = 7 -> 336 [MHz] / 48 [MHz] = 7
 	 * */
 	 /* (9) Enable the PLL */
@@ -228,7 +225,7 @@ static void setup_GPIOA()
 	// pull up (01) pull down (10):
 
 	// set high on PIN4 (SPI CS):
-	GPIOA->BSRRL |= GPIO_BSRR_BS_4;
+	GPIOA->BSRR |= GPIO_BSRR_BS_4;
 
 	//	output type (0 - push-pull, 1 - open-drain):
 
@@ -296,8 +293,8 @@ static void setup_GPIOB()
 	GPIOB->AFR[1] |= 0x55500700;
 
 	// set high on PIN3 (SPI3 CS) and PIN12 (SPI2 CS) :
-	GPIOB->BSRRL |= GPIO_BSRR_BS_3;
-	GPIOB->BSRRL |= GPIO_BSRR_BS_12;
+	GPIOB->BSRR |= GPIO_BSRR_BS_3;
+	GPIOB->BSRR |= GPIO_BSRR_BS_12;
 
 	// (00 no pull down, no pull up; 01 pull-up; 10 pull-down ):
 	// pull-up SDA and SCL lines 
@@ -1068,11 +1065,6 @@ static void setup_I2C1()
 	I2C1->CR1 |= I2C_CR1_PE;
 }
 
-static void setup_OTG_USB_FS()
-{
-
-	RCC->AHB2ENR |= RCC_AHB2ENR_OTGFSEN;
-}
 
 void setup_NVIC_1()
 {

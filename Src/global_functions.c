@@ -10,6 +10,7 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "OSD.h"
+#include "usb.h"
 
 flight_mode_e get_Flight_Mode()
 {
@@ -222,19 +223,19 @@ void set_motors(ThreeF corr)
 
 void turn_ON_BLUE_LED()
 {
-	GPIOB->BSRRH |= GPIO_BSRR_BS_5;
+	GPIOB->BSRR |= GPIO_BSRR_BR_5;
 }
 void turn_OFF_BLUE_LED()
 {
-	GPIOB->BSRRL |= GPIO_BSRR_BS_5;
+	GPIOB->BSRR |= GPIO_BSRR_BS_5;
 }
 void turn_ON_RED_LED()
 {
-	GPIOB->BSRRH |= GPIO_BSRR_BS_4;
+	GPIOB->BSRR |= GPIO_BSRR_BR_4;
 }
 void turn_OFF_RED_LED()
 {
-	GPIOB->BSRRL |= GPIO_BSRR_BS_4;
+	GPIOB->BSRR |= GPIO_BSRR_BS_4;
 }
 void toggle_BLUE_LED()
 {
@@ -263,8 +264,7 @@ void EXTI9_5_IRQHandler()
 	if ((EXTI->PR & EXTI_PR_PR5))
 	{
 		EXTI->PR |= EXTI_PR_PR5; // clear this bit setting it high
-
-		USB_detected = GPIOC->IDR & GPIO_IDR_IDR_5;
+		USB_check_connection();
 	}
 	if ((EXTI->PR & EXTI_PR_PR6))
 	{
