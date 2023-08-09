@@ -72,11 +72,11 @@ static Quaternion gyro_angles(Quaternion q_position, float dt)
 
 static Quaternion acc_angles(Quaternion q_position)
 {
-	ThreeF gravity_estimated = { 0, 0, 0 };
+
 	ThreeF acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
 	static Quaternion q_acc = { 1, 0, 0, 0 };
 
-	gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
+	ThreeF gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
 		quaternion_conjugate(q_position));
 
 	// normalize vector:

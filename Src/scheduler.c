@@ -148,7 +148,7 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 		}
 
 		// update current task:
-		if ((scheduler->current_task == NULL && task->dynamic_priority > 0) || (task->dynamic_priority > scheduler->current_task->dynamic_priority))
+		if ((scheduler->current_task == NULL && task->dynamic_priority > 0) || (scheduler->current_task != NULL && task->dynamic_priority > scheduler->current_task->dynamic_priority))
 		{
 			scheduler->current_task = task;
 		}
@@ -200,7 +200,3 @@ bool remove_from_queue(task_t* task, scheduler_t* scheduler)
 	}
 	return false;
 }
-
-
-
-

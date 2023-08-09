@@ -16,18 +16,8 @@
 #include "OSD.h"
 #include "MPU6000.h"
 #include "scheduler.h"
-#include "main.h"
 
-void Error_Handler(void)
-{
-	/* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	__disable_irq();
-	while (1)
-	{
-	}
-	/* USER CODE END Error_Handler_Debug */
-}
+
 
 void SystemClock_Config(void);
 
@@ -77,7 +67,7 @@ void SystemClock_Config(void)
 	RCC_OscInitStruct.PLL.PLLQ = 7;
 	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
 	{
-		Error_Handler();
+		// you can call setup failure
 	}
 
 	/** Initializes the CPU, AHB and APB buses clocks
@@ -91,6 +81,6 @@ void SystemClock_Config(void)
 
 	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
 	{
-		Error_Handler();
+		// you can call setup failure
 	}
 }

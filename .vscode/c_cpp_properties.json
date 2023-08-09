@@ -2,10 +2,10 @@
     "configurations": [
         {
             "name": "STM32 F405",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "${workspaceFolder}/src"
-            ],
+            // "includePath": [
+            //     "${workspaceFolder}/**",
+            //     "${workspaceFolder}/src"
+            // ],
             "defines": [],
             "intelliSenseMode": "gcc-arm",
             "cStandard": "c17",
@@ -14,7 +14,7 @@
             "compilerArgs": [
                 "-mcpu=cortex-m4",
                 "-mfpu=fpv4-sp-d16",
-                "-mfloat-abi=hard",
+                "-mfloat-abi=soft",
                 "-mthumb",
                 "-D__FPU_USED"
             ],

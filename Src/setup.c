@@ -397,6 +397,7 @@ static void setup_TIM5(void)
 	TIM5->EGR |= TIM_EGR_UG;
 	TIM5->CR1 |= TIM_CR1_CEN;
 }
+
 #if defined(ESC_PROTOCOL_PWM)	
 static void setup_PWM()
 {
@@ -416,7 +417,10 @@ static void setup_PWM()
 	// channel 4 enable:
 	TIM2->CCER |= TIM_CCER_CC4E;
 
-	TIM2->PSC = 42 - 1;								// counter count every 0.5 microsecond (typically 1 step is 1 [us] long but for better resolution and easier Dshot implementation it is 0.5 [us]. Notice that lowest motor_value 2000 step is still 1 [ms] long as in typical PWM)
+	// counter count every 0.5 [us] (typically 1 step is 1 [us]).
+	// For better resolution and easier Dshot implementation it is 0.5[us].
+	// Notice that lowest motor_value (2000) is still 1[ms] long as in typical PWM):
+	TIM2->PSC = 84 / 2 - 1;
 	TIM2->ARR = 2000000 / FREQUENCY_ESC_UPDATE - 1; // 1 period of PWM
 
 	TIM2->CCR3 = 2000; // PWM length channel 3 (1 [ms])
@@ -429,8 +433,8 @@ static void setup_PWM()
 	// enable TIM3 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
-	// register is buffered and only overflow generate interrupt:
-	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
+	// register is buffered:
+	TIM3->CR1 |= TIM_CR1_ARPE;
 
 	// PWM mode 1 and output compare 3 preload enable:
 	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
@@ -442,7 +446,7 @@ static void setup_PWM()
 	// channel 4 enable:
 	TIM3->CCER |= TIM_CCER_CC4E;
 
-	TIM3->PSC = 42 - 1;								// counter count every 0.5 microsecond (typically 1 step is 1 [us] long but for better resolution and easier Dshot implementation it is 0.5 [us]. Notice that lowest motor_value 2000 step is still 1 [ms] long as in typical PWM)
+	TIM3->PSC = 84 / 2 - 1;								// counter count every 0.5 microsecond (typically 1 step is 1 [us] long but for better resolution and easier Dshot implementation it is 0.5 [us]. Notice that lowest motor_value 2000 step is still 1 [ms] long as in typical PWM)
 	TIM3->ARR = 2000000 / FREQUENCY_ESC_UPDATE - 1; // 1 period of PWM
 
 	TIM3->CCR3 = 2000; // PWM length channel 3 (1 [ms])
@@ -539,8 +543,7 @@ static void setup_Dshot()
 
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 
-	// register is buffered and update event disable:
-	TIM2->CR1 = 0x0;
+	// register is buffered and only overflow generate interrupt:
 	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
 	// PWM mode 1 and output compare 3 preload enable:
@@ -571,8 +574,7 @@ static void setup_Dshot()
 	// enable TIM3 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
-	// register is buffered and update event disable:
-	TIM3->CR1 = 0x0;
+	// register is buffered and only overflow generate interrupt:
 	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
 
 	// PWM mode 1 and output compare 3 preload enable:
@@ -676,76 +678,55 @@ static void setup_Dshot_burst()
 	TIM3->EGR |= TIM_EGR_UG;
 	TIM3->CR1 |= TIM_CR1_CEN;
 }
+
 #elif defined(ESC_PROTOCOL_ONESHOT125)
 static void setup_OneShot125()
 {
-
-	//	TIM2:
-	// enable TIM2 clock:
+	//	Enable TIM2 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-
-	// register is buffered and only overflow generate interrupt:
-	TIM2->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
-
-	// PWM mode 1 and output compare 3 preload enable:
-	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
-	// PWM mode 1 and output compare 4 preload enable:
-	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
-
-	// channel's polarity when channels are active: (we want low because after PWM there should be low signal)
+	TIM2->CR1 |= TIM_CR1_OPM; //	ONE_PULSE_MODE
+	//	PWM 1 mode channel 3:
+	TIM2->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2;
+	//	PWM 1 mode channel 4:
+	TIM2->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2;
+	//	Channel's polarity -> when channels are active (for PWM 1 mode when CNT<CCR) signal is low:
 	TIM2->CCER |= TIM_CCER_CC3P;
 	TIM2->CCER |= TIM_CCER_CC4P;
-
-	// channel 3 output enable:
+	//	Channel 3 output enable:
 	TIM2->CCER |= TIM_CCER_CC3E;
-	// channel 4 output enable:
+	//	Channel 4 output enable:
 	TIM2->CCER |= TIM_CCER_CC4E;
-
-	//	So OneShot is 8x faster regular PWM. 1 step is 1/14 [us] (normally 1 [us]).
-	TIM2->PSC = 84 / 14 - 1;
-	TIM2->ARR = 3500 - 1; //	PWM frame length (250 [us])
-
-	TIM2->CCR3 = TIM2->ARR / 2; //	PWM duration channel 3
-	TIM2->CCR4 = TIM2->ARR / 2; //	PWM duration channel 4
-
-	//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. Timer is set in One Pulse mode so it is turned off after reaching arr_value
-	TIM2->CR1 |= TIM_CR1_OPM; //	ONE_PULSE_MODE
-
+	//	OneShot is 8x faster regular PWM. 
+	//	1 step is 1/16 [us] (normally 1 [us]):
+	TIM2->PSC = 84 / 16 - 1;
+	TIM2->ARR = 3999 + 16;	//	PWM frame length (250+16 [us]) cause min delay required in pulse mode
+	TIM2->CCR3 = 4015 - 2000 + 1;	//	PWM duration channel 3 (125 [us])
+	TIM2->CCR4 = 4015 - 2000 + 1;	//	PWM duration channel 4 (125 [us])
 	//	TIM2 enabling:
 	TIM2->EGR |= TIM_EGR_UG;
 	TIM2->CR1 |= TIM_CR1_CEN;
 
 	//	TIM3:
-	// enable TIM3 clock:
+	//	Enable TIM3 clock:
 	RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-
-	// register is buffered and only overflow generate update interrupt:
-	TIM3->CR1 |= TIM_CR1_ARPE | TIM_CR1_URS;
-
-	// PWM mode 1 and output compare 3 preload enable:
-	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3PE;
-	// PWM mode 1 and output compare 4 preload enable:
-	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4PE;
-
-	// channel's polarity when channels are active: (we want low because after PWM there should be low signal)
+	TIM3->CR1 |= TIM_CR1_OPM; //	ONE_PULSE_MODE
+	//	PWM 1 mode channel 3:
+	TIM3->CCMR2 |= TIM_CCMR2_OC3M_1 | TIM_CCMR2_OC3M_2;
+	//	PWM 1 mode channel 4:
+	TIM3->CCMR2 |= TIM_CCMR2_OC4M_1 | TIM_CCMR2_OC4M_2;
+	//	Channel's polarity -> when channels are active (for PWM 1 mode when CNT<CCR) signal is low:
 	TIM3->CCER |= TIM_CCER_CC3P;
 	TIM3->CCER |= TIM_CCER_CC4P;
-
-	// channel 3 enable:
+	//	Channel 3 output enable:
 	TIM3->CCER |= TIM_CCER_CC3E;
-	// channel 4 enable:
+	//	Channel 4 output enable:
 	TIM3->CCER |= TIM_CCER_CC4E;
-
-	// OneShot is 8x faster regular PWM. 1 step is 1/14 [us] (normally 1 [us]).
-	TIM3->PSC = 84 / 14 - 1;
-	TIM3->ARR = 3500 - 1; //	PWM frame length (250 [us])
-
-	TIM3->CCR3 = TIM3->ARR / 2; //	PWM duration channel 3
-	TIM3->CCR4 = TIM3->ARR / 2; //	PWM duration channel 4
-
-	//	Second important change from regular PWM is that after sending new motor_value PWM is turning off until new value. Timer is set in One Pulse mode so it is turned off after reaching arr_value
-	TIM3->CR1 |= TIM_CR1_OPM; //	ONE_PULSE_MODE
-
+	//	OneShot is 8x faster regular PWM. 
+	//	1 step is 1/16 [us] (normally 1 [us]):
+	TIM3->PSC = 84 / 16 - 1;
+	TIM3->ARR = 3999 + 16;	//	PWM frame length (250+1 [us]) cause min delay required in pulse mode
+	TIM3->CCR3 = 4015 - 2000 + 1;	//	PWM duration channel 3 (125 [us])
+	TIM3->CCR4 = 4015 - 2000 + 1;	//	PWM duration channel 4 (125 [us])
 	//	TIM3 enabling:
 	TIM3->EGR |= TIM_EGR_UG;
 	TIM3->CR1 |= TIM_CR1_CEN;

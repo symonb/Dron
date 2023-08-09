@@ -11,10 +11,8 @@ static uint16_t prepare_Dshot_package(uint16_t value);
 static void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
 #elif defined(ESC_PROTOCOL_DSHOT_BURST)
 static void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
-#elif defined(ESC_PROTOCOL_PWM) || defined(ESC_PROTOCOL_ONESHOT125)
-static void prepare_OneShot_PWM();
 #elif defined(ESC_PROTOCOL_BDSHOT)
-static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
+static void fill_bb_Dshot_buffers(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
 static bool BDshot_check_checksum(uint16_t value);
 static uint32_t get_BDshot_response(const uint32_t raw_buffer[], const uint8_t motor_shift);
 static void read_BDshot_response(uint32_t value, uint8_t motor);
@@ -212,7 +210,7 @@ void update_motors(timeUs_t current_time)
 
     update_motors_rpm();
 
-    fill_bb_Dshot_buffer(prepare_Dshot_package(*motor_1_value_pointer),
+    fill_bb_Dshot_buffers(prepare_Dshot_package(*motor_1_value_pointer),
         prepare_Dshot_package(*motor_2_value_pointer),
         prepare_Dshot_package(*motor_3_value_pointer),
         prepare_Dshot_package(*motor_4_value_pointer));
@@ -330,9 +328,12 @@ void update_motors(timeUs_t current_time)
 #elif defined(ESC_PROTOCOL_ONESHOT125)
 
     //	OneShot125:
+    TIM2->CCR4 = 4015 - *motor_1_value_pointer + 1; // value motor 1
+    TIM3->CCR3 = 4015 - *motor_2_value_pointer + 1; // value motor 2
+    TIM3->CCR4 = 4015 - *motor_3_value_pointer + 1; // value motor 3
+    TIM2->CCR3 = 4015 - *motor_4_value_pointer + 1; // value motor 4
 
-    prepare_OneShot_PWM();
-
+    //	Reload and start timers:
     TIM2->EGR |= TIM_EGR_UG;
     TIM3->EGR |= TIM_EGR_UG;
     TIM2->CR1 |= TIM_CR1_CEN;
@@ -371,6 +372,7 @@ uint16_t prepare_Dshot_package(uint16_t value)
     }
     return ((value << 5) | calculate_Dshot_checksum(value));
 }
+
 #if defined(ESC_PROTOCOL_DSHOT)
 static void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
     uint16_t m4_value)
@@ -445,7 +447,7 @@ void preset_bb_Dshot_buffers()
     }
 }
 
-static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
+static void fill_bb_Dshot_buffers(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
     uint16_t m4_value)
 {
     // Each bite is preset (lowering edge at first and rising edge after DSHOT_1_length rest values are 0 so there will be no changes in GPIO uotput registers).
@@ -510,7 +512,7 @@ void preset_bb_Dshot_buffers()
     }
 }
 
-static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
+static void fill_bb_Dshot_buffers(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value,
     uint16_t m4_value)
 {
     // each bite frame is divided in sections where slope can vary:
@@ -569,7 +571,8 @@ static void fill_bb_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t 
 }
 #endif
 
-bool BDshot_check_checksum(uint16_t value)
+#if defined(ESC_PROTOCOL_BDSHOT)
+static bool BDshot_check_checksum(uint16_t value)
 {
     // BDshot frame has 4 last bits CRC:
     if (((value ^ (value >> 4) ^ (value >> 8) ^ (value >> 12)) & 0x0F) == 0x0F)
@@ -690,7 +693,7 @@ static void read_BDshot_response(uint32_t value, uint8_t motor)
         motors_error[motor - 1] = 0.9 * motors_error[motor - 1] + 10; // increase motor error
     }
 }
-
+#endif
 #if defined(ESC_PROTOCOL_BDSHOT_BURST)
 static void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,
     uint16_t m3_value, uint16_t m4_value)
@@ -748,12 +751,3 @@ static void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value,
 }
 #endif
 
-#if defined(ESC_PROTOCOL_ONESHOT125)
-static void prepare_OneShot_PWM()
-{
-    TIM2->CCR4 = 3500 - *motor_1_value_pointer * 0.875f + 1; // value motor 1
-    TIM3->CCR3 = 3500 - *motor_2_value_pointer * 0.875f + 1; // value motor 2
-    TIM3->CCR4 = 3500 - *motor_3_value_pointer * 0.875f + 1; // value motor 3
-    TIM2->CCR3 = 3500 - *motor_4_value_pointer * 0.875f + 1; // value motor 4
-}
-#endif

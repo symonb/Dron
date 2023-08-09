@@ -57,7 +57,7 @@
 void setup_OSD();
 void OSD_SPI_write(uint8_t instruction, uint8_t data);
 void OSD_SPI_read(uint8_t instruction, uint8_t* memory_address);
-void OSD_write_new_character(uint8_t* new_character_table, uint8_t character_number);
+void OSD_write_new_character(const uint8_t* new_character_table, uint8_t character_number);
 void OSD_read_character(uint8_t* table_to_save_character, uint8_t character_number);
 void OSD_clear_Display_Memory();
 

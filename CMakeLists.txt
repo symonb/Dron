@@ -33,7 +33,7 @@ set(MCU_flags "-mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb")
 # C defines (defines parse with cmd line not defined in files):
 set(C_DEFS "-DUSE_HAL_DRIVER -DSTM32F405xx")
 
-set(C_flags "${MCU_flags} ${C_DEFS} -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -fanalyzer ")
+set(C_flags "${MCU_flags} ${C_DEFS} -Wall -fdata-sections -ffunction-sections -DARM_MATH_CM4 -fanalyzer")
 set(AS_flags "${MCU_flags} -Wall -fdata-sections -ffunction-sections")
 set(LD_flags "${MCU_flags} -specs=nano.specs -specs=nosys.specs  -T${linker_script} ${LD_include} -Wl,--print-memory-usage -u _printf_float ")
 
@@ -43,6 +43,7 @@ macro(main_sources var)
     list(TRANSFORM ${var} PREPEND "${MAIN_SRC_DIR}/")
 endmacro()
 
+# add folder with another CMakeList.txt:
 add_subdirectory("${MAIN_SRC_DIR}")
 
 # add paths for executables files:
@@ -98,8 +99,12 @@ set(CMAKE_EXE_LINKER_FLAGS "${LD_flags}")
 target_link_libraries(${TARGET_ELF} PUBLIC "${CMAKE_SOURCE_DIR}/Drivers/libarm_cortexM4lf_math.a")
 target_link_libraries(${TARGET_ELF} PUBLIC c m)
 
+# set shourtcut for command:
 set(OBJCOPY arm-none-eabi-objcopy)
+# make new targets .hex and .bin from .elf file:
 add_custom_target(${TARGET_BIN} ALL COMMAND ${OBJCOPY} -O binary -S ${BUILD_DIR}/${TARGET_ELF} ${BUILD_DIR}/${TARGET_BIN})
 add_custom_target(${TARGET_HEX} ALL COMMAND ${OBJCOPY} -O ihex -S ${BUILD_DIR}/${TARGET_ELF} ${BUILD_DIR}/${TARGET_HEX})
 
+# define dependeces so that .hex dile is created after .elf and .bin as the last one:
+add_dependencies( ${TARGET_HEX} ${TARGET_ELF})
 add_dependencies(${TARGET_BIN} ${TARGET_ELF} ${TARGET_HEX})

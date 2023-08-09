@@ -105,7 +105,9 @@ linear dependance for a=b otherwise curve (max for b = 0)
 
 //------------ESC_PROTOCOLS----------
 #define ESC_PROTOCOL_BDSHOT // ESC_PROTOCOL_PWM, ESC_PROTOCOL_ONESHOT125, ESC_PROTOCOL_BDSHOT, ESC_PROTOCOL_DSHOT, ESC_PROTOCOL_DSHOT_BURST (not ended yet)
+#if defined(ESC_PROTOCOL_BDSHOT)
 #define BIT_BANGING_V1
+#endif
 #define DSHOT_MODE 300 // 150 300 600 1200
 
 #define DSHOT_BUFFER_LENGTH 18 // 16 bits of Dshot and 2 for clearing

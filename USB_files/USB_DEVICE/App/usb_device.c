@@ -16,9 +16,9 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+  /* USER CODE END Header */
 
-/* Includes ------------------------------------------------------------------*/
+  /* Includes ------------------------------------------------------------------*/
 
 #include "usb_device.h"
 #include "usbd_core.h"
@@ -46,21 +46,30 @@ USBD_HandleTypeDef hUsbDeviceFS;
 /*
  * -- Insert your variables declaration here --
  */
-/* USER CODE BEGIN 0 */
-
+ /* USER CODE BEGIN 0 */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
+  /* USER CODE END Error_Handler_Debug */
+}
 /* USER CODE END 0 */
 
 /*
  * -- Insert your external function declaration here --
  */
-/* USER CODE BEGIN 1 */
+ /* USER CODE BEGIN 1 */
 
-/* USER CODE END 1 */
+ /* USER CODE END 1 */
 
-/**
-  * Init USB device Library, add supported class and start the library
-  * @retval None
-  */
+ /**
+   * Init USB device Library, add supported class and start the library
+   * @retval None
+   */
 void MX_USB_DEVICE_Init(void)
 {
   /* USER CODE BEGIN USB_DEVICE_Init_PreTreatment */
@@ -94,7 +103,7 @@ void MX_USB_DEVICE_Init(void)
   * @}
   */
 
-/**
-  * @}
-  */
+  /**
+    * @}
+    */
 

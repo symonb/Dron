@@ -47,9 +47,10 @@ static RPM_filter_t rpm_filter_acc;
 #endif
 
 static void biquad_filter_update(biquad_Filter_t* filter, biquad_Filter_type filter_type, float filter_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
+#if defined(USE_RPM_FILTER_GYRO)||defined(USE_RPM_FILTER_ACC)
 static void biquad_filter_copy_coefficients(biquad_Filter_t* copy_from_filter, biquad_Filter_t* copy_to_filter);
 static void RPM_filter_update(RPM_filter_t* filter);
-
+#endif
 void FIR_filter_init(FIR_Filter* fir)
 {
 
@@ -309,6 +310,7 @@ float biquad_filter_apply_DF2(biquad_Filter_t* filter, float input)
 	return result;
 }
 
+#if defined(USE_RPM_FILTER_GYRO)||defined(USE_RPM_FILTER_ACC)
 static void biquad_filter_copy_coefficients(biquad_Filter_t* copy_from_filter, biquad_Filter_t* copy_to_filter)
 {
 	copy_to_filter->a0 = copy_from_filter->a0;
@@ -392,6 +394,7 @@ static void RPM_filter_update(RPM_filter_t* filter)
 		}
 	}
 }
+#endif
 
 float RPM_filter_apply(RPM_filter_t* filter, uint8_t axis, float input)
 {

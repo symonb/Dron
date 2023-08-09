@@ -134,7 +134,7 @@ void delay_mili(timeMs_t delay_time)
 
 void delay_micro(uint16_t delay_time)
 {
-	uint64_t t = get_Global_Time();
+	timeUs_t t = get_Global_Time();
 	while (get_Global_Time() - t < delay_time)
 	{
 		;

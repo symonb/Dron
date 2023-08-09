@@ -16,21 +16,20 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
+  /* USER CODE END Header */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
+  /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __USBD_CONF__H__
 #define __USBD_CONF__H__
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
+  /* Includes ------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "main.h"
 #include "stm32f4xx.h"
 #include "stm32f4xx_hal.h"
 
@@ -43,26 +42,26 @@
   * @{
   */
 
-/** @defgroup USBD_CONF USBD_CONF
-  * @brief Configuration file for Usb otg low level driver.
-  * @{
-  */
+  /** @defgroup USBD_CONF USBD_CONF
+    * @brief Configuration file for Usb otg low level driver.
+    * @{
+    */
 
-/** @defgroup USBD_CONF_Exported_Variables USBD_CONF_Exported_Variables
-  * @brief Public variables.
-  * @{
-  */
+    /** @defgroup USBD_CONF_Exported_Variables USBD_CONF_Exported_Variables
+      * @brief Public variables.
+      * @{
+      */
 
-/**
-  * @}
-  */
+      /**
+        * @}
+        */
 
-/** @defgroup USBD_CONF_Exported_Defines USBD_CONF_Exported_Defines
-  * @brief Defines for configuration of the Usb device.
-  * @{
-  */
+        /** @defgroup USBD_CONF_Exported_Defines USBD_CONF_Exported_Defines
+          * @brief Defines for configuration of the Usb device.
+          * @{
+          */
 
-/*---------- -----------*/
+          /*---------- -----------*/
 #define USBD_MAX_NUM_INTERFACES     1U
 /*---------- -----------*/
 #define USBD_MAX_NUM_CONFIGURATION     1U
@@ -84,12 +83,12 @@
   * @}
   */
 
-/** @defgroup USBD_CONF_Exported_Macros USBD_CONF_Exported_Macros
-  * @brief Aliases.
-  * @{
-  */
-/* Memory management macros make sure to use static memory allocation */
-/** Alias for memory allocation. */
+  /** @defgroup USBD_CONF_Exported_Macros USBD_CONF_Exported_Macros
+    * @brief Aliases.
+    * @{
+    */
+    /* Memory management macros make sure to use static memory allocation */
+    /** Alias for memory allocation. */
 
 #define USBD_malloc         (void *)USBD_static_malloc
 
@@ -135,35 +134,35 @@
   * @}
   */
 
-/** @defgroup USBD_CONF_Exported_Types USBD_CONF_Exported_Types
-  * @brief Types.
-  * @{
-  */
+  /** @defgroup USBD_CONF_Exported_Types USBD_CONF_Exported_Types
+    * @brief Types.
+    * @{
+    */
 
-/**
-  * @}
-  */
+    /**
+      * @}
+      */
 
-/** @defgroup USBD_CONF_Exported_FunctionsPrototype USBD_CONF_Exported_FunctionsPrototype
-  * @brief Declaration of public functions for Usb device.
-  * @{
-  */
+      /** @defgroup USBD_CONF_Exported_FunctionsPrototype USBD_CONF_Exported_FunctionsPrototype
+        * @brief Declaration of public functions for Usb device.
+        * @{
+        */
 
-/* Exported functions -------------------------------------------------------*/
-void *USBD_static_malloc(uint32_t size);
-void USBD_static_free(void *p);
+        /* Exported functions -------------------------------------------------------*/
+  void* USBD_static_malloc(uint32_t size);
+  void USBD_static_free(void* p);
 
-/**
-  * @}
-  */
+  /**
+    * @}
+    */
 
-/**
-  * @}
-  */
+    /**
+      * @}
+      */
 
-/**
-  * @}
-  */
+      /**
+        * @}
+        */
 
 #ifdef __cplusplus
 }
