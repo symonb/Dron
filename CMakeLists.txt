@@ -54,29 +54,37 @@ add_executable(${TARGET_ELF}
     USB_files/USB_DEVICE/App/usb_device.c 
     USB_files/USB_DEVICE/App/usbd_desc.c 
     USB_files/USB_DEVICE/App/usbd_cdc_if.c 
+    USB_files/USB_DEVICE/App/usbd_dfu_if.c
+    USB_files/USB_DEVICE/App/usbd_storage_if.c
     USB_files/USB_DEVICE/Target/usbd_conf.c 
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.c 
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd_ex.c 
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_usb.c 
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ramfunc.c
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_gpio.c
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma_ex.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_dma.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr_ex.c 
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_cortex.c 
     USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c 
-    USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_exti.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c 
+    # USB_files/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c 
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c 
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c 
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c 
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c 
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/DFU/Src/usbd_dfu.c 
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_bot.c
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_data.c
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc.c 
+
 )
 
 target_include_directories(${TARGET_ELF} PUBLIC
@@ -86,6 +94,8 @@ target_include_directories(${TARGET_ELF} PUBLIC
     Drivers/CMSIS/DSP/Include
     Drivers/STM32F4xx/Include
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Inc
+    USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/DFU/Inc
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Core/Inc
     USB_files/STM32F4xx_HAL_Driver/Inc
     USB_files/STM32F4xx_HAL_Driver/Inc/Legacy

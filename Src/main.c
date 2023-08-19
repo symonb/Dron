@@ -16,24 +16,22 @@
 #include "OSD.h"
 #include "MPU6000.h"
 #include "scheduler.h"
-
-
+#include "flash.h"
 
 void SystemClock_Config(void);
 
-int main(void)
-{
+int main(void) {
 	setup();
 	SystemClock_Config();
 	HAL_Init();
-	MX_USB_DEVICE_Init();
-
-	turn_OFF_BLUE_LED();
+	MX_USB_DEVICE_Init(USB_CLASS_CDC);
+	turn_ON_BLUE_LED();
+	turn_ON_RED_LED();
 	setup_NVIC_1();
 	delay_mili(500);
 	setup_MPU6000();
 	setup_NVIC_2();
-	delay_mili(100);
+	delay_mili(1000);
 	scheduler_initialization(&main_scheduler);
 
 	while (1)

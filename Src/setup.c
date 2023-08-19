@@ -788,10 +788,12 @@ static void setup_SPI3()
 {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
 
-	SPI3->CR1 |= SPI_CR1_BR_1 | SPI_CR1_BR_0;											 // should be able to change to  &=~(SPI_CR1_BR); APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz] but it is not working the highest is 42/16 [MHz]
+	SPI3->CR1 &= ~(SPI_CR1_BR);		 // APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
 	SPI3->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL | SPI_CR1_CPHA; // NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 
 	SPI3->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
+	//	enable SPI3:
+	SPI3->CR1 |= SPI_CR1_SPE;
 }
 
 static void setup_ADC1()
@@ -850,7 +852,6 @@ static void setup_DMA()
 	}
 	DMA1_Stream5->CR |= DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	DMA1_Stream5->PAR = (uint32_t)(&(SPI3->DR));
-	DMA1_Stream5->M0AR = (uint32_t)(flash_write_buffer);
 
 #endif
 
@@ -1046,86 +1047,96 @@ static void setup_I2C1()
 	I2C1->CR1 |= I2C_CR1_PE;
 }
 
-
+//	Only basics interrupts (Global_Time; delay_functions(); failsafe_functions();)
 void setup_NVIC_1()
 {
-	// Only basics interrupts (Global_Time; delay_functions(); failsafe_functions();)
+	//	Priority HAS TO BE in range <0-15> (only 4 last bits are taken):
 
 	//	nvic interrupt enable (TIM5 interrupt);
 	NVIC_EnableIRQ(TIM5_IRQn);
-	NVIC_SetPriority(TIM5_IRQn, 7);
+	NVIC_SetPriority(TIM5_IRQn, 0);
 
 	//	nvic EXTI interrupt enable:
 	NVIC_EnableIRQ(EXTI15_10_IRQn);
-	NVIC_SetPriority(EXTI15_10_IRQn, 8);
+	NVIC_SetPriority(EXTI15_10_IRQn, 1);
 }
 
 void setup_NVIC_2()
 {
+	//	Priority HAS TO BE in range <0-15> (only 4 last bits are taken):
+
 	//	nvic interrupt enable (USART6 interrupt):
 	NVIC_EnableIRQ(USART6_IRQn);
-	NVIC_SetPriority(USART6_IRQn, 17);
+	NVIC_SetPriority(USART6_IRQn, 12);
 
 	//	nvic interrupt enable (USART1 interrupt):
 	NVIC_EnableIRQ(USART1_IRQn);
-	NVIC_SetPriority(USART1_IRQn, 9);
+	NVIC_SetPriority(USART1_IRQn, 5);
 
 	//	nvic interrupt enable (EXTI interrupt)
 	NVIC_EnableIRQ(EXTI4_IRQn);
-	NVIC_SetPriority(EXTI4_IRQn, 10);
+	NVIC_SetPriority(EXTI4_IRQn, 6);
 
 	//	nvic interrupt enable (EXTI interrupt)
 	NVIC_EnableIRQ(EXTI9_5_IRQn);
-	NVIC_SetPriority(EXTI9_5_IRQn, 20);
+	NVIC_SetPriority(EXTI9_5_IRQn, 10);
 
 	//	nvic interrupt enable (ADC1 interrupt)
 	NVIC_DisableIRQ(ADC_IRQn);
-	NVIC_SetPriority(ADC_IRQn, 22);
+	NVIC_SetPriority(ADC_IRQn, 15);
 
 	//	nvic DMA interrupts enable:
-#if defined(USE_FLASH_BLACKBOX)
+#if defined(USE_FLASH_BLACKBOX) && !defined(USE_I2C1)
 	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
 #endif
 
+#if defined(ESC_PROTOCOL_DSHOT)
 	NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-	NVIC_SetPriority(DMA1_Stream1_IRQn, 16);
+	NVIC_SetPriority(DMA1_Stream1_IRQn, 15);
 
 	NVIC_EnableIRQ(DMA1_Stream2_IRQn);
 	NVIC_SetPriority(DMA1_Stream2_IRQn, 15);
+#endif
 
 #if defined(USE_FLASH_BLACKBOX)
 	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+	NVIC_SetPriority(DMA1_Stream5_IRQn, 10);
 #endif
-	NVIC_EnableIRQ(DMA1_Stream4_IRQn);
-	NVIC_SetPriority(DMA1_Stream4_IRQn, 17);
 
+	NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+	NVIC_SetPriority(DMA1_Stream4_IRQn, 15);
+
+#if defined(ESC_PROTOCOL_DSHOT)
 	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
-	NVIC_SetPriority(DMA1_Stream6_IRQn, 14);
+	NVIC_SetPriority(DMA1_Stream6_IRQn, 15);
 
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
-	NVIC_SetPriority(DMA1_Stream7_IRQn, 13);
+	NVIC_SetPriority(DMA1_Stream7_IRQn, 15);
+#endif
 
 	NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-	NVIC_SetPriority(DMA2_Stream0_IRQn, 12);
+	NVIC_SetPriority(DMA2_Stream0_IRQn, 8);
+
+#if defined(ESC_PROTOCOL_BDSHOT)
+	NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+	NVIC_SetPriority(DMA2_Stream2_IRQn, 3);
+#endif
 
 	NVIC_EnableIRQ(DMA2_Stream3_IRQn);
-	NVIC_SetPriority(DMA2_Stream3_IRQn, 12);
+	NVIC_SetPriority(DMA2_Stream3_IRQn, 15);
 
 	NVIC_EnableIRQ(DMA2_Stream4_IRQn);
-	NVIC_SetPriority(DMA2_Stream4_IRQn, 18);
+	NVIC_SetPriority(DMA2_Stream4_IRQn, 15);
 
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
-	NVIC_SetPriority(DMA2_Stream5_IRQn, 11);
+	NVIC_SetPriority(DMA2_Stream5_IRQn, 10);
+
+#if defined(ESC_PROTOCOL_BDSHOT)
+	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
+	NVIC_SetPriority(DMA2_Stream6_IRQn, 3);
+#endif
 
 	NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 	NVIC_SetPriority(DMA2_Stream7_IRQn, 12);
 
-#if defined(ESC_PROTOCOL_BDSHOT)
-
-	NVIC_EnableIRQ(DMA2_Stream6_IRQn);
-	NVIC_SetPriority(DMA2_Stream6_IRQn, 13);
-	NVIC_EnableIRQ(DMA2_Stream2_IRQn);
-	NVIC_SetPriority(DMA2_Stream2_IRQn, 14);
-
-#endif
 }

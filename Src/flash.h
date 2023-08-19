@@ -8,21 +8,27 @@
 #ifndef FLASH_H_
 #define FLASH_H_
 
-void flash_SPI_read(uint8_t, uint8_t *, int);
-void flash_SPI_read_DMA(uint8_t, uint8_t *, int);
-void flash_SPI_write(uint8_t, uint8_t *, uint8_t);
-void flash_SPI_write_DMA(uint8_t, uint8_t *, int);
-void flash_erase(uint8_t, uint8_t *);
-void flash_full_chip_erase();
-uint8_t flash_read_status_register(uint8_t);
-void flash_read_unique_ID(uint8_t *);
-void flash_save_data(uint8_t, uint32_t, uint8_t *, int);
-void flash_read_data(uint8_t, uint32_t, uint8_t *, int);
+#include "stdbool.h"
+#include "global_constants.h"
+
+void W25Q128_erase(uint8_t instruction, uint32_t address);
+void W25Q128_erase_full_chip();
+uint8_t W25Q128_read_status_register(uint8_t);
+void W25Q128_read_unique_ID(uint8_t* memory_address);
+uint32_t W25Q128_read_JEDEC_ID();
+void W25Q128_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes);
+void W25Q128_fast_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes);
+void W25Q128_modify_data(uint32_t memory_address, uint8_t* new_data, int number_of_bytes);
+void W25Q128_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes);
+void W25Q128_fast_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes);
 void flash_add_data_to_save(uint8_t);
-void Gyro_Acc_save_to_flash(float *not_filtered);
-bool is_flash_busy();
+void Gyro_Acc_save_to_flash(float* not_filtered);
+bool W25Q128_check_if_busy();
 
 //-------MACROs FOR FLASH W25Q128JV----------
+
+#define W25Q128_PAGE_SIZE 256
+#define W25Q128_SECTOR_SIZE 16*W25Q128_PAGE_SIZE
 #define FLASH_WRITE_ENABLE 0x06
 #define FLASH_WRITE_DISABLE 0x04
 
@@ -30,12 +36,13 @@ bool is_flash_busy();
 #define FLASH_READ_UNIQUE_ID 0x4B
 
 #define FLASH_READ_DATA 0x03
+#define FLASH_FAST_READ 0x0B
 #define FLASH_PAGE_PROGRAM 0x02
 
-#define FLASH_SECTOR_ERASE_4KB 0x20
-#define FLASH_BLOCK_ERASE_32KB 0x52
-#define FLASH_BLOCK_ERASE_64KB 0xD8
-#define FLASH_CHIP_ERASE 0x60
+#define FLASH_ERASE_SECTOR_4KB 0x20
+#define FLASH_ERASE_BLOCK_32KB 0x52
+#define FLASH_ERASE_BLOCK_64KB 0xD8
+#define FLASH_ERASE_CHIP 0x60
 
 #define FLASH_READ_STATUS_REGISTER_1 0x05
 #define FLASH_WRITE_STATUS_REGISTER_1 0x01

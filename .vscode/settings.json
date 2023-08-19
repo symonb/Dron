@@ -1,4 +1,9 @@
 {   
-        "cmake.generator": "MinGW Makefiles"
+        "cmake.generator": "MinGW Makefiles",
+        "files.associations": {
+                "usbd_def.h": "c",
+                "usbd_core.h": "c",
+                "usbd_cdc_if.h": "c"
+        }
      // "cmake.generator": "Ninja"
 }

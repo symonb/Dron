@@ -182,7 +182,7 @@ void RX_handling()
         if (BLACKBOX_STATUS != BLACKBOX_ERASE)
         {
             BLACKBOX_STATUS = BLACKBOX_ERASE;
-            flash_full_chip_erase();
+            W25Q128_erase_full_chip();
         }
     }
     else if (BLACKBOX_STATUS != BLACKBOX_SEND_DATA)

@@ -4,7 +4,7 @@
         "configurations": [
 
           { 
-            "name": "Debug (OpenOCD)",
+             "name": "Debug (OpenOCD)",
             "type": "cortex-debug",
             "request": "launch",
             "servertype": "openocd",
@@ -13,6 +13,10 @@
             "showDevDebugOutput": "both",
             "preLaunchTask": "Make Firmware",
             "executable": "${workspaceFolder}/bin/main.elf",
+            "liveWatch": {
+              "enabled": true,
+              "samplesPerSecond": 4
+            },
             "configFiles": [
               "${workspaceFolder}/openocd.cfg"
             ],

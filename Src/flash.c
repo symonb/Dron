@@ -14,8 +14,9 @@
 #include "drivers/SPI3.h"
 #include "flash.h"
 
+static volatile bool data_sending = false;
 
-static void flash_write_enable();
+static void W25Q128_write_enable();
 
 // RX:
 #if !defined(USE_I2C1)
@@ -48,7 +49,7 @@ void DMA1_Stream0_IRQHandler(void)
 		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
 
 		CS_SPI3_disable();
-		SPI3_disable();
+
 	}
 }
 #endif
@@ -56,7 +57,6 @@ void DMA1_Stream0_IRQHandler(void)
 // TX:
 void DMA1_Stream5_IRQHandler(void)
 {
-
 	// if stream5 transfer is completed:
 	if (DMA1->HISR & DMA_HISR_TCIF5)
 	{
@@ -81,130 +81,69 @@ void DMA1_Stream5_IRQHandler(void)
 		SPI3->DR;
 		SPI3->SR;
 		DMA1_Stream5->CR &= ~DMA_SxCR_EN;
-		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
+		data_sending = false;
 
 		CS_SPI3_disable();
-		SPI3_disable();
 	}
 }
 
-bool is_flash_busy()
+bool W25Q128_check_if_busy()
 {
-	if (flash_read_status_register(FLASH_READ_STATUS_REGISTER_1) & FLASH_IS_BUSY_BIT)
+	if (data_sending) {
+		return true;
+	}
+	if (W25Q128_read_status_register(FLASH_READ_STATUS_REGISTER_1) & FLASH_IS_BUSY_BIT)
 	{
 		return true;
 	}
 	return false;
 }
 
-
-void flash_SPI_write(uint8_t instruction, uint8_t* data, uint8_t size)
+static void W25Q128_write_enable()
 {
-
-	// must be done before writing:
-	flash_write_enable();
-
-	SPI3_enable();
-	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_transmit(data, size);
-
-	CS_SPI3_disable();
-	SPI3_disable();
-}
-
-void flash_SPI_write_DMA(uint8_t instruction, uint8_t* data, int size)
-{
-
-	// must be done before writing:
-	flash_write_enable();
-
-	SPI3_enable();
-	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_transmit_DMA(data, size);
-}
-
-void flash_SPI_read(uint8_t instruction, uint8_t* memory_address,
-	int number_of_bytes)
-{
-	SPI3_enable();
-	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_transmit(memory_address, 3);
-	SPI3_receive(memory_address, number_of_bytes);
-
-	CS_SPI3_disable();
-	SPI3_disable();
-}
-
-#if !defined(USE_I2C1)
-void flash_SPI_read_DMA(uint8_t instruction, uint8_t* data, int size)
-{
-
-	SPI3_enable();
-	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_receive_DMA(data, size);
-}
-#endif
-
-static void flash_write_enable()
-{
-
 	uint8_t instruction = FLASH_WRITE_ENABLE;
 
-	SPI3_enable();
 	CS_SPI3_enable();
-
 	SPI3_transmit(&instruction, 1);
-
 	CS_SPI3_disable();
-	SPI3_disable();
+
 }
 
-void flash_erase(uint8_t instruction, uint8_t* address)
+void W25Q128_erase(uint8_t instruction, uint32_t address)
 {
-
+	uint8_t instruction_and_address[4] = { instruction, address >> 16,address >> 8,address };
+	while (W25Q128_check_if_busy()) {
+		;//wait
+	}
 	// must be done before erasing:
-	flash_write_enable();
+	W25Q128_write_enable();
 
-	SPI3_enable();
+
 	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_transmit(address, 3);
-
+	SPI3_transmit(instruction_and_address, 4);
 	CS_SPI3_disable();
-	SPI3_disable();
 }
 
-void flash_full_chip_erase()
+void W25Q128_erase_full_chip()
 {
 
-	uint8_t instruction = FLASH_CHIP_ERASE;
-
+	uint8_t instruction = FLASH_ERASE_CHIP;
+	while (W25Q128_check_if_busy()) {
+		;//wait
+	}
 	// must be done before some instruction:
-	flash_write_enable();
+	W25Q128_write_enable();
 
-	SPI3_enable();
+
 	CS_SPI3_enable();
-
 	SPI3_transmit(&instruction, 1);
-
 	CS_SPI3_disable();
-	SPI3_disable();
 }
 
-uint8_t flash_read_status_register(uint8_t instruction)
+uint8_t W25Q128_read_status_register(uint8_t instruction)
 {
 	uint8_t status;
 
-	SPI3_enable();
 	CS_SPI3_enable();
 
 	// wait for TXE flag before sending anything
@@ -265,55 +204,130 @@ uint8_t flash_read_status_register(uint8_t instruction)
 	SPI3->SR;
 
 	CS_SPI3_disable();
-	SPI3_disable();
 
 	return status;
 }
 
-void flash_read_unique_ID(uint8_t* memory_address)
+uint32_t W25Q128_read_JEDEC_ID()
 {
-	// save in memory_address 64-bit unique ID as 8 bytes
-	uint8_t temp[9];
-	flash_read_data(FLASH_READ_UNIQUE_ID, 0x000000, temp, 8);
-	memmove(memory_address, &temp[1], sizeof(temp[1]) * 8);
-}
+	uint8_t temp[3];
+	uint8_t instr = FLASH_JEDEC_ID;
 
-
-
-void flash_save_data(uint8_t instruction, uint32_t memory_address,
-	uint8_t* data, int number_of_bytes)
-{
-
-	uint8_t memory_address_tab[3] = { (memory_address >> 16) & 0xFF,
-									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
-
-	// must be done before writing:
-	flash_write_enable();
-
-	SPI3_enable();
 	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_transmit(memory_address_tab, 3);
-	SPI3_transmit_DMA(data, number_of_bytes);
-}
-
-void flash_read_data(uint8_t instruction, uint32_t memory_address,
-	uint8_t* data, int number_of_bytes)
-{
-
-	uint8_t memory_address_tab[3] = { (memory_address >> 16) & 0xFF,
-									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
-
-	SPI3_enable();
-	CS_SPI3_enable();
-
-	SPI3_transmit(&instruction, 1);
-	SPI3_transmit(memory_address_tab, 3);
-	SPI3_receive(data, number_of_bytes);
-
+	SPI3_transmit(&instr, 1);
+	SPI3_receive(temp, 3);
 	CS_SPI3_disable();
-	SPI3_disable();
+
+	return (temp[0] << 16 | temp[1] << 8 | temp[2]);
+}
+
+//	This function write any number of bytes (assumes that flash is erased):
+void W25Q128_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes)
+{
+	uint8_t instruction_and_address[4] = { FLASH_PAGE_PROGRAM, (memory_address >> 16) & 0xFF,
+									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
+
+	uint32_t page_address = memory_address & 0xFFFFFF00;
+	uint16_t offset = memory_address & 0xFF;
+	//	if data exceed page range write a next page:
+	if (number_of_bytes + offset > W25Q128_PAGE_SIZE) {
+		W25Q128_write_data(page_address + W25Q128_PAGE_SIZE, &data[W25Q128_PAGE_SIZE - offset], number_of_bytes - (W25Q128_PAGE_SIZE - offset));
+		number_of_bytes = W25Q128_PAGE_SIZE - offset;
+	}
+	while (W25Q128_check_if_busy()) {
+		;
+	}
+	// must be done before writing:
+	W25Q128_write_enable();
+
+	CS_SPI3_enable();
+	data_sending = true;
+	SPI3_transmit(instruction_and_address, 4);
+	SPI3_transmit_DMA(data, number_of_bytes);
+
+}
+
+//	This function doesn't provide any check of size or address - it is up to you:
+void W25Q128_fast_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes)
+{
+	uint8_t instruction_and_address[4] = { FLASH_PAGE_PROGRAM, (memory_address >> 16) & 0xFF,
+									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
+	while (W25Q128_check_if_busy()) {
+		;//wait
+	}
+	// must be done before writing:
+	W25Q128_write_enable();
+
+	CS_SPI3_enable();
+	data_sending = true;
+	SPI3_transmit(instruction_and_address, 4);
+	SPI3_transmit_DMA(data, number_of_bytes);
+
+}
+
+void W25Q128_modify_data(uint32_t memory_address, uint8_t* new_data, int number_of_bytes)
+{
+	uint32_t sector_address = memory_address & 0xFFFFF000;
+	uint16_t offset = memory_address & 0xFFF;
+	uint8_t buffer[W25Q128_SECTOR_SIZE];
+
+	while (number_of_bytes > 0) {
+		//	copy old data:
+		W25Q128_read_data(sector_address, buffer, W25Q128_SECTOR_SIZE);
+		//	erase sector:
+		W25Q128_erase(FLASH_ERASE_SECTOR_4KB, sector_address);
+		//	modify data:
+		if (number_of_bytes + offset > W25Q128_SECTOR_SIZE) {
+			memcpy(&buffer[offset], new_data, W25Q128_SECTOR_SIZE - offset);
+			number_of_bytes -= (W25Q128_SECTOR_SIZE - offset);
+			new_data += (W25Q128_SECTOR_SIZE - offset);
+		}
+		else {
+			memcpy(&buffer[offset], new_data, number_of_bytes);
+			number_of_bytes = 0;
+		}
+
+		offset = 0;
+		//	write modified data:
+		for (int i = 0;i < (W25Q128_SECTOR_SIZE / W25Q128_PAGE_SIZE); ++i) {
+			W25Q128_fast_write_data(sector_address + i * W25Q128_PAGE_SIZE, &buffer[i * W25Q128_PAGE_SIZE], W25Q128_PAGE_SIZE);
+		}
+
+		sector_address += W25Q128_SECTOR_SIZE;
+
+	}
+}
+
+//	works up to 50 [MHz] for higher use W25Q128_fast_read_data()
+void W25Q128_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes)
+{
+	uint8_t instruction_and_address[4] = { FLASH_READ_DATA, (memory_address >> 16) & 0xFF,
+										   (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
+	while (W25Q128_check_if_busy()) {
+		;//wait
+	}
+
+	CS_SPI3_enable();
+	SPI3_transmit(instruction_and_address, 4);
+	SPI3_receive(pointer_for_data, number_of_bytes);
+	CS_SPI3_disable();
+
+}
+
+//	works up to 104 [MHz]
+void W25Q128_fast_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes)
+{
+	uint8_t instruction_and_address[5] = { FLASH_FAST_READ, (memory_address >> 16) & 0xFF,
+										   (memory_address >> 8) & 0xFF, (memory_address) & 0xFF, FLASH_DUMMY_BYTE };
+	while (W25Q128_check_if_busy()) {
+		;//wait
+	}
+
+	CS_SPI3_enable();
+	SPI3_transmit(instruction_and_address, 5);
+	SPI3_receive(pointer_for_data, number_of_bytes);
+	CS_SPI3_disable();
+
 }
 
 void flash_add_data_to_save(uint8_t data)
@@ -323,16 +337,16 @@ void flash_add_data_to_save(uint8_t data)
 
 	flash_write_counter++;
 
-	if (flash_write_counter == 256)
+	if (flash_write_counter == W25Q128_PAGE_SIZE)
 	{
-		flash_save_data(FLASH_PAGE_PROGRAM, flash_global_write_address,
-			flash_write_buffer, 256);
+		W25Q128_fast_write_data(flash_global_write_address,
+			flash_write_buffer, W25Q128_PAGE_SIZE);
 		flash_global_write_address += 0x100;
 	}
 	else if (flash_write_counter == 512)
 	{
-		flash_save_data(FLASH_PAGE_PROGRAM, flash_global_write_address,
-			&flash_write_buffer[256], 256);
+		W25Q128_fast_write_data(flash_global_write_address,
+			&flash_write_buffer[W25Q128_PAGE_SIZE], W25Q128_PAGE_SIZE);
 		flash_global_write_address += 0x100;
 		flash_write_counter = 0;
 	}

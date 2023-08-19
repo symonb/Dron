@@ -7,10 +7,15 @@
 void USB_check_connection();
 void usb_communication(timeUs_t time);
 
+typedef enum {
+    USB_CLASS_CDC,
+    USB_CLASS_DFU,
+    USB_CLASS_MSC
+}usb_class_e;
+
 typedef enum
 {
     USB_STATE_NOT_CONNECTED,
-    USB_STATE_STARTUP,
     USB_STATE_COMMUNICATION,
     USB_STATE_IDLE,
     USB_COUNT
@@ -18,6 +23,7 @@ typedef enum
 
 typedef struct
 {
+    usb_class_e class;
     bool connected;
     usb_state_e status;
     uint8_t data_to_send[50];
@@ -28,6 +34,11 @@ typedef struct
 
 extern usb_t main_usb;
 
-
 #endif /* USB_H_ */
+
+
+
+
+
+
 

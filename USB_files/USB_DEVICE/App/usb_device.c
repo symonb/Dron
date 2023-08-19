@@ -27,7 +27,10 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "usbd_msc.h"
+#include "usbd_storage_if.h"
+#include "usbd_dfu.h"
+#include "usbd_dfu_if.h"
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN PV */
@@ -47,16 +50,7 @@ USBD_HandleTypeDef hUsbDeviceFS;
  * -- Insert your variables declaration here --
  */
  /* USER CODE BEGIN 0 */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
-}
+
 /* USER CODE END 0 */
 
 /*
@@ -70,10 +64,10 @@ void Error_Handler(void)
    * Init USB device Library, add supported class and start the library
    * @retval None
    */
-void MX_USB_DEVICE_Init(void)
+void MX_USB_DEVICE_Init(usb_class_e class)
 {
   /* USER CODE BEGIN USB_DEVICE_Init_PreTreatment */
-
+  USBD_Descriptor_preinit(class);
   /* USER CODE END USB_DEVICE_Init_PreTreatment */
 
   /* Init Device Library, add supported class and start the library. */
@@ -81,14 +75,51 @@ void MX_USB_DEVICE_Init(void)
   {
     Error_Handler();
   }
-  if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK)
+
+  switch (class)
   {
-    Error_Handler();
+  case USB_CLASS_CDC:
+    if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK)
+    {
+      Error_Handler();
+    }
+    if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK)
+    {
+      Error_Handler();
+    }
+    // NVIC_SetPriority(OTG_FS_IRQn, 0);
+    // NVIC_SetPriority(DMA1_Stream5_IRQn, 10);
+    break;
+  case USB_CLASS_MSC:
+    if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_MSC) != USBD_OK)
+    {
+      Error_Handler();
+    }
+    if (USBD_MSC_RegisterStorage(&hUsbDeviceFS, &USBD_Storage_Interface_fops_FS) != USBD_OK)
+    {
+      Error_Handler();
+    }
+    //  to make writing to FLASH possible it is needed to change priorities of interrupts:
+    NVIC_SetPriority(OTG_FS_IRQn, 10);
+    NVIC_SetPriority(DMA1_Stream5_IRQn, 9);
+
+    break;
+  case USB_CLASS_DFU:
+    if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_DFU) != USBD_OK)
+    {
+      Error_Handler();
+    }
+    if (USBD_DFU_RegisterMedia(&hUsbDeviceFS, &USBD_DFU_fops_FS) != USBD_OK)
+    {
+      Error_Handler();
+    }
+    // NVIC_SetPriority(OTG_FS_IRQn, 0);
+    // NVIC_SetPriority(DMA1_Stream5_IRQn, 10);
+    break;
+  default:
+    break;
   }
-  if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK)
-  {
-    Error_Handler();
-  }
+
   if (USBD_Start(&hUsbDeviceFS) != USBD_OK)
   {
     Error_Handler();

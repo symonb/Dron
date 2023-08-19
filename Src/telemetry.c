@@ -69,7 +69,7 @@ void USART6_IRQHandler(void)
 		case 9:
 			//	reset FLASH:
 			BLACKBOX_STATUS = BLACKBOX_IDLE;
-			flash_full_chip_erase();
+			W25Q128_erase_full_chip();
 			flash_write_counter = 0;
 			flash_read_counter = 0;
 			flash_global_write_address = 0x00;
@@ -168,7 +168,7 @@ void print_flash(uint8_t data_pack_size)
 			toggle_RED_LED();
 			toggle_BLUE_LED();
 			// read data from flash:
-			flash_read_data(FLASH_READ_DATA, read_address, flash_read_buffer,
+			W25Q128_read_data(read_address, flash_read_buffer,
 				256);
 			read_address += 0x100;
 			transmitting_is_Done = 0;
