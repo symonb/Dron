@@ -84,6 +84,9 @@ add_executable(${TARGET_ELF}
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_data.c
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c
     USB_files/Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc.c 
+    USB_files/FatFS/Src/ff.c
+    USB_files/FatFS/Src/diskio.c
+    USB_files/FatFS/Src/ffunicode.c
 
 )
 
@@ -100,7 +103,9 @@ target_include_directories(${TARGET_ELF} PUBLIC
     USB_files/STM32F4xx_HAL_Driver/Inc
     USB_files/STM32F4xx_HAL_Driver/Inc/Legacy
     USB_files/USB_DEVICE/App
-    USB_files/USB_DEVICE/Target)
+    USB_files/USB_DEVICE/Target
+    USB_files/FatFS/Inc
+    )
 
 set(CMAKE_C_FLAGS "${C_flags}")
 set(CMAKE_ASM_FLAGS "${AS_flags}")

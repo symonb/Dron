@@ -7,6 +7,11 @@ set(MAIN_SRC
     acro.c
     adc1.c
     battery.c
+    blackbox/blackbox.c
+    blackbox/blackbox_encoding.c
+    common/encoding.c
+    common/printf.c
+    common/typeconversion.c
     drivers/SPI1.c
     drivers/SPI2.c
     drivers/SPI3.c
@@ -18,6 +23,7 @@ set(MAIN_SRC
     ibus.c
     math/statistics.c 
     math/quaternions.c
+    math/math_quicker.c
     motors.c
     MPU6000.c
     OSD.c

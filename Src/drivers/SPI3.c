@@ -71,7 +71,6 @@ void SPI3_transmit_DMA(uint8_t* data, int size)
     DMA1_Stream5->NDTR = size;
     DMA1_Stream5->CR |= DMA_SxCR_EN;
 }
-
 void SPI3_receive(uint8_t* data, int size)
 {
     while (size > 0)
@@ -135,9 +134,9 @@ void SPI3_receive_DMA(uint8_t* data, int size)
 bool failsafe_SPI3()
 {
     //	waiting as Data will be sent or failsafe (if set time passed)
-    if ((get_Global_Time() - time_flag5_1) >= SEC_TO_US(TIMEOUT_VALUE))
+    if ((get_Global_Time() - time_flag5_1) >= SEC_TO_US(SPI_TIMEOUT_VALUE))
     {
-        FailSafe_status = FS_SPI_FLASH_ERROR;
+        FailSafe_status = FAILSAFE_SPI_FLASH_ERROR;
         EXTI->SWIER |= EXTI_SWIER_SWIER15;
         return true;
     }

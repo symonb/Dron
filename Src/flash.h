@@ -18,17 +18,21 @@ void W25Q128_read_unique_ID(uint8_t* memory_address);
 uint32_t W25Q128_read_JEDEC_ID();
 void W25Q128_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes);
 void W25Q128_fast_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes);
+void W25Q128_unsafe_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes);
 void W25Q128_modify_data(uint32_t memory_address, uint8_t* new_data, int number_of_bytes);
 void W25Q128_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes);
 void W25Q128_fast_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes);
-void flash_add_data_to_save(uint8_t);
-void Gyro_Acc_save_to_flash(float* not_filtered);
+void flash_save(uint8_t);
+uint16_t flash_flush();
 bool W25Q128_check_if_busy();
+uint16_t flash_get_write_buffer_free_space();
+uint16_t flash_get_write_buffer_size();
 
 //-------MACROs FOR FLASH W25Q128JV----------
 
 #define W25Q128_PAGE_SIZE 256
 #define W25Q128_SECTOR_SIZE 16*W25Q128_PAGE_SIZE
+#define W25Q128_SECTOR_COUNT 4096
 #define FLASH_WRITE_ENABLE 0x06
 #define FLASH_WRITE_DISABLE 0x04
 

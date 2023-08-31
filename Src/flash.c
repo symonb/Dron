@@ -81,9 +81,8 @@ void DMA1_Stream5_IRQHandler(void)
 		SPI3->DR;
 		SPI3->SR;
 		DMA1_Stream5->CR &= ~DMA_SxCR_EN;
-		data_sending = false;
-
 		CS_SPI3_disable();
+		data_sending = false;
 	}
 }
 
@@ -108,6 +107,7 @@ static void W25Q128_write_enable()
 	CS_SPI3_disable();
 
 }
+
 
 void W25Q128_erase(uint8_t instruction, uint32_t address)
 {
@@ -157,7 +157,7 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 	}
 	// send first data - instruction for reading
 	SPI3->DR = instruction;
-	// wait for TXE flag and send 2nd byte - anything
+	// wait for TXE flag 
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
@@ -166,20 +166,21 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 			break; // wait
 		}
 	}
-	// send 2nd byte (dummy):
-	SPI3->DR = FLASH_DUMMY_BYTE;
 
 	// now start receiving bytes:
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_RXNE))
-	{
+	{ // wait
 		if (failsafe_SPI3())
 		{
-			break; // wait
+			break;
 		}
 	}
-	// read first byte this is rubbish:
+	// read first byte (this should be a rubbish):
 	SPI3->DR;
+
+	// send 2nd byte (dummy byte):
+	SPI3->DR = FLASH_DUMMY_BYTE;
 
 	// wait for TXE flag
 	time_flag5_1 = get_Global_Time();
@@ -190,14 +191,22 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 			break; // wait
 		}
 	}
-	// now start receiving status value:
+	// now start receiving status value
+	// continue sending dummy byte to receive status again if RXNE not set after first one (happens)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_RXNE))
 	{
 		if (failsafe_SPI3())
-		{
-			break; // wait
+		{	//if failsafe occure return:
+			return 0xFF;
+			break;
 		}
+		// if (!((SPI3->SR) & SPI_SR_TXE)) {
+		// 	// send 2nd byte (dummy byte):
+		// 	SPI3->DR = FLASH_DUMMY_BYTE;
+		// }
+
+
 	}
 	// read status:
 	status = SPI3->DR;
@@ -222,6 +231,14 @@ uint32_t W25Q128_read_JEDEC_ID()
 }
 
 //	This function write any number of bytes (assumes that flash is erased):
+/**
+  * @brief  function to write data to W25Q128 Flash
+  * @param memory_address memory address where data will be written
+  *	@param data pointer for data to write
+  * @param number_of_bytes number of bytes to write
+  * @retval none
+  * @note	This function check if number of data exceeds given page and if so write 2 or more pages. Function assumes that Flash pages which will be written are erased.
+  */
 void W25Q128_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes)
 {
 	uint8_t instruction_and_address[4] = { FLASH_PAGE_PROGRAM, (memory_address >> 16) & 0xFF,
@@ -247,11 +264,19 @@ void W25Q128_write_data(uint32_t memory_address, uint8_t* data, int number_of_by
 
 }
 
-//	This function doesn't provide any check of size or address - it is up to you:
+/**
+  * @brief  function to write data to W25Q128 Flash
+  * @param memory_address memory address where data will be written
+  *	@param data pointer for data to write
+  * @param number_of_bytes number of bytes to write max. 256 (if memory_address == XXXXX00)
+  * @retval none
+  * @note	This function doesn't provide any check of size or address. It is up to you to provide coreect inputs. Function assumes that Flash pages which will be written are erased.
+  */
 void W25Q128_fast_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes)
 {
 	uint8_t instruction_and_address[4] = { FLASH_PAGE_PROGRAM, (memory_address >> 16) & 0xFF,
 									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
+
 	while (W25Q128_check_if_busy()) {
 		;//wait
 	}
@@ -262,28 +287,59 @@ void W25Q128_fast_write_data(uint32_t memory_address, uint8_t* data, int number_
 	data_sending = true;
 	SPI3_transmit(instruction_and_address, 4);
 	SPI3_transmit_DMA(data, number_of_bytes);
-
 }
 
+/**
+  * @brief  function to write data to W25Q128 Flash
+  * @param memory_address memory address where data will be written
+  *	@param data pointer for data to write
+  * @param number_of_bytes number of bytes to write max. 256 (if memory_address == XXXXX00)
+  * @retval none
+  * @note	This function doesn't provide any check of size or address or busy flag. Function assumes that Flash page which will be written is erased.
+  */
+void W25Q128_unsafe_write_data(uint32_t memory_address, uint8_t* data, int number_of_bytes)
+{
+	uint8_t instruction_and_address[4] = { FLASH_PAGE_PROGRAM, (memory_address >> 16) & 0xFF,
+									 (memory_address >> 8) & 0xFF, (memory_address) & 0xFF };
+
+
+	// must be done before writing:
+	W25Q128_write_enable();
+
+	CS_SPI3_enable();
+	data_sending = true;
+	SPI3_transmit(instruction_and_address, 4);
+	SPI3_transmit_DMA(data, number_of_bytes);
+}
+
+/**
+  * @brief  function to modify data storaged in W25Q128 Flash
+  * @param memory_address memory address where data will be written
+  *	@param new_data npointer for data to write
+  * @param number_of_bytes number of bytes to write
+  * @retval none
+  * @note	Function will copy current data from flash, erase needed space and overwrite specified number of bytes. Then write it to flash module.
+  */
 void W25Q128_modify_data(uint32_t memory_address, uint8_t* new_data, int number_of_bytes)
 {
 	uint32_t sector_address = memory_address & 0xFFFFF000;
 	uint16_t offset = memory_address & 0xFFF;
-	uint8_t buffer[W25Q128_SECTOR_SIZE];
+	static uint8_t buffer[W25Q128_SECTOR_SIZE];
 
 	while (number_of_bytes > 0) {
 		//	copy old data:
 		W25Q128_read_data(sector_address, buffer, W25Q128_SECTOR_SIZE);
 		//	erase sector:
 		W25Q128_erase(FLASH_ERASE_SECTOR_4KB, sector_address);
+
 		//	modify data:
 		if (number_of_bytes + offset > W25Q128_SECTOR_SIZE) {
-			memcpy(&buffer[offset], new_data, W25Q128_SECTOR_SIZE - offset);
+			memmove(&buffer[offset], new_data, W25Q128_SECTOR_SIZE - offset);
 			number_of_bytes -= (W25Q128_SECTOR_SIZE - offset);
 			new_data += (W25Q128_SECTOR_SIZE - offset);
 		}
 		else {
-			memcpy(&buffer[offset], new_data, number_of_bytes);
+			memmove(&buffer[offset], new_data, number_of_bytes);
 			number_of_bytes = 0;
 		}
 
@@ -298,7 +354,14 @@ void W25Q128_modify_data(uint32_t memory_address, uint8_t* new_data, int number_
 	}
 }
 
-//	works up to 50 [MHz] for higher use W25Q128_fast_read_data()
+/**
+  * @brief  function for reading data from W25Q128 Flash
+  * @param memory_address memory address from data will be read
+  *	@param pointer_for_data tab for read data
+  * @param number_of_bytes number of bytes to read
+  * @retval none
+  * @note	works up to 50 [MHz] for higher frequencies use W25Q128_fast_read_data()
+  */
 void W25Q128_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes)
 {
 	uint8_t instruction_and_address[4] = { FLASH_READ_DATA, (memory_address >> 16) & 0xFF,
@@ -314,7 +377,14 @@ void W25Q128_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int n
 
 }
 
-//	works up to 104 [MHz]
+/**
+  * @brief  function for reading data from W25Q128 Flash
+  * @param memory_address memory address from data will be read
+  *	@param pointer_for_data tab for read data
+  * @param number_of_bytes number of bytes to read
+  * @retval none
+  * @note	works up to 104 [MHz] but before reading it sends one more byte compering to W25Q128_read_data()
+  */
 void W25Q128_fast_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int number_of_bytes)
 {
 	uint8_t instruction_and_address[5] = { FLASH_FAST_READ, (memory_address >> 16) & 0xFF,
@@ -330,110 +400,50 @@ void W25Q128_fast_read_data(uint32_t memory_address, uint8_t* pointer_for_data, 
 
 }
 
-void flash_add_data_to_save(uint8_t data)
+void flash_save(uint8_t data)
 {
-
-	flash_write_buffer[flash_write_counter] = data;
-
-	flash_write_counter++;
+	static uint8_t data_ready_to_write = 0;
+	flash_write_buffer[flash_write_counter++] = data;
 
 	if (flash_write_counter == W25Q128_PAGE_SIZE)
 	{
-		W25Q128_fast_write_data(flash_global_write_address,
-			flash_write_buffer, W25Q128_PAGE_SIZE);
-		flash_global_write_address += 0x100;
+		data_ready_to_write = 1;
 	}
 	else if (flash_write_counter == 512)
 	{
-		W25Q128_fast_write_data(flash_global_write_address,
-			&flash_write_buffer[W25Q128_PAGE_SIZE], W25Q128_PAGE_SIZE);
-		flash_global_write_address += 0x100;
+		data_ready_to_write = 2;
 		flash_write_counter = 0;
+	}
+	// try to save data to flash (if buffer ready and flash not busy):
+	if (data_ready_to_write > 0 && !W25Q128_check_if_busy()) {
+		W25Q128_unsafe_write_data(flash_global_write_address, &flash_write_buffer[W25Q128_PAGE_SIZE * (data_ready_to_write - 1)], W25Q128_PAGE_SIZE);
+		flash_global_write_address += 0x100;
+		data_ready_to_write = 0;
 	}
 }
 
-void Gyro_Acc_save_to_flash(float* not_filtered)
-{
-#if defined(USE_FLASH_BLACKBOX)
+/**
+  * @brief  Function for flushing data to W25Q128 Flash.
+  * @retval The remaining bytes to fully fill the page.
+  * @note	It will flush data from buffer into memory even is page will not be fully written. Next writing have to take care of remaining space to fill page.
+  */
+uint16_t flash_flush() {
 
-	if (BLACKBOX_STATUS == BLACKBOX_COLLECT_DATA)
-	{
-
-#if defined(BLACKBOX_SAVE_EULER_ANGLES)
-
-		flash_add_data_to_save(
-			((int16_t)(global_euler_angles.roll * 150) >> 8) & 0xFF);
-		flash_add_data_to_save((int16_t)(global_euler_angles.roll * 150) & 0xFF);
-
-		flash_add_data_to_save(
-			((int16_t)(global_euler_angles.pitch * 150) >> 8) & 0xFF);
-		flash_add_data_to_save((int16_t)(global_euler_angles.pitch * 150) & 0xFF);
-
-		flash_add_data_to_save(
-			((int16_t)(global_euler_angles.yaw * 150) >> 8) & 0xFF);
-		flash_add_data_to_save((int16_t)(global_euler_angles.yaw * 150) & 0xFF);
-#endif
-
-#if defined(BLACKBOX_SAVE_SET_ANGLES)
-		for (uint8_t i = 0; i < 3; i++)
-		{
-			flash_add_data_to_save(((int16_t)(global_variable_monitor[i] * 150) >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t)(global_variable_monitor[i] * 150) & 0xFF);
-		}
-
-#endif
-
-#if defined(BLACKBOX_SAVE_FILTERED_GYRO_AND_ACC)
-		for (uint8_t i = 0; i < 6; i++)
-		{
-			flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
-			flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
-		}
-#elif defined(BLACKBOX_SAVE_FILTERED_GYRO)
-		for (uint8_t i = 0; i < 3; i++)
-		{
-			flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
-			flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
-		}
-#elif defined(BLACKBOX_SAVE_FILTERED_ACC)
-		for (uint8_t i = 3; i < 6; i++)
-		{
-			flash_add_data_to_save((Gyro_Acc[i] >> 8) & 0xFF);
-			flash_add_data_to_save(Gyro_Acc[i] & 0xFF);
-		}
-#endif
-
-#if defined(BLACKBOX_SAVE_RAW_GYRO_AND_ACC)
-
-		for (uint8_t i = 0; i < 6; i++)
-		{
-			flash_add_data_to_save(((int16_t)not_filtered[i] >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t)not_filtered[i] & 0xFF);
-		}
-#elif defined(BLACKBOX_SAVE_RAW_GYRO)
-		for (uint8_t i = 0; i < 3; i++)
-		{
-			flash_add_data_to_save(((int16_t)not_filtered[i] >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t)not_filtered[i] & 0xFF);
-		}
-#elif defined(BLACKBOX_SAVE_RAW_ACC)
-		for (uint8_t i = 3; i < 6; i++)
-		{
-			flash_add_data_to_save(((int16_t)not_filtered[i] >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t)not_filtered[i] & 0xFF);
-		}
-#endif
-
-#if defined(BLACKBOX_SAVE_STICKS)
-		for (uint8_t i = 0; i < 2; i++)
-		{
-			flash_add_data_to_save(((int16_t)channels[i] >> 8) & 0xFF);
-			flash_add_data_to_save((int16_t)channels[i] & 0xFF);
-		}
-		flash_add_data_to_save(((int16_t)channels[3] >> 8) & 0xFF);
-		flash_add_data_to_save((int16_t)channels[3] & 0xFF);
-#endif
+	if (flash_write_counter != 0) {
+		uint16_t counter = flash_write_counter > W25Q128_PAGE_SIZE ? flash_write_counter - W25Q128_PAGE_SIZE : flash_write_counter;
+		while (W25Q128_check_if_busy()) {}
+		W25Q128_unsafe_write_data(flash_global_write_address, &flash_write_buffer[(flash_write_counter / W25Q128_PAGE_SIZE) * W25Q128_PAGE_SIZE], counter);
+		flash_global_write_address += counter;
+		flash_write_counter = 0;
+		return W25Q128_PAGE_SIZE - counter;
 	}
+	return 0;
+}
+uint16_t flash_get_write_buffer_free_space() {
+	return sizeof(flash_write_buffer) / sizeof(flash_write_buffer[0]) - flash_write_counter;
 
-#endif
+}
+uint16_t flash_get_write_buffer_size() {
+	return sizeof(flash_write_buffer) / sizeof(flash_write_buffer[0]);
+
 }
