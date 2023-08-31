@@ -54,7 +54,7 @@
 
 #define OSD_MAX_CHARACTER_NUMBER 256
 
-void setup_OSD();
+bool OSD_init();
 void OSD_SPI_write(uint8_t instruction, uint8_t data);
 void OSD_SPI_read(uint8_t instruction, uint8_t* memory_address);
 void OSD_write_new_character(const uint8_t* new_character_table, uint8_t character_number);
@@ -78,6 +78,7 @@ typedef struct
 {
     char* chip_name;
     bool calibrated;
+    timeUs_t logo_time;
 } osd_t;
 
 extern osd_t main_OSD;

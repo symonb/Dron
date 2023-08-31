@@ -134,7 +134,7 @@ void SPI2_receive(uint8_t* data, uint16_t size)
         {
             if (failsafe_SPI2())
             {
-                break; // wait
+                break;
             }
         }
         *data++ = SPI2->DR;
@@ -147,16 +147,16 @@ void SPI2_receive(uint8_t* data, uint16_t size)
     {
         if (failsafe_SPI2())
         {
-            break; // wait
+            break;
         }
     }
     // wait for BSY flag
     time_flag6_1 = get_Global_Time();
     while (((SPI2->SR) & SPI_SR_BSY))
-    {
+    {// wait
         if (failsafe_SPI2())
         {
-            break; // wait
+            break;
         }
     }
     SPI2->DR;
@@ -167,20 +167,20 @@ void SPI2_receive_one(uint8_t* data)
 {
     time_flag6_1 = get_Global_Time();
     while (!((SPI2->SR) & SPI_SR_TXE))
-    {
+    { // wait
         if (failsafe_SPI2())
         {
-            break; // wait
+            break;
         }
     }
     SPI2->DR = 0xFF; // send anything
 
     time_flag6_1 = get_Global_Time();
     while (!((SPI2->SR) & SPI_SR_RXNE))
-    {
+    { // wait
         if (failsafe_SPI2())
         {
-            break; // wait
+            break;
         }
     }
     *data = SPI2->DR;
@@ -189,9 +189,9 @@ void SPI2_receive_one(uint8_t* data)
 bool failsafe_SPI2()
 {
     //	waiting as Data will be sent or failsafe if set time passed
-    if ((get_Global_Time() - time_flag6_1) >= SEC_TO_US(TIMEOUT_VALUE))
+    if ((get_Global_Time() - time_flag6_1) >= SEC_TO_US(SPI_TIMEOUT_VALUE))
     {
-        FailSafe_status = FS_SPI_OSD_ERROR;
+        FailSafe_status = FAILSAFE_SPI_OSD_ERROR;
         EXTI->SWIER |= EXTI_SWIER_SWIER15;
         return true;
     }

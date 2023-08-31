@@ -35,7 +35,7 @@ static void OSD_NTSC_PAL_selection();
 static void OSD_enable_auto_black_control();
 static void OSD_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
 
-osd_t main_OSD = { .calibrated = false, .chip_name = "MAX7456" };
+osd_t main_OSD = { .calibrated = false, .chip_name = "MAX7456", .logo_time = SEC_TO_US(4) };
 
 // ------SPI2 with DMA usage-----
 // reception:
@@ -49,46 +49,67 @@ void DMA1_Stream4_IRQHandler(void)
 	}
 }
 
-
-void setup_OSD()
+// @retval true if setup copleted false if in progress 
+bool OSD_init()
 {
-	CS_SPI2_disable();
+	static uint8_t setup_stage;
+	static timeUs_t time_flag;
+	// CS_SPI2_disable();
 
 	//	wait for saving changes (until OSD is not busy):
-	while (is_OSD_busy())
+	switch (setup_stage)
 	{
-		; // wait
+	case 0:
+		main_OSD.calibrated = false;
+		if (!is_OSD_busy()) {
+			//	set all OSD parameters:
+			OSD_enable_auto_black_control();
+			OSD_set_horizontal_offset(-2);
+			OSD_set_vertical_offset(4);
+			OSD_NTSC_PAL_selection();
+			OSD_clear_Display_Memory();
+			setup_stage++;
+		}
+		break;
+	case 1:
+		if (!is_OSD_busy()) {
+			OSD_enable_OSD_display();
+			OSD_print_logo();
+			setup_stage++;
+			time_flag = get_Global_Time();
+
+		}
+		break;
+		// // only for debugging:
+		// uint8_t table[256];
+		// for (int i = 0; i < 256; i++)
+		// {
+		// 	table[i] = i;
+		// }
+		// OSD_write_to_Display_Memory_16bit_AI(table, 1, 256);
+		//	OSD_update_logo_characters();
+
+	case 2:
+		// wait some time to display a logo:
+		if (get_Global_Time() - time_flag > main_OSD.logo_time) {
+
+			OSD_clear_Display_Memory();
+			setup_stage++;
+		}
+		break;
+	case 3:
+		//	wait for saving changes (until OSD is not busy):
+		if (is_OSD_cleared()) {
+			main_OSD.calibrated = true;
+			// for reconecting battery with USB power:
+			setup_stage = 0;
+			return true;
+		}
+		break;
+	default:
+		break;
 	}
-	//	set all OSD parameters:
-	OSD_enable_auto_black_control();
-	OSD_set_horizontal_offset(-2);
-	OSD_set_vertical_offset(4);
-	OSD_NTSC_PAL_selection();
-	OSD_clear_Display_Memory();
-	delay_mili(50);
-	OSD_enable_OSD_display();
-
-	// // only for debugging:
-	// uint8_t table[256];
-	// for (int i = 0; i < 256; i++)
-	// {
-	// 	table[i] = i;
-	// }
-	// OSD_write_to_Display_Memory_16bit_AI(table, 1, 256);
-
-	//	OSD_update_logo_characters();
-
-	OSD_print_logo();
-
-	delay_mili(1000);
-
-	OSD_clear_Display_Memory();
-	//	wait for saving changes (until OSD is not busy):
-	while (is_OSD_cleared())
-	{
-		; // wait
-	}
-	main_OSD.calibrated = true;
+	return false;
 }
 
 void OSD_SPI_write(uint8_t instruction, uint8_t data)
@@ -479,19 +500,19 @@ void OSD_print_warnings()
 	uint8_t text_tab[12];
 	switch (FailSafe_status)
 	{
-	case FS_NO_FAILSAFE:
+	case FAILSAFE_NO_FAILSAFE:
 		OSD_characters_from_text("            ", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 6, 12);
 		break;
-	case FS_RX_TIMEOUT:
+	case FAILSAFE_RX_TIMEOUT:
 		OSD_characters_from_text("NO RX", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 2, 5);
 		break;
-	case FS_NO_PREARM:
+	case FAILSAFE_NO_PREARM:
 		OSD_characters_from_text("NO PREARM", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 4, 9);
 		break;
-	case FS_GYRO_CALIBRATION:
+	case FAILSAFE_GYRO_CALIBRATION:
 		OSD_characters_from_text("GYRO CALIB", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 4, 10);
 		break;
