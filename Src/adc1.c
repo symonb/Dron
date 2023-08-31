@@ -6,9 +6,8 @@
 #include "battery.h"
 #include "adc1.h"
 
-const float V_25 = 0.76f;    // [V]
-const float AVG_SLOPE = 400; // [C/V]
-uint32_t ADC1_buffer[2] = {0, 0};
+
+
 
 void DMA2_Stream4_IRQHandler(void)
 {
@@ -19,27 +18,16 @@ void DMA2_Stream4_IRQHandler(void)
     }
 }
 
-void ADC1_start(timeUs_t current_time)
-{
-    //  convert previous measurements:
-    main_battery.voltage = ADC1_buffer[0] * ADC_REFERENCE_VOLTAGE / 0xFFF * BATTERY_SCALE;
-    main_battery.voltage_filtered = main_battery.voltage_filtered * 0.9 + (ADC1_buffer[0] * ADC_REFERENCE_VOLTAGE / 0xFFF * BATTERY_SCALE) * 0.1;
-    MCU_temperature = MCU_temperature * 0.7f + ((ADC1_buffer[1] * ADC_REFERENCE_VOLTAGE / 0xFFF - V_25) * AVG_SLOPE + 25) * 0.3f;
 
-    //  turn on DMA:
-    DMA2_Stream4->CR |= DMA_SxCR_EN;
-    //  start conversion:
-    ADC1->CR2 |= ADC_CR2_SWSTART;
-}
 
 void ADC_IRQHandler(void)
 {
     //  ADC1 overrun handler:
     if (ADC1->SR & ADC_SR_OVR)
     {
-        DMA2_Stream4->CR &= ~DMA_SxCR_EN;
-        DMA2_Stream4->M0AR = (uint32_t)(ADC1_buffer);
-        DMA2_Stream4->NDTR = 2;
         ADC1->SR &= ~ADC_SR_OVR;
+        DMA2_Stream4->CR &= ~DMA_SxCR_EN;
+        DMA2_Stream4->M0AR = (uint32_t)(main_battery.ADC_value);
+        DMA2_Stream4->NDTR = 2;
     }
 }

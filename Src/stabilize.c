@@ -15,8 +15,8 @@
 #include "tasks.h"
 
 #if defined(STABILIZE_FILTER_COMPLEMENTARY)
-static Quaternion gyro_angles(Quaternion q_position, float dt);
-static Quaternion acc_angles(Quaternion q_position);
+static quaternion_t gyro_angles(quaternion_t q_position, float dt);
+static quaternion_t acc_angles(quaternion_t q_position);
 static void complementary_filter(float dt);
 #elif defined(STABILIZE_FILTER_MAGDWICK)
 static void madgwick_filter(float dt);
@@ -24,7 +24,7 @@ static void madgwick_filter(float dt);
 static void mahony_filter(float dt);
 #endif
 
-static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt);
+static threef_t corrections_from_quaternion(quaternion_t position_quaternion, float dt);
 
 
 
@@ -47,11 +47,11 @@ void stabilize(timeUs_t dt_us)
 }
 
 #if defined(STABILIZE_FILTER_COMPLEMENTARY)
-static Quaternion gyro_angles(Quaternion q_position, float dt)
+static quaternion_t gyro_angles(quaternion_t q_position, float dt)
 {
 
-	Quaternion q_prim;
-	Quaternion angular_velocity;
+	quaternion_t q_prim;
+	quaternion_t angular_velocity;
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
@@ -70,13 +70,13 @@ static Quaternion gyro_angles(Quaternion q_position, float dt)
 	return q_position;
 }
 
-static Quaternion acc_angles(Quaternion q_position)
+static quaternion_t acc_angles(quaternion_t q_position)
 {
 
-	ThreeF acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
-	static Quaternion q_acc = { 1, 0, 0, 0 };
+	threef_t acc_vector = { Gyro_Acc[3] * ACC_TO_GRAVITY, Gyro_Acc[4] * ACC_TO_GRAVITY, Gyro_Acc[5] * ACC_TO_GRAVITY };
+	static quaternion_t q_acc = { 1, 0, 0, 0 };
 
-	ThreeF gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
+	threef_t gravity_estimated = Rotate_Vector_with_Quaternion(acc_vector,
 		quaternion_conjugate(q_position));
 
 	// normalize vector:
@@ -111,12 +111,12 @@ static Quaternion acc_angles(Quaternion q_position)
 
 static void complementary_filter(float dt)
 {
-	Quaternion q_gyro = gyro_angles(q_global_position, dt);
-	Quaternion q_acc = acc_angles(q_gyro);
+	quaternion_t q_gyro = gyro_angles(q_global_position, dt);
+	quaternion_t q_acc = acc_angles(q_gyro);
 
 	// to accomplish complementary filter q_acc need to have, a little effect so it need to be reduce by combining with identity quaternion =[1,0,0,0] which was multiplied with (1-ACC_PART) so:
-	const Quaternion IDENTITY_QUATERNION = { 1 - ACC_PART, 0, 0, 0 };
-	Quaternion delta_q_acc;
+	const quaternion_t IDENTITY_QUATERNION = { 1 - ACC_PART, 0, 0, 0 };
+	quaternion_t delta_q_acc;
 	delta_q_acc = quaternions_sum(IDENTITY_QUATERNION,
 		quaternion_multiply(q_acc, ACC_PART));
 	delta_q_acc = quaternion_multiply(delta_q_acc,
@@ -129,8 +129,8 @@ static void complementary_filter(float dt)
 static void madgwick_filter(float dt)
 {
 
-	Quaternion q_prim;
-	Quaternion angular_velocity;
+	quaternion_t q_prim;
+	quaternion_t angular_velocity;
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
@@ -138,7 +138,7 @@ static void madgwick_filter(float dt)
 	angular_velocity.z = Gyro_Acc[2] * GYRO_TO_RAD;
 
 	float error_function[3];
-	Quaternion acc_reading;
+	quaternion_t acc_reading;
 
 	acc_reading.w = 0;
 	acc_reading.x = Gyro_Acc[3] * ACC_TO_GRAVITY;
@@ -161,7 +161,7 @@ static void madgwick_filter(float dt)
 	error_function[2] = 2 * (0.5f - q_global_position.x * q_global_position.x - q_global_position.y * q_global_position.y) - acc_reading.z;
 
 	// compute Jacobian^T*error_function:
-	Quaternion delta_error_function;
+	quaternion_t delta_error_function;
 
 	delta_error_function.w = -2 * q_global_position.y * error_function[0] + 2 * q_global_position.x * error_function[1];
 
@@ -204,7 +204,7 @@ static void madgwick_filter(float dt)
 	error_function[2] = 2 * (0.5f - q_global_position.x * q_global_position.x - q_global_position.y * q_global_position.y) - acc_reading.z;
 
 	// compute Jacobian^T*error_function:
-	Quaternion delta_error_function;
+	quaternion_t delta_error_function;
 
 	delta_error_function.w = 2 * q_global_position.y * error_function[0] - 2 * q_global_position.x * error_function[1];
 	delta_error_function.x = 2 * q_global_position.z * error_function[0] - 2 * q_global_position.w * error_function[1] - 4 * q_global_position.x * error_function[2];
@@ -235,15 +235,15 @@ static void madgwick_filter(float dt)
 #elif defined(STABILIZE_FILTER_MAHONY)
 static void mahony_filter(float dt)
 {
-	Quaternion q_prim;
-	Quaternion angular_velocity;
+	quaternion_t q_prim;
+	quaternion_t angular_velocity;
 
-	Quaternion acc_reading;
-	const PID mahony_omega_PI = { 1, 0.001, 0 };
-	Quaternion omega_corr;
-	static Quaternion sum_omega_corr;
-	Quaternion gravity_q;
-	const ThreeF gravity_vector_global = { 0, 0, 1 };
+	quaternion_t acc_reading;
+	const PID_t mahony_omega_PI = { 1, 0.001, 0 };
+	quaternion_t omega_corr;
+	static quaternion_t sum_omega_corr;
+	quaternion_t gravity_q;
+	const threef_t gravity_vector_global = { 0, 0, 1 };
 
 	angular_velocity.w = 0;
 	angular_velocity.x = Gyro_Acc[0] * GYRO_TO_RAD;
@@ -264,7 +264,7 @@ static void mahony_filter(float dt)
 		quaternions_multiplication(angular_velocity, q_global_position),
 		-0.5f);
 
-	ThreeF gravity_vector = Rotate_Vector_with_Quaternion(gravity_vector_global,
+	threef_t gravity_vector = Rotate_Vector_with_Quaternion(gravity_vector_global,
 		quaternions_sum(q_global_position,
 			quaternion_multiply(q_prim, dt)));
 
@@ -307,13 +307,13 @@ static void mahony_filter(float dt)
 }
 #endif
 
-static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float dt)
+static threef_t corrections_from_quaternion(quaternion_t position_quaternion, float dt)
 {
-	ThreeF err = { 0, 0, 0 };
+	threef_t err = { 0, 0, 0 };
 
 
-	Quaternion set_position_quaternion;
-	Quaternion error_quaternion;
+	quaternion_t set_position_quaternion;
+	quaternion_t error_quaternion;
 	static bool drone_was_armed;
 
 	desired_angles.yaw = global_euler_angles.yaw;
@@ -336,12 +336,12 @@ static ThreeF corrections_from_quaternion(Quaternion position_quaternion, float 
 
 	// reset error for yaw after arming drone:
 
-	if (!drone_was_armed && ARMING_STATUS == ARMED)
+	if (!drone_was_armed && Arming_status == ARMED)
 	{
 		drone_was_armed = true;
 		desired_angles.yaw = global_euler_angles.yaw;
 	}
-	else if (ARMING_STATUS != ARMED)
+	else if (Arming_status != ARMED)
 	{
 		drone_was_armed = false;
 	}

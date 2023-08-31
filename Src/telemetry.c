@@ -50,29 +50,14 @@ void USART6_IRQHandler(void)
 		switch (bufor[i])
 		{
 		case 0:
-			BLACKBOX_STATUS = BLACKBOX_IDLE;
 			break;
 		case 1:
-			BLACKBOX_STATUS = BLACKBOX_COLLECT_DATA;
 			break;
 		case 2:
-			BLACKBOX_STATUS = BLACKBOX_SEND_DATA;
-
 			break;
 		case 3:
-			//	go back to the beginning of the FLASH:
-			BLACKBOX_STATUS = BLACKBOX_IDLE;
-			flash_write_counter = 0;
-			flash_read_counter = 0;
-
 			break;
 		case 9:
-			//	reset FLASH:
-			BLACKBOX_STATUS = BLACKBOX_IDLE;
-			W25Q128_erase_full_chip();
-			flash_write_counter = 0;
-			flash_read_counter = 0;
-			flash_global_write_address = 0x00;
 			break;
 		default:
 			break;
@@ -112,7 +97,6 @@ void USART6_IRQHandler(void)
 
 void USART3_IRQHandler(void)
 {
-
 	if (USART3->SR & USART_SR_IDLE)
 	{
 		USART3->DR; // If not read usart will crush
@@ -161,75 +145,72 @@ void print_flash(uint8_t data_pack_size)
 	j = 0;
 	k = 0;
 
-	while (BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
+	if (0 != transmitting_is_Done && read_address < flash_global_write_address)
 	{
-		if (0 != transmitting_is_Done && read_address < flash_global_write_address)
+		toggle_RED_LED();
+		toggle_BLUE_LED();
+		// read data from flash:
+		W25Q128_read_data(read_address, flash_read_buffer,
+			256);
+		read_address += 0x100;
+		transmitting_is_Done = 0;
+
+		if (data_pack_size == 1)
 		{
-			toggle_RED_LED();
-			toggle_BLUE_LED();
-			// read data from flash:
-			W25Q128_read_data(read_address, flash_read_buffer,
-				256);
-			read_address += 0x100;
-			transmitting_is_Done = 0;
+			// if you sending only 1 value (2 bytes) it is not worth to send frame with 6 byte
 
-			if (data_pack_size == 1)
-			{
-				// if you sending only 1 value (2 bytes) it is not worth to send frame with 6 byte
-
-				DMA2_Stream7->M0AR = (uint32_t)(flash_read_buffer);
-				DMA2_Stream7->NDTR = 256;
-				DMA2_Stream7->CR |= DMA_SxCR_EN;
-			}
-
-			else
-			{
-
-				while (j < 256)
-				{
-					if (k == 0)
-					{
-						// header=32767 it is unlikely to have this value to transmit
-						temporary_array[i] = 0x7F;
-						temporary_array[i + 1] = 0xFF;
-						i += 2;
-					}
-					while (k < data_pack_size * 2 && j < 256)
-					{
-						checksum += flash_read_buffer[j];
-						temporary_array[i] = flash_read_buffer[j];
-						i++;
-						j++;
-						k++;
-					}
-					if (k >= data_pack_size * 2)
-					{
-						k = 0;
-						temporary_array[i] = (checksum >> 8) & 0xFF;
-						temporary_array[i + 1] = checksum & 0xFF;
-						checksum = 0;
-						i += 2;
-					}
-				}
-
-				DMA2_Stream7->M0AR = (uint32_t)(temporary_array);
-				DMA2_Stream7->NDTR = i;
-				DMA2_Stream7->CR |= DMA_SxCR_EN;
-
-				j = 0;
-				i = 0;
-			}
+			DMA2_Stream7->M0AR = (uint32_t)(flash_read_buffer);
+			DMA2_Stream7->NDTR = 256;
+			DMA2_Stream7->CR |= DMA_SxCR_EN;
 		}
-		else if (read_address >= flash_global_write_address)
-		{
-			delay_mili(1000);
-			toggle_BLUE_LED();
-			toggle_RED_LED();
-		}
+
 		else
 		{
-			delay_mili(100);
+
+			while (j < 256)
+			{
+				if (k == 0)
+				{
+					// header=32767 it is unlikely to have this value to transmit
+					temporary_array[i] = 0x7F;
+					temporary_array[i + 1] = 0xFF;
+					i += 2;
+				}
+				while (k < data_pack_size * 2 && j < 256)
+				{
+					checksum += flash_read_buffer[j];
+					temporary_array[i] = flash_read_buffer[j];
+					i++;
+					j++;
+					k++;
+				}
+				if (k >= data_pack_size * 2)
+				{
+					k = 0;
+					temporary_array[i] = (checksum >> 8) & 0xFF;
+					temporary_array[i + 1] = checksum & 0xFF;
+					checksum = 0;
+					i += 2;
+				}
+			}
+
+			DMA2_Stream7->M0AR = (uint32_t)(temporary_array);
+			DMA2_Stream7->NDTR = i;
+			DMA2_Stream7->CR |= DMA_SxCR_EN;
+
+			j = 0;
+			i = 0;
 		}
+	}
+	else if (read_address >= flash_global_write_address)
+	{
+		delay_mili(1000);
+		toggle_BLUE_LED();
+		toggle_RED_LED();
+	}
+	else
+	{
+		delay_mili(100);
 	}
 }
 

@@ -92,22 +92,13 @@ void DMA2_Stream0_IRQHandler(void)
 		DMA2->LIFCR |= DMA_LIFCR_CTCIF0;
 		DMA2_Stream0->CR &= ~DMA_SxCR_EN;
 
-		// X acc axis:
-		acc_1.raw_data.roll = (int16_t)(rx_buffer[0] << 8 | rx_buffer[1]);
-		// Y acc axis:
-		acc_1.raw_data.pitch = (int16_t)(rx_buffer[2] << 8 | rx_buffer[3]);
-		// Z acc axis:
-		acc_1.raw_data.yaw = (int16_t)(rx_buffer[4] << 8 | rx_buffer[5]);
+
+		for (int i = 0;i < 3;i++) {
+			acc_1.raw_data[i] = (int16_t)(rx_buffer[i * 2] << 8 | rx_buffer[i * 2 + 1]);
+			gyro_1.raw_data[i] = (int16_t)(rx_buffer[i * 2 + 8] << 8 | rx_buffer[i * 2 + 9]);
+		}
 		acc_1.new_raw_data_flag = true;
-
-		// X gyro axis:
-		gyro_1.raw_data.roll = (int16_t)(rx_buffer[8] << 8 | rx_buffer[9]);
-		// Y gyro axis:
-		gyro_1.raw_data.pitch = (int16_t)(rx_buffer[10] << 8 | rx_buffer[11]);
-		// Z gyro axis:
-		gyro_1.raw_data.yaw = (int16_t)(rx_buffer[12] << 8 | rx_buffer[13]);
 		gyro_1.new_raw_data_flag = true;
-
 		CS_SPI1_disable();
 		SPI1_disable();
 	}
@@ -307,12 +298,9 @@ void read_acc()
 	uint8_t temp[6];
 	MPU6000_SPI_read(MPU6000_ACCEL_READ, temp, 6);
 
-	// X acc axis:
-	acc_1.raw_data.roll = (int16_t)(temp[0] << 8 | temp[1]);
-	// Y acc axis:
-	acc_1.raw_data.pitch = (int16_t)(temp[2] << 8 | temp[3]);
-	// Z acc axis:
-	acc_1.raw_data.yaw = (int16_t)(temp[4] << 8 | temp[5]);
+	for (uint8_t i = 0; i < 3;++i) {
+		acc_1.raw_data[i] = (int16_t)(rx_buffer[2 * i] << 8 | rx_buffer[2 * i + 1]);
+	}
 
 	acc_1.new_raw_data_flag = true;
 
@@ -335,12 +323,9 @@ void read_gyro()
 	uint8_t temp[6];
 	MPU6000_SPI_read(MPU6000_GYRO_READ, temp, 6);
 	// X gyro axis:
-	gyro_1.raw_data.roll = (int16_t)(temp[0] << 8 | temp[1]);
-	// Y gyro axis:
-	gyro_1.raw_data.pitch = (int16_t)(temp[2] << 8 | temp[3]);
-	// Z gyro axis:
-	gyro_1.raw_data.yaw = (int16_t)(temp[4] << 8 | temp[5]);
-
+	for (uint8_t i = 0; i < 3;++i) {
+		gyro_1.raw_data[i] = (int16_t)(rx_buffer[2 * i] << 8 | rx_buffer[2 * i + 1]);
+	}
 	gyro_1.new_raw_data_flag = true;
 	SPI1_disable();
 
@@ -353,20 +338,11 @@ void read_all()
 	//	burst reading sensors:
 	MPU6000_SPI_read(MPU6000_ACCEL_READ, &rx_buffer[0], 14);
 
-	// X acc axis:
-	acc_1.raw_data.roll = (int16_t)(rx_buffer[0] << 8 | rx_buffer[1]);
-	// Y acc axis:
-	acc_1.raw_data.pitch = (int16_t)(rx_buffer[2] << 8 | rx_buffer[3]);
-	// Z acc axis:
-	acc_1.raw_data.yaw = (int16_t)(rx_buffer[4] << 8 | rx_buffer[5]);
+	for (uint8_t i = 0; i < 3;++i) {
+		acc_1.raw_data[i] = (int16_t)(rx_buffer[2 * i] << 8 | rx_buffer[2 * i + 1]);
+		gyro_1.raw_data[i] = (int16_t)(rx_buffer[2 * i + 8] << 8 | rx_buffer[2 * i + 9]);
+	}
 	acc_1.new_raw_data_flag = true;
-
-	// X gyro axis:
-	gyro_1.raw_data.roll = (int16_t)(rx_buffer[8] << 8 | rx_buffer[9]);
-	// Y gyro axis:
-	gyro_1.raw_data.pitch = (int16_t)(rx_buffer[10] << 8 | rx_buffer[11]);
-	// Z gyro axis:
-	gyro_1.raw_data.yaw = (int16_t)(rx_buffer[12] << 8 | rx_buffer[13]);
 	gyro_1.new_raw_data_flag = true;
 
 	SPI1_disable();
@@ -382,9 +358,9 @@ void gyro_update(timeUs_t time)
 	static float temporary[3];
 	for (int j = 0; j < 3; j++)
 	{
-		temporary[j] = gyro_1.raw_data.roll * transform_matrix[j][0];
-		temporary[j] += gyro_1.raw_data.pitch * transform_matrix[j][1];
-		temporary[j] += gyro_1.raw_data.yaw * transform_matrix[j][2];
+		temporary[j] = gyro_1.raw_data[0] * transform_matrix[j][0];
+		temporary[j] += gyro_1.raw_data[1] * transform_matrix[j][1];
+		temporary[j] += gyro_1.raw_data[2] * transform_matrix[j][2];
 	}
 	gyro_filtering(temporary);
 
@@ -397,9 +373,9 @@ void acc_update(timeUs_t time)
 	float temporary[3] = { 0,0,0 };
 	for (int j = 0; j < 3; j++)
 	{
-		temporary[j] = acc_1.raw_data.roll * transform_matrix[j][0];
-		temporary[j] += acc_1.raw_data.pitch * transform_matrix[j][1];
-		temporary[j] += acc_1.raw_data.yaw * transform_matrix[j][2];
+		temporary[j] = acc_1.raw_data[0] * transform_matrix[j][0];
+		temporary[j] += acc_1.raw_data[1] * transform_matrix[j][1];
+		temporary[j] += acc_1.raw_data[2] * transform_matrix[j][2];
 	}
 	acc_filtering(temporary);
 

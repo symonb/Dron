@@ -9,16 +9,16 @@
 #define QUATERNIONS_H_
 
 
-Quaternion quaternions_multiplication(Quaternion q1, Quaternion q2);
-Quaternion quaternion_multiply(Quaternion q1, float x);
-Quaternion quaternions_sum(Quaternion q1, Quaternion q2);
-Quaternion quaternions_sub(Quaternion q1, Quaternion q2);
-Quaternion quaternion_conjugate(Quaternion q1);
-float quaternion_norm(Quaternion q1);
-float quaternions_skalar_multiplication(Quaternion q1, Quaternion q2);
+quaternion_t quaternions_multiplication(quaternion_t q1, quaternion_t q2);
+quaternion_t quaternion_multiply(quaternion_t q1, float x);
+quaternion_t quaternions_sum(quaternion_t q1, quaternion_t q2);
+quaternion_t quaternions_sub(quaternion_t q1, quaternion_t q2);
+quaternion_t quaternion_conjugate(quaternion_t q1);
+float quaternion_norm(quaternion_t q1);
+float quaternions_skalar_multiplication(quaternion_t q1, quaternion_t q2);
 
-ThreeF Rotate_Vector_with_Quaternion(ThreeF vector,Quaternion q);
-Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles);
-ThreeF Quaternion_to_Euler_angles(Quaternion q);
+threef_t Rotate_Vector_with_Quaternion(threef_t vector,quaternion_t q);
+quaternion_t Euler_angles_to_Quaternion(threef_t euler_angles);
+threef_t Quaternion_to_Euler_angles(quaternion_t q);
 
 #endif /* QUATERNIONS_H_ */

@@ -96,6 +96,6 @@ void acc_filtering(const float* temporary);
 
 
 void setup_D_term_filters();
-void D_term_filtering(ThreeF* input);
+void D_term_filtering();
 
 #endif /* FILTERS_H_ */

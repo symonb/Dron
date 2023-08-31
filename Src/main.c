@@ -12,33 +12,34 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "setup.h"
-#include "usb_device.h"
 #include "OSD.h"
 #include "MPU6000.h"
 #include "scheduler.h"
-#include "flash.h"
+#include "blackbox/blackbox.h"
+#include "usb.h"
+#include "usb_device.h"
 
 void SystemClock_Config(void);
 
 int main(void) {
-	setup();
 	SystemClock_Config();
 	HAL_Init();
-	MX_USB_DEVICE_Init(USB_CLASS_CDC);
+	setup();
 	turn_ON_BLUE_LED();
 	turn_ON_RED_LED();
 	setup_NVIC_1();
 	delay_mili(500);
 	setup_MPU6000();
 	setup_NVIC_2();
-	delay_mili(1000);
+	delay_mili(100);
 	scheduler_initialization(&main_scheduler);
+	MX_USB_DEVICE_Init(USB_CLASS_CDC);
+	USB_check_connection();
 
 	while (1)
 	{
 		scheduler_execute(&main_scheduler);
 	}
-
 }
 
 

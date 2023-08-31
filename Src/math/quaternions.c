@@ -13,7 +13,7 @@
 
 #include <math.h>
 
-ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q) {
+threef_t Rotate_Vector_with_Quaternion(threef_t vector, quaternion_t q) {
 
 	vector.roll = (q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z)
 		* vector.roll + 2 * (q.x * q.y - q.w * q.z) * vector.pitch
@@ -28,8 +28,8 @@ ThreeF Rotate_Vector_with_Quaternion(ThreeF vector, Quaternion q) {
 }
 
 
-ThreeF Quaternion_to_Euler_angles(Quaternion q) {
-	ThreeF angles;
+threef_t Quaternion_to_Euler_angles(quaternion_t q) {
+	threef_t angles;
 
 	// yaw (z-axis rotation)
 	float siny_cosp = 2 * (-q.w * q.z + q.x * q.y);
@@ -47,7 +47,7 @@ ThreeF Quaternion_to_Euler_angles(Quaternion q) {
 
 	return angles;
 }
-Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles) {
+quaternion_t Euler_angles_to_Quaternion(threef_t euler_angles) {
 
 	float cr = cosf(euler_angles.roll * 0.5 * DEG_TO_RAD);
 	float sr = sinf(euler_angles.roll * 0.5 * DEG_TO_RAD);
@@ -56,7 +56,7 @@ Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles) {
 	float cy = cosf(euler_angles.yaw * 0.5 * DEG_TO_RAD);
 	float sy = sinf(euler_angles.yaw * 0.5 * DEG_TO_RAD);
 
-	Quaternion q;
+	quaternion_t q;
 	q.w = cr * cp * cy + sr * sp * sy;
 	q.x = -sr * cp * cy + cr * sp * sy;
 	q.y = -cr * sp * cy - sr * cp * sy;
@@ -65,8 +65,8 @@ Quaternion Euler_angles_to_Quaternion(ThreeF euler_angles) {
 	return q;
 }
 
-Quaternion quaternions_multiplication(Quaternion q1, Quaternion q2) {
-	Quaternion q3;
+quaternion_t quaternions_multiplication(quaternion_t q1, quaternion_t q2) {
+	quaternion_t q3;
 	q3.w = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
 	q3.x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
 	q3.y = q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x;
@@ -74,8 +74,8 @@ Quaternion quaternions_multiplication(Quaternion q1, Quaternion q2) {
 
 	return q3;
 }
-Quaternion quaternions_sum(Quaternion q1, Quaternion q2) {
-	Quaternion q3;
+quaternion_t quaternions_sum(quaternion_t q1, quaternion_t q2) {
+	quaternion_t q3;
 	q3.w = q1.w + q2.w;
 	q3.x = q1.x + q2.x;
 	q3.y = q1.y + q2.y;
@@ -83,8 +83,8 @@ Quaternion quaternions_sum(Quaternion q1, Quaternion q2) {
 
 	return q3;
 }
-Quaternion quaternions_sub(Quaternion q1, Quaternion q2) {
-	Quaternion q3;
+quaternion_t quaternions_sub(quaternion_t q1, quaternion_t q2) {
+	quaternion_t q3;
 	q3.w = q1.w - q2.w;
 	q3.x = q1.x - q2.x;
 	q3.y = q1.y - q2.y;
@@ -92,7 +92,7 @@ Quaternion quaternions_sub(Quaternion q1, Quaternion q2) {
 
 	return q3;
 }
-Quaternion quaternion_multiply(Quaternion q1, float x) {
+quaternion_t quaternion_multiply(quaternion_t q1, float x) {
 	q1.w *= x;
 	q1.x *= x;
 	q1.y *= x;
@@ -100,17 +100,17 @@ Quaternion quaternion_multiply(Quaternion q1, float x) {
 
 	return q1;
 }
-float quaternion_norm(Quaternion q1) {
+float quaternion_norm(quaternion_t q1) {
 	return sqrtf(q1.w * q1.w + q1.x * q1.x + q1.y * q1.y + q1.z * q1.z);
 }
 
-Quaternion quaternion_conjugate(Quaternion q1) {
+quaternion_t quaternion_conjugate(quaternion_t q1) {
 	q1.x *= -1;
 	q1.y *= -1;
 	q1.z *= -1;
 	return q1;
 }
 
-float quaternions_skalar_multiplication(Quaternion q1, Quaternion q2) {
+float quaternions_skalar_multiplication(quaternion_t q1, quaternion_t q2) {
 	return q1.w * q2.w + q1.x * q2.x + q1.y * q2.y + q1.z * q2.z;
 }

@@ -709,19 +709,19 @@ void setup_D_term_filters()
 #endif
 }
 
-void D_term_filtering(ThreeF* input)
+void D_term_filtering()
 {
-#if defined(USE_FIR_FILTERS)
-	input->pitch = FIR_filter_apply(&filter_D_term_pitch, input->pitch);
-	input->roll = FIR_filter_apply(&filter_D_term_roll, input->roll);
-	input->yaw = FIR_filter_apply(&filter_D_term_yaw, input->yaw);
+#if defined(USE_FIR_FILTERS)	
+	corr_PIDF[0].D = FIR_filter_apply(&filter_D_term_roll, corr_PIDF[0].D);
+	corr_PIDF[1].D = FIR_filter_apply(&filter_D_term_pitch, corr_PIDF[1].D);
+	corr_PIDF[2].D = FIR_filter_apply(&filter_D_term_yaw, corr_PIDF[2].D);
 #elif defined(USE_IIR_FILTERS)
-	input->pitch = IIR_filter_apply(&filter_D_term_pitch, input->pitch);
-	input->roll = IIR_filter_apply(&filter_D_term_roll, input->roll);
-	input->yaw = IIR_filter_apply(&filter_D_term_yaw, input->yaw);
+	corr_PIDF[0].D = IIR_filter_apply(&filter_D_term_roll, corr_PIDF[0].D);
+	corr_PIDF[1].D = IIR_filter_apply(&filter_D_term_pitch, corr_PIDF[1].D);
+	corr_PIDF[2].D = IIR_filter_apply(&filter_D_term_yaw, corr_PIDF[2].D;
 #elif defined(USE_BIQUAD_FILTERS)
-	input->pitch = biquad_filter_apply_DF2(&filter_D_term_pitch, input->pitch);
-	input->roll = biquad_filter_apply_DF2(&filter_D_term_roll, input->roll);
-	input->yaw = biquad_filter_apply_DF2(&filter_D_term_yaw, input->yaw);
+	corr_PIDF[0].D = biquad_filter_apply_DF2(&filter_D_term_roll, corr_PIDF[0].D);
+	corr_PIDF[1].D = biquad_filter_apply_DF2(&filter_D_term_pitch, corr_PIDF[1].D);
+	corr_PIDF[2].D = biquad_filter_apply_DF2(&filter_D_term_yaw, corr_PIDF[2].D);
 #endif
 }

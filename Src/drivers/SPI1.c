@@ -146,9 +146,9 @@ void SPI1_receive_DMA(uint8_t* data, uint16_t size)
 bool failsafe_SPI1()
 {
     //	waiting as Data will be sent or failsafe if set time passed
-    if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(TIMEOUT_VALUE))
+    if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(SPI_TIMEOUT_VALUE))
     {
-        FailSafe_status = FS_SPI_IMU_ERROR;
+        FailSafe_status = FAILSAFE_SPI_IMU_ERROR;
         EXTI->SWIER |= EXTI_SWIER_SWIER15;
         return true;
     }
