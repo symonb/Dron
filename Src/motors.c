@@ -2,6 +2,7 @@
 #include "global_constants.h"
 #include "global_variables.h"
 #include "global_functions.h"
+#include <math.h>
 #include "motors.h"
 #if defined(ESC_PROTOCOL_BDSHOT)||defined(ESC_PROTOCOL_DSHOT) || defined(ESC_PROTOCOL_DSHOT_BURST)
 static uint16_t calculate_Dshot_checksum(uint16_t value);
@@ -14,7 +15,7 @@ static void fill_Dshot_burst_buffer(uint16_t m1_value, uint16_t m2_value, uint16
 #elif defined(ESC_PROTOCOL_BDSHOT)
 static void fill_bb_Dshot_buffers(uint16_t m1_value, uint16_t m2_value, uint16_t m3_value, uint16_t m4_value);
 static bool BDshot_check_checksum(uint16_t value);
-static uint32_t get_BDshot_response(const uint32_t raw_buffer[], const uint8_t motor_shift);
+static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_shift);
 static void read_BDshot_response(uint32_t value, uint8_t motor);
 #endif
 
@@ -208,7 +209,7 @@ void update_motors(timeUs_t current_time)
 #if defined(ESC_PROTOCOL_BDSHOT)
     // prepare for sending
 
-    update_motors_rpm();
+    update_motors_rpm();     // without update is 5us with 72us wow
 
     fill_bb_Dshot_buffers(prepare_Dshot_package(*motor_1_value_pointer),
         prepare_Dshot_package(*motor_2_value_pointer),
@@ -225,6 +226,8 @@ void update_motors(timeUs_t current_time)
     GPIOA->MODER |= GPIO_MODER_MODER3_0;
 
 #if defined(BIT_BANGING_V1)
+
+    //  configure DMA:
     DMA2_Stream6->CR |= DMA_SxCR_DIR_0;
     DMA2_Stream6->PAR = (uint32_t)(&(GPIOA->BSRR));
     DMA2_Stream6->M0AR = (uint32_t)(dshot_bb_buffer_1_4);
@@ -239,20 +242,19 @@ void update_motors(timeUs_t current_time)
     TIM1->CR1 &= ~TIM_CR1_CEN;
     TIM1->ARR = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS - 1;
     TIM1->CCR1 = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS;
-
     // TIM8 setup:
-    TIM1->CR1 &= ~TIM_CR1_CEN;
+    TIM8->CR1 &= ~TIM_CR1_CEN;
     TIM8->CCR1 = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS;
     TIM8->ARR = DSHOT_BB_FRAME_LENGTH / DSHOT_BB_FRAME_SECTIONS - 1;
 
-    //  send:
-    DMA2_Stream6->CR |= DMA_SxCR_EN;
-    DMA2_Stream2->CR |= DMA_SxCR_EN;
-
+    //  first start timer then DMA:
     TIM1->EGR |= TIM_EGR_UG;
     TIM1->CR1 |= TIM_CR1_CEN;
+    DMA2_Stream6->CR |= DMA_SxCR_EN;
+
     TIM8->EGR |= TIM_EGR_UG;
     TIM8->CR1 |= TIM_CR1_CEN;
+    DMA2_Stream2->CR |= DMA_SxCR_EN;
 
 #elif defined(BIT_BANGING_V2)
     DMA2_Stream6->CR |= DMA_SxCR_DIR_0;
@@ -426,9 +428,13 @@ static void fill_Dshot_buffer(uint16_t m1_value, uint16_t m2_value, uint16_t m3_
 
 #if defined(BIT_BANGING_V1)
 
+/**
+ * @brief Set all constant values in the buffers.
+ * @note It can be called once in the setup routine.
+ **/
 void preset_bb_Dshot_buffers()
 {
-    // these values are constant so they can be set once in the setup rutine:
+
     for (uint16_t i = 0; i < DSHOT_BB_BUFFER_LENGTH * DSHOT_BB_FRAME_SECTIONS; i++)
     {
         // set all bits to 0x00. after that state of GPIOs outputs will stay the same:
@@ -442,8 +448,8 @@ void preset_bb_Dshot_buffers()
         dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS] = GPIO_BSRR_BR_0 << MOTOR_1 | GPIO_BSRR_BR_0 << MOTOR_4;
         dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS] = GPIO_BSRR_BR_0 << MOTOR_2 | GPIO_BSRR_BR_0 << MOTOR_3;
         // set high after 1-bit length:
-        dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_1_LENGTH - 1] = GPIO_BSRR_BS_0 << MOTOR_1 | GPIO_BSRR_BS_0 << MOTOR_4;
-        dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_1_LENGTH - 1] = GPIO_BSRR_BS_0 << MOTOR_2 | GPIO_BSRR_BS_0 << MOTOR_3;
+        dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_1_LENGTH] = GPIO_BSRR_BS_0 << MOTOR_1 | GPIO_BSRR_BS_0 << MOTOR_4;
+        dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_1_LENGTH] = GPIO_BSRR_BS_0 << MOTOR_2 | GPIO_BSRR_BS_0 << MOTOR_3;
     }
 }
 
@@ -458,52 +464,53 @@ static void fill_bb_Dshot_buffers(uint16_t m1_value, uint16_t m2_value, uint16_t
         if (1 << (DSHOT_BB_BUFFER_LENGTH - 3 - i) & m1_value)
         {
             // if bit is one send 0x00 so that GPIOs output will not change (will stay low):
-            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] = 0x00;
+            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] = 0x00;
         }
         else
         {
             // if bit is zero set rising edge after DSHOT_0_length:
-            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] = GPIO_BSRR_BS_0 << MOTOR_1;
+            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] = GPIO_BSRR_BS_0 << MOTOR_1;
         }
         if (1 << (DSHOT_BB_BUFFER_LENGTH - 3 - i) & m2_value)
         {
             // if bit is one send 0x00 so that GPIOs output will not change (will stay low):
-            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] = 0x00;
+            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] = 0x00;
         }
         else
         {
             // if bit is zero set rising edge after DSHOT_0_length:
-            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] = GPIO_BSRR_BS_0 << MOTOR_2;
+            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] = GPIO_BSRR_BS_0 << MOTOR_2;
         }
         if (1 << (DSHOT_BB_BUFFER_LENGTH - 3 - i) & m3_value)
         {
             // if bit is one send 0x00 so that GPIOs output will not change (will stay low):
-            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] |= 0x00;
+            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] |= 0x00;
         }
         else
         {
             // if bit is zero set rising edge after DSHOT_0_length:
-            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] |= GPIO_BSRR_BS_0 << MOTOR_3;
+            dshot_bb_buffer_2_3[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] |= GPIO_BSRR_BS_0 << MOTOR_3;
         }
         if (1 << (DSHOT_BB_BUFFER_LENGTH - 3 - i) & m4_value)
         {
             // if bit is one send 0x00 so that GPIOs output will not change (will stay low):
-            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] |= 0x00;
+            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] |= 0x00;
         }
         else
         {
             // if bit is zero set rising edge after DSHOT_0_length:
-            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH - 1] |= GPIO_BSRR_BS_0 << MOTOR_4;
+            dshot_bb_buffer_1_4[i * DSHOT_BB_FRAME_SECTIONS + DSHOT_BB_0_LENGTH] |= GPIO_BSRR_BS_0 << MOTOR_4;
         }
     }
 }
 #elif defined(BIT_BANGING_V2)
 
+/**
+ * @brief Set all constant values in the buffers.
+ * @note It can be called once in the setup routine.
+ **/
 void preset_bb_Dshot_buffers()
 {
-
-    // this values are constant so they can be set once in the setup rutine:
-
     // make 2 high frames after Dshot frame (it is always this way, so should be set in rhe setup, not here):
     for (uint8_t i = 0; i < DSHOT_BB_FRAME_SECTIONS * 2; i++)
     {
@@ -590,69 +597,81 @@ void update_motors_rpm()
     // BDshot bit banging reads whole GPIO register.
     // Now it's time to create BDshot responses from all motors (made of individual bits).
     uint32_t motor_1_response = get_BDshot_response(dshot_bb_buffer_1_4_r, MOTOR_1);
+    read_BDshot_response(motor_1_response, 1);
     uint32_t motor_2_response = get_BDshot_response(dshot_bb_buffer_2_3_r, MOTOR_2);
     uint32_t motor_3_response = get_BDshot_response(dshot_bb_buffer_2_3_r, MOTOR_3);
     uint32_t motor_4_response = get_BDshot_response(dshot_bb_buffer_1_4_r, MOTOR_4);
 
-    read_BDshot_response(motor_1_response, 1);
+
+
     read_BDshot_response(motor_2_response, 2);
     read_BDshot_response(motor_3_response, 3);
     read_BDshot_response(motor_4_response, 4);
 }
 
-static uint32_t get_BDshot_response(const uint32_t raw_buffer[], const uint8_t motor_shift)
-{
-    // reception starts just after transmission, so there is a lot of HIGH samples. Find first LOW bit:
-
-    uint16_t i = 0;
-    uint16_t previous_i = 0;
-    uint16_t end_i = 0;
-    uint32_t previous_value = 1;
-
-
-    while (i < (int)(33 * BDSHOT_RESPONSE_BITRATE / 1000 * BDSHOT_RESPONSE_OVERSAMPLING))
+static uint32_t get_BDshot_response(uint32_t raw_buffer[], const uint8_t motor_shift)
+{   // set end of search after 33 us so response would be observed if sent:
+    uint32_t* buffer_end = raw_buffer + 33 * BDSHOT_RESPONSE_BITRATE / 1000 * BDSHOT_RESPONSE_OVERSAMPLING;
+    while (raw_buffer < buffer_end)
     {
-        if (!(raw_buffer[i] & (1 << motor_shift)))
-        {
-            previous_value = 0;
-            previous_i = i;
-            end_i = i + BDSHOT_RESPONSE_LENGTH * BDSHOT_RESPONSE_OVERSAMPLING;
-            break;
-        }
-        i++;
-    }
-    // if LOW edge was detected:
-    if (previous_value == 0)
-    {
-        uint32_t motor_response = 0;
-        uint8_t bits = 0;
-        while (i < end_i)
-        {
-            // then look for changes in bits values and compute BDSHOT bits:
-            if ((raw_buffer[i] & (1 << motor_shift)) != previous_value)
+        // reception starts just after transmission, so there is a lot of HIGH samples. Find first LOW bit:
+        if (__builtin_expect(!(*raw_buffer++ & 1 << motor_shift), 0) ||
+            __builtin_expect(!(*raw_buffer++ & 1 << motor_shift), 0) ||
+            __builtin_expect(!(*raw_buffer++ & 1 << motor_shift), 0) ||
+            __builtin_expect(!(*raw_buffer++ & 1 << motor_shift), 0))
+        {   // if LOW edge was detected:
+            uint32_t* buffer_previous = raw_buffer - 1;
+            // set buffer end as current buffer + length of BDshot response:
+            buffer_end = raw_buffer + BDSHOT_RESPONSE_LENGTH * BDSHOT_RESPONSE_OVERSAMPLING;
+            uint32_t motor_response = 0;
+            uint8_t bits = 0;
+            while (raw_buffer <= buffer_end)
             {
-                const uint8_t len = MAX((i - previous_i) / BDSHOT_RESPONSE_OVERSAMPLING, 1); // how many bits had the same value
-                bits += len;
-                motor_response <<= len;
-                if (previous_value != 0)
+                // look for the high edge:
+                if (__builtin_expect((*raw_buffer++ & (1 << motor_shift)), 0) ||
+                    __builtin_expect((*raw_buffer++ & (1 << motor_shift)), 0) ||
+                    __builtin_expect((*raw_buffer++ & (1 << motor_shift)), 0) ||
+                    __builtin_expect((*raw_buffer++ & (1 << motor_shift)), 0))
                 {
-                    motor_response |= (0x1FFFFF >> (21 - len)); // 21 ones right-shifted by 20 or less
-                }
-                previous_value = raw_buffer[i] & (1 << motor_shift);
-                previous_i = i;
-            }
-            i++;
-        }
-        // if last bits were 1 they were not added so far
-        motor_response <<= (BDSHOT_RESPONSE_LENGTH - bits);
-        motor_response |= 0x1FFFFF >> bits; // 21 ones right-shifted
+                    if (raw_buffer <= buffer_end) {
+                        uint8_t len = MAX((raw_buffer - buffer_previous) / BDSHOT_RESPONSE_OVERSAMPLING, 1); // how many bits has the same value (for int rounding 1 is added)
+                        bits += len;
+                        motor_response <<= len;
+                        buffer_previous = raw_buffer - 1;
+                        // then look for the low edge:
+                        while (raw_buffer < buffer_end)
+                        {
+                            if (__builtin_expect(!(*raw_buffer++ & (1 << motor_shift)), 0) ||
+                                __builtin_expect(!(*raw_buffer++ & (1 << motor_shift)), 0) ||
+                                __builtin_expect(!(*raw_buffer++ & (1 << motor_shift)), 0) ||
+                                __builtin_expect(!(*raw_buffer++ & (1 << motor_shift)), 0)) {
+                                if (raw_buffer <= buffer_end) {
+                                    len = MAX((raw_buffer - buffer_previous) / BDSHOT_RESPONSE_OVERSAMPLING, 1); // how many bits has the same value (for int rounding 1 is added)
+                                    bits += len;
+                                    motor_response <<= len;
+                                    motor_response |= 0x1FFFFF >> (BDSHOT_RESPONSE_LENGTH - len);
+                                    buffer_previous = raw_buffer - 1;
+                                }
+                                break;
+                            }
+                        }
+                    }
 
-        return motor_response;
+                }
+            }
+
+            // if last bits were 1 they were not added so far
+            motor_response <<= (BDSHOT_RESPONSE_LENGTH - bits);
+            if (*buffer_previous & (1 << motor_shift)) {
+                motor_response |= 0x1FFFFF >> bits; // 21 ones right-shifted
+            }
+
+            return motor_response;
+        }
     }
-    else
-    { // if LOW edge was not found return incorrect motor response:
-        return 0xFFFFFFFF;
-    }
+
+    // if LOW edge was not found return incorrect motor response:
+    return 0xFFFFFFFF;
 }
 
 static void read_BDshot_response(uint32_t value, uint8_t motor)
@@ -668,29 +687,62 @@ static void read_BDshot_response(uint32_t value, uint8_t motor)
     static const uint32_t GCR_table[32] = {
         iv, iv, iv, iv, iv, iv, iv, iv, iv, 9, 10, 11, iv, 13, 14, 15,
         iv, iv, 2, 3, iv, 5, 6, 7, iv, 0, 8, 1, iv, 4, 12, iv };
+    // if ESC has not sent frame value =0xFFFF FFFF (bigger than possible values):
 
-    value = (value ^ (value >> 1)); // now we have GCR value
+    static uint32_t counter;
+    static uint32_t counter_no_frames;
+    static uint32_t counter_bad_frames;
+    static timeUs_t time;
 
-    uint32_t decoded_value = GCR_table[(value & 0x1F)];
-    decoded_value |= GCR_table[((value >> 5) & 0x1F)] << 4;
-    decoded_value |= GCR_table[((value >> 10) & 0x1F)] << 8;
-    decoded_value |= GCR_table[((value >> 15) & 0x1F)] << 12;
+    counter++;
 
-    // if wrongly decoded decoded_value will be bigger than uint16_t:
-    if (decoded_value < 0xFFFF && BDshot_check_checksum(decoded_value))
-    {
-        // if checksum is correct real save real RPM.
-        // value sent by ESC is a period between each pole changes [us].
-        // to achive eRPM we need to find out how many of these changes are in one minute.
-        // eRPM = (60*1000 000)/T_us next RPM can be achived -> RPM = eRPM/(poles/2):
+    if (counter >= 100000) {
+        time = get_Global_Time() - time;
+        time = get_Global_Time();
+        counter = 0;
+        counter_bad_frames = 0;
+        counter_no_frames = 0;
+    }
 
-        motors_rpm[motor - 1] = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13);      // cut off CRC and add shifting - this is period in [us]
-        motors_rpm[motor - 1] = 60 * 1000000 / motors_rpm[motor - 1] * 2 / MOTOR_POLES_NUMBER; // convert to RPM
-        motors_error[motor - 1] = 0.9 * motors_error[motor - 1];                               // reduce motor error
+    if (value < 0xFFFFFFF) {
+
+
+        value = (value ^ (value >> 1)); // now we have GCR value
+
+        uint32_t decoded_value = GCR_table[(value & 0x1F)];
+        decoded_value |= GCR_table[((value >> 5) & 0x1F)] << 4;
+        decoded_value |= GCR_table[((value >> 10) & 0x1F)] << 8;
+        decoded_value |= GCR_table[((value >> 15) & 0x1F)] << 12;
+
+        if (BDshot_check_checksum(decoded_value))
+        {
+            // if checksum is correct save real RPM.
+            // value sent by ESC is a period between each pole changes [us].
+            // to achive eRPM we need to find out how many of these changes are in one minute.
+            // eRPM = (60*1000 000)/T_us next RPM can be achived -> RPM = eRPM/(poles/2):
+
+            motors_rpm[motor - 1] = ((decoded_value & 0x1FF0) >> 4) << (decoded_value >> 13);      // cut off CRC and add shifting - this is period in [us]
+            motors_rpm[motor - 1] = 60 * 1000000 / motors_rpm[motor - 1] * 2 / MOTOR_POLES_NUMBER; // convert to RPM
+
+            motors_error[motor - 1] *= 0.999f;                                  // reduce motor error
+            BDshot_invalid_response[motor - 1] *= 0.999f;                                                // reduce motor error
+            BDshot_no_response[motor - 1] *= 0.999f; // reduce error
+
+        }
+        else {
+            counter_bad_frames++;
+            BDshot_invalid_response[motor - 1] = 0.999f * motors_error[motor - 1] + 0.1f; // increase error
+            motors_error[motor - 1] = 0.999f * motors_error[motor - 1] + 0.1f; // increase motor error
+            BDshot_no_response[motor - 1] *= 0.999f; // dicrease error
+
+        }
     }
     else
     {
-        motors_error[motor - 1] = 0.9 * motors_error[motor - 1] + 10; // increase motor error
+        counter_no_frames++;
+        BDshot_invalid_response[motor - 1] *= 0.999f;
+        BDshot_no_response[motor - 1] = 0.999f * motors_error[motor - 1] + 0.1f; // increase error
+        motors_error[motor - 1] = 0.999f * motors_error[motor - 1] + 0.1f; // increase motor error
     }
 }
 #endif
