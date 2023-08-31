@@ -6,6 +6,7 @@
         {
             "label": "Make Firmware",
             "type": "shell",
+            "detail": "build program",
             "command": "cmake --build .",
             "options": {
                 "cwd": "${workspaceRoot}/build"
@@ -14,25 +15,35 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": []
+            "problemMatcher": {
+            "base": "$gcc",
+            "fileLocation": ["absolute"]
+        },
         },
 
         {   
-            "label": "clean & build",
+            "label": "Clean & Build",
             "type": "shell",
+            "detail": "clean first and build program",
             "command": "cmake --build . --clean-first ",
              "options": {
                 "cwd": "${workspaceRoot}/build"
             },
              "group":{
-                    "kind": "build"
-             }
+                    "kind": "build",
+                     "isDefault": true
+             },
+             "problemMatcher": {
+            "base": "$gcc",
+            "fileLocation": ["absolute"]
+        }
         
         },
 
         {
             "label": "Load Firmware",
             "type": "shell",
+            "detail": "load program into a drone (without building)",
             "command": "openocd.exe",
             "args": [
                 "-f",
@@ -51,12 +62,11 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
-            "problemMatcher": []
+            }
         },
         {
             "type": "shell",
-            "label": "build & load",
+            "label": "Build & Load",
             "dependsOrder": "sequence",
             "dependsOn": ["Make Firmware", "Load Firmware"],
             "group": {

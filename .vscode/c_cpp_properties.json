@@ -7,14 +7,14 @@
             //     "${workspaceFolder}/src"
             // ],
             "defines": [],
-            "intelliSenseMode": "gcc-arm",
+            "intelliSenseMode": "${default}",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "compilerPath": "${env:ARMGCC_DIR}/arm-none-eabi-gcc.exe",
             "compilerArgs": [
                 "-mcpu=cortex-m4",
                 "-mfpu=fpv4-sp-d16",
-                "-mfloat-abi=soft",
+                "-mfloat-abi=hard",
                 "-mthumb",
                 "-D__FPU_USED"
             ],
