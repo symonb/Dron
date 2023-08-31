@@ -13,72 +13,72 @@ void failsafe_RX()
 {
 #if defined(USE_PREARM)
 
-    if (ARMING_STATUS == DISARMED)
+    if (Arming_status == DISARMED)
     {
         //	if prearm switch is set, arming switch is off, throttle is low:
         if (receiver.channels[PREARM_CHANNEL] >= PREARM_VALUE && receiver.channels[ARM_CHANNEL] < ARM_VALUE && receiver.Throttle <= MAX_ARM_THROTTLE_VAL)
         {
-            ARMING_STATUS = PREARMED;
+            Arming_status = PREARMED;
         }
         else if (receiver.channels[ARM_CHANNEL] > ARM_VALUE)
         {
-            FailSafe_status = FS_NO_PREARM;
+            FailSafe_status = FAILSAFE_NO_PREARM;
             EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
     }
 
-    if (ARMING_STATUS == PREARMED)
+    if (Arming_status == PREARMED)
     {
         if (gyro_1.calibrated == false) {
-            FailSafe_status = FS_GYRO_CALIBRATION;
+            FailSafe_status = FAILSAFE_GYRO_CALIBRATION;
             EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
         else if (receiver.channels[ARM_CHANNEL] > ARM_VALUE)
         {
-            ARMING_STATUS = ARMED;
+            Arming_status = ARMED;
         }
         else if (receiver.channels[PREARM_CHANNEL] < PREARM_VALUE || receiver.Throttle > MAX_ARM_THROTTLE_VAL)
         {
-            ARMING_STATUS = DISARMED;
+            Arming_status = DISARMED;
         }
     }
 
 #else
-    if (ARMING_STATUS == DISARMED)
+    if (Arming_status == DISARMED)
     {
         if (Throttle <= MAX_ARM_THROTTLE_VAL && receiver.channels[ARM_CHANNEL] < ARM_VALUE)
         {
-            ARMING_STATUS = PREARMED;
+            Arming_status = PREARMED;
         }
         else
         {
-            ARMING_STATUS = DISARMED;
+            Arming_status = DISARMED;
         }
     }
-    if (ARMING_STATUS == PREARMED)
+    if (Arming_status == PREARMED)
     {
         if (gyro_1.calibrated == false) {
-            FailSafe_status = FS_GYRO_CALIBRATION;
+            FailSafe_status = FAILSAFE_GYRO_CALIBRATION;
             EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
         else if (receiver.channels[ARM_CHANNEL] > ARM_VALUE)
         {
-            ARMING_STATUS = ARMED;
+            Arming_status = ARMED;
         }
         else if (Throttle > MAX_ARM_THROTTLE_VAL)
         {
-            ARMING_STATUS = DISARMED;
+            Arming_status = DISARMED;
         }
     }
 
 #endif
 
-    else if (ARMING_STATUS == ARMED)
+    else if (Arming_status == ARMED)
     {
         // Arming switch:
         if (receiver.channels[4] < ARM_VALUE)
         {
-            ARMING_STATUS = DISARMED;
+            Arming_status = DISARMED;
             motor_1_value_pointer = &MOTOR_OFF;
             motor_2_value_pointer = &MOTOR_OFF;
             motor_3_value_pointer = &MOTOR_OFF;
@@ -99,15 +99,15 @@ void failsafe_RX()
                 receiver.channels[i] = receiver.channels_previous_values[i];
             }
 
-            FailSafe_status = FS_INCORRECT_CHANNELS_VALUES;
+            FailSafe_status = FAILSAFE_INCORRECT_CHANNELS_VALUES;
             EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
         else
         {
-            motor_1_value_pointer = &motor_1_value;
-            motor_2_value_pointer = &motor_2_value;
-            motor_3_value_pointer = &motor_3_value;
-            motor_4_value_pointer = &motor_4_value;
+            motor_1_value_pointer = &motor_value[0];
+            motor_2_value_pointer = &motor_value[1];
+            motor_3_value_pointer = &motor_value[2];
+            motor_4_value_pointer = &motor_value[3];
         }
     }
 }
@@ -173,21 +173,22 @@ void RX_handling()
     }
 #endif
 
-    if (receiver.channels[BLACKBOX_CHANNEL] >= 1400 && receiver.channels[BLACKBOX_CHANNEL] < 1700)
-    {
-        BLACKBOX_STATUS = BLACKBOX_COLLECT_DATA;
-    }
-    else if (receiver.channels[BLACKBOX_CHANNEL] >= 1700)
-    {
-        if (BLACKBOX_STATUS != BLACKBOX_ERASE)
-        {
-            BLACKBOX_STATUS = BLACKBOX_ERASE;
-            W25Q128_erase_full_chip();
+    if (receiver.channels[BLACKBOX_CHANNEL] >= 1400 && receiver.channels[BLACKBOX_CHANNEL] < 1700) {
+        //blackbox switch active:
+        if (Blackbox_status == BLACKBOX_IDLE) {
+            Blackbox_status = BLACKBOX_COLLECTING_DATA;
         }
-    }
-    else if (BLACKBOX_STATUS != BLACKBOX_SEND_DATA)
+        else if (Blackbox_status == BLACKBOX_SUSPENDED) {
+            Blackbox_status = BLACKBOX_COLLECTING_DATA;
+        }
+
+    }   //blackbox switch disable:
+    else if (Blackbox_status == BLACKBOX_COLLECTING_DATA)
     {
-        BLACKBOX_STATUS = BLACKBOX_IDLE;
+        Blackbox_status = BLACKBOX_SUSPENDED;
+    }
+    else if (Blackbox_status == BLACKBOX_SUSPENDED && Arming_status == DISARMED) {
+        Blackbox_status = BLACKBOX_STOPPED;
     }
 };
 

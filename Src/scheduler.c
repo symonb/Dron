@@ -21,26 +21,10 @@
 
 static void scheduler_reschedule(scheduler_t* scheduler);
 static bool is_in_queue(const task_t* const task, scheduler_t* scheduler);
-static bool add_to_queue(task_t* task, scheduler_t* scheduler);
+
 
 scheduler_t main_scheduler = { .system_load = 100 };
-static timeUs_t idle_time_counter = 0;
 
-void task_system_fun(timeUs_t current_time)
-{
-	static timeUs_t last_time;
-	main_scheduler.system_load = main_scheduler.system_load * 0.9f + 10 * (1 - (float)(idle_time_counter) / (current_time - last_time));
-	idle_time_counter = 0;
-	last_time = current_time;
-	//	read MCU temp. and battery voltage:
-	ADC1_start(current_time);
-	battery_manage();
-	//	blackbox management:
-	if (BLACKBOX_STATUS == BLACKBOX_SEND_DATA)
-	{
-		print_blackbox();
-	}
-}
 
 bool scheduler_initialization(scheduler_t* scheduler)
 {
@@ -48,6 +32,7 @@ bool scheduler_initialization(scheduler_t* scheduler)
 	scheduler->task_queue[0] = NULL;
 	scheduler->task_queue_size = 0;
 
+	add_to_queue(&all_tasks[TASK_GYRO_CALIBRATION], scheduler);
 	add_to_queue(&all_tasks[TASK_GYRO_UPDATE], scheduler);
 	add_to_queue(&all_tasks[TASK_ACC_UPDATE], scheduler);
 	add_to_queue(&all_tasks[TASK_IBUS_SAVE], scheduler);
@@ -58,8 +43,9 @@ bool scheduler_initialization(scheduler_t* scheduler)
 	add_to_queue(&all_tasks[TASK_UPDATE_MOTORS], scheduler);
 	add_to_queue(&all_tasks[TASK_BUZZER], scheduler);
 	add_to_queue(&all_tasks[TASK_OSD], scheduler);
-	add_to_queue(&all_tasks[TASK_GYRO_CALIBRATION], scheduler);
 	add_to_queue(&all_tasks[TASK_USB_HANDLING], scheduler);
+	add_to_queue(&all_tasks[TASK_BLACKBOX_INIT], scheduler);
+	add_to_queue(&all_tasks[TASK_BLACKBOX], scheduler);
 
 	scheduler_reset_tasks_statistics(scheduler);
 
@@ -97,7 +83,7 @@ void scheduler_execute(scheduler_t* scheduler)
 	else
 	{
 		delay_micro(10);
-		idle_time_counter += 10;
+		scheduler->idle_time_counter += 10;
 	}
 }
 
@@ -111,10 +97,10 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 	uint8_t i = 0;
 	for (task_t* task = scheduler->task_queue[i]; task != NULL; task = scheduler->task_queue[++i])
 	{
-		//	if task.check_fun() exists:
-		if (task->check_fun)
-		{ //	if .check_fun() return true (if not dynamic priority will stay 0):
-			if (task->check_fun(current_time, current_time - task->last_execution))
+
+		if (task->check_fun)		//	if task.check_fun() exists:
+		{
+			if (task->check_fun(current_time, current_time - task->last_execution))//	if .check_fun() return true (if not dynamic priority will stay 0):
 			{
 				//	update dynamic priority (dividing int so if not >1 will stay 0):
 				task->dynamic_priority = (current_time - task->last_execution) / (task->desired_period) * task->static_priority;
@@ -163,7 +149,7 @@ static bool is_in_queue(const task_t* const task, scheduler_t* scheduler)
 	return false;
 }
 
-static bool add_to_queue(task_t* task, scheduler_t* scheduler)
+bool add_to_queue(task_t* task, scheduler_t* scheduler)
 {
 	if (is_in_queue(task, scheduler) || scheduler->task_queue_size >= TASKS_COUNT) // make sure that we have space
 		return false;

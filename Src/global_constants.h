@@ -11,6 +11,7 @@
 
  //------DIFFERENT_CONSTANTS------------
 #define MAX(a, b) ((a > b) ? a : b)	 // choose greater value
+#define MIN(a, b) ((a < b) ? a : b)
 #define GYRO_ACC_SIZE 7				 // 3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14		 // telemetry information different values
 #define GYRO_TO_DPS 2000.f / 32767.f // convert gyro register into degrees per second unit
@@ -18,7 +19,7 @@
 #define DEG_TO_RAD M_PI / 180
 #define GYRO_TO_RAD (1.f / 32.767f * DEG_TO_RAD)  // convert gyro register into rad per second unit
 #define ACC_TO_GRAVITY 1.f / 4096.f				  // convert acc register into gravity unit
-#define TIMEOUT_VALUE 0.5f						  // time for SPI_failsafe activation [s]
+#define SPI_TIMEOUT_VALUE 0.01f						  // time for SPI_failsafe activation [s]
 #define TASK_PERIOD_KHZ(kHz) (1000000000 / (kHz)) // converts frequency in [kHz] into period in [us]
 #define TASK_PERIOD_HZ(Hz) (1000000 / (Hz))		  // converts frequency in [Hz] into [us]
 #define SEC_TO_US(s) ((s)*1000000)				  // converts [s] into [us]
@@ -29,6 +30,7 @@
 #define BATTERY_SCALE 11
 #define ADC_REFERENCE_VOLTAGE 3.3f	  //	[V]
 #define BATTERY_CELL_MIN_VOLTAGE 3.5f //	[V]
+#define BATTERY_CELL_WARNING_VOLTAGE 3.6f //	[V]
 #define BATTERY_CELL_MAX_VOLTAGE 4.2f //	[V]
 
 //-------------BUZZER-------------
@@ -92,12 +94,16 @@ y = x*b + x^3*(a-b)
 notes:
 linear dependance for a=b otherwise curve (max for b = 0)
 */
+
 #define RATES_MAX_RATE_P 750	// <0; 2000>
 #define RATES_CENTER_RATE_P 270 // <1; 1000>
+#define RATES_EXPO_P 0
 
 #define RATES_MAX_RATE_R 750	// <0; 2000>
 #define RATES_CENTER_RATE_R 270 // <1; 1000>
+#define RATES_EXPO_R 0
 
+#define RATES_EXPO_Y 0
 #define RATES_MAX_RATE_Y 650	// <0; 2000>
 #define RATES_CENTER_RATE_Y 290 // <1; 1000>
 
@@ -118,11 +124,11 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #if defined(BIT_BANGING_V1)
 #define DSHOT_BB_BUFFER_LENGTH 18  // 16 bits of Dshot and 2 for clearing - used when bit-banging dshot used
 #define DSHOT_BB_FRAME_LENGTH 140  //	how many counts of timer gives one bit frame
-#define DSHOT_BB_FRAME_SECTIONS 14 // in how many sections is bit frame divided (must be factor of DSHOT_BB_FRAME_LENGTH)
-#define DSHOT_BB_1_LENGTH 10
-#define DSHOT_BB_0_LENGTH 4
+#define DSHOT_BB_FRAME_SECTIONS 7 // in how many sections is bit frame divided (must be factor of DSHOT_BB_FRAME_LENGTH)
+#define DSHOT_BB_1_LENGTH 5
+#define DSHOT_BB_0_LENGTH 2
 #define BDSHOT_RESPONSE_LENGTH 21
-#define BDSHOT_RESPONSE_BITRATE (DSHOT_MODE * 4 / 3) // in my tests this value was not 5/4 * DSHOT_MODE as documentation suggests
+#define BDSHOT_RESPONSE_BITRATE (DSHOT_MODE * 4 / 3) // in my tests this value was not 5/4 * DSHOT_MODE as documentation suggests but 4/3*DSHOT_MODE
 #define BDSHOT_RESPONSE_OVERSAMPLING 3				 // it has to be a factor of DSHOT_BB_FRAME_LENGTH * DSHOT_MODE / BDSHOT_RESPONSE_BITRATE
 
 #elif defined(BIT_BANGING_V2)
@@ -136,7 +142,8 @@ linear dependance for a=b otherwise curve (max for b = 0)
 
 //----------MOTORS_AND_CORRECTIONS-------
 #define MAX_I_CORRECTION 300 // maximal I_corr for PIDs between <0;4000>
-#define IDLE_VALUE 1050
+#define THROTTLE_MIN 1050
+#define THROTTLE_MAX 2000
 #define MOTORS_COUNT 4		  // how many motors are used
 #define MOTOR_1 3			  // PA3
 #define MOTOR_2 0			  // PB0
@@ -155,40 +162,43 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define ACC_PART 0.005f	 // complementary filter
 
 //---------FREQUENCY_SETTINGS--------
-#define FREQUENCY_MAIN_LOOP 2000			//[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
-#define FREQUENCY_STABILIZATION_LOOP 200 //[Hz]
-#define FREQUENCY_ESC_UPDATE 2000		 //[Hz]	SCHOULD BE AT LEAST AS MAIN_LOOP
-#define FREQUENCY_RX_READING 200		 //[Hz]	set more than it is possible (>150)
-#define FREQUENCY_TELEMETRY_UPDATE 1	 //[Hz]
-#define FREQUENCY_SYSTEM_CHECK 	30	 	//[Hz]
-#define FREQUENCY_OSD_UPDATE 30			 //[Hz]
-#define FREQUENCY_USB_CHECK 50			//[Hz]
+#define FREQUENCY_MAIN_LOOP 2000			//	[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
+#define FREQUENCY_STABILIZATION_LOOP 200 	//	[Hz]
+#define FREQUENCY_ESC_UPDATE 2000		 	//	[Hz]	SHOULD BE AT LEAST AS MAIN_LOOP
+#define FREQUENCY_RX_READING 200		 	//	[Hz]	set more than it is possible (>150)
+#define FREQUENCY_TELEMETRY_UPDATE 1	 	//	[Hz]
+#define FREQUENCY_SYSTEM_CHECK 	30	 		//	[Hz]
+#define FREQUENCY_OSD_UPDATE 30			 	//	[Hz]
+#define FREQUENCY_USB_CHECK 50				//	[Hz]
+#define FREQUENCY_BLACKBOX FREQUENCY_MAIN_LOOP/(1<<BLACKBOX_SAMPLE_RATE)				//	[Hz]
 
 //------------FAILSAFE--------------------
 
-enum failsafe_t
+typedef enum
 {
-	FS_NO_FAILSAFE,
-	FS_INCORRECT_CHANNELS_VALUES,
-	FS_RX_TIMEOUT,
-	FS_NO_PREARM,
-	FS_I2C_ERROR,
-	FS_SPI_IMU_ERROR,
-	FS_SPI_FLASH_ERROR,
-	FS_SPI_OSD_ERROR,
-	FS_GYRO_CALIBRATION,
-	FAILSAFES_COUNTER
-};
+	FAILSAFE_NO_FAILSAFE,
+	FAILSAFE_INCORRECT_CHANNELS_VALUES,
+	FAILSAFE_RX_TIMEOUT,
+	FAILSAFE_NO_PREARM,
+	FAILSAFE_I2C_ERROR,
+	FAILSAFE_SPI_IMU_ERROR,
+	FAILSAFE_SPI_FLASH_ERROR,
+	FAILSAFE_SPI_OSD_ERROR,
+	FAILSAFE_GYRO_CALIBRATION,
+	FAILSAFE_COUNTER
+} failsafe_e;
 
-enum arming_t
+typedef enum
 {
 	DISARMED,
 	ARMED,
 	PREARMED
-};
+}arming_e;
+//--------------------FLASH-------------------
+#define USE_FLASHFS	// USE_FLASHFS required for USB MSC and BLACKBOX  
 
 //--------------BLACKBOX-------------------
-#define USE_FLASH_BLACKBOX // USE_FLASH_BLACKBOX if you want BLACKBOX or NOT_USE_FLASH_BLACKBOX
+#define USE_BLACKBOX // USE_BLACKBOX if you want BLACKBOX
 /*define which parameters you would like to save:
  *
  * BLACKBOX_SAVE_FILTERED_GYRO_AND_ACC 	- 6 values
@@ -205,14 +215,19 @@ enum arming_t
 #define BLACKBOX_SAVE_EULER_ANGLES
 #define BLACKBOX_SAVE_SET_ANGLES
 #define BLACKBOX_SAVE_FILTERED_GYRO
+#define BLACKBOX_SAMPLE_RATE 1		//	sampling is 1/2^BLACKBOX_SAMPLE_RATE so for 0 it is equal to main PID loop frequency, for half frequency of main loop set this as 1
 
-enum blackbox_t
+#define REQUIRE_CC_ARM_PRINTF_SUPPORT
+#define REQUIRE_PRINTF_LONG_SUPPORT
+
+typedef enum
 {
 	BLACKBOX_IDLE,
-	BLACKBOX_COLLECT_DATA,
-	BLACKBOX_SEND_DATA,
-	BLACKBOX_ERASE
-};
+	BLACKBOX_STARTED,
+	BLACKBOX_COLLECTING_DATA,
+	BLACKBOX_SUSPENDED,
+	BLACKBOX_STOPPED
+}blackbox_e;
 
 //---------------------OSD--------------------
 

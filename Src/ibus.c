@@ -73,7 +73,7 @@ bool Ibus_save(timeUs_t current_time)
 
 	if ((current_time - time_flag3_1) >= SEC_TO_US(MAX_NO_SIGNAL_TIME))
 	{
-		FailSafe_status = FS_RX_TIMEOUT;
+		FailSafe_status = FAILSAFE_RX_TIMEOUT;
 		EXTI->SWIER |= EXTI_SWIER_SWIER15;
 	}
 

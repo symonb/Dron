@@ -41,7 +41,7 @@ void interrupts_LOCK()
 	NVIC_DisableIRQ(EXTI9_5_IRQn);
 
 	// nvic DMA interrupt enable:
-#if defined(USE_FLASH_BLACKBOX)
+#if defined(USE_BLACKBOX) || defined(USE_I2C1)
 	NVIC_DisableIRQ(DMA1_Stream0_IRQn);
 #endif
 
@@ -49,8 +49,8 @@ void interrupts_LOCK()
 
 	NVIC_DisableIRQ(DMA1_Stream2_IRQn);
 
-#if defined(USE_FLASH_BLACKBOX)
-	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+#if defined(USE_FLASHFS)
+	NVIC_DisableIRQ(DMA1_Stream5_IRQn);
 #endif
 
 	NVIC_DisableIRQ(DMA1_Stream6_IRQn);
@@ -86,7 +86,7 @@ void interrupts_UNLOCK()
 	NVIC_EnableIRQ(EXTI9_5_IRQn);
 
 	// nvic DMA interrupt enable:
-#if defined(USE_FLASH_BLACKBOX)
+#if defined(USE_BLACKBOX)|| defined(USE_I2C1)
 	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
 #endif
 
@@ -94,7 +94,7 @@ void interrupts_UNLOCK()
 
 	NVIC_EnableIRQ(DMA1_Stream2_IRQn);
 
-#if defined(USE_FLASH_BLACKBOX)
+#if defined(USE_FLASHFS)
 	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
 #endif
 
@@ -142,83 +142,51 @@ void delay_micro(uint16_t delay_time)
 }
 
 
-void anti_windup(ThreeF* sum_err, const PIDF* R_PIDF, const PIDF* P_PIDF, const PIDF* Y_PIDF)
+void anti_windup()
 {
-	if (ARMING_STATUS == ARMED)
+	if (Arming_status == ARMED)
 	{
 		//	limit I_corrections:
-		if ((sum_err->roll * R_PIDF->I) > MAX_I_CORRECTION)
-		{
-			sum_err->roll = MAX_I_CORRECTION / R_PIDF->I;
-		}
-		else if ((sum_err->roll * R_PIDF->I) < -MAX_I_CORRECTION)
-		{
-			sum_err->roll = -MAX_I_CORRECTION / R_PIDF->I;
-		}
-		if ((sum_err->pitch * P_PIDF->I) > MAX_I_CORRECTION)
-		{
-			sum_err->pitch = MAX_I_CORRECTION / P_PIDF->I;
-		}
-		else if ((sum_err->pitch * P_PIDF->I) < -MAX_I_CORRECTION)
-		{
-			sum_err->pitch = -MAX_I_CORRECTION / P_PIDF->I;
-		}
-		if ((sum_err->yaw * Y_PIDF->I) > MAX_I_CORRECTION)
-		{
-			sum_err->yaw = MAX_I_CORRECTION / Y_PIDF->I;
-		}
-		else if ((sum_err->yaw * Y_PIDF->I) < -MAX_I_CORRECTION)
-		{
-			sum_err->yaw = -MAX_I_CORRECTION / Y_PIDF->I;
+		for (uint8_t i = 0;i < 3;i++) {
+			if ((corr_PIDF[i].I) > MAX_I_CORRECTION)
+			{
+				corr_PIDF[i].I = MAX_I_CORRECTION;
+			}
+			else if ((corr_PIDF[i].I) < -MAX_I_CORRECTION)
+			{
+				corr_PIDF[i].I = -MAX_I_CORRECTION;
+			}
 		}
 	}
-
 	else
 	{ // quad is disarmed so turn off I term of corrections
-		sum_err->roll = 0;
-		sum_err->pitch = 0;
-		sum_err->yaw = 0;
+		corr_PIDF[0].I = 0;
+		corr_PIDF[1].I = 0;
+		corr_PIDF[2].I = 0;
 	}
 }
 
-void set_motors(ThreeF corr)
+void set_motors(threef_t corr)
 {
-	const uint16_t max_value = 4000;
-
 	//	Make corrections:
 	//	right back:
-	motor_1_value = receiver.Throttle * 2 - corr.roll + corr.pitch - corr.yaw;
+	motor_value[0] = (receiver.Throttle - corr.roll + corr.pitch - corr.yaw) * 2;
 	//	right front:
-	motor_2_value = receiver.Throttle * 2 - corr.roll - corr.pitch + corr.yaw;
+	motor_value[1] = (receiver.Throttle - corr.roll - corr.pitch + corr.yaw) * 2;
 	//	left back:
-	motor_3_value = receiver.Throttle * 2 + corr.roll + corr.pitch + corr.yaw;
+	motor_value[2] = (receiver.Throttle + corr.roll + corr.pitch + corr.yaw) * 2;
 	//	left front:
-	motor_4_value = receiver.Throttle * 2 + corr.roll - corr.pitch - corr.yaw;
+	motor_value[3] = (receiver.Throttle + corr.roll - corr.pitch - corr.yaw) * 2;
 
-	if (motor_1_value < IDLE_VALUE * 2)
-	{
-		motor_1_value = IDLE_VALUE * 2;
+	for (uint8_t i = 0; i < MOTORS_COUNT;++i) {
+		if (motor_value[i] < THROTTLE_MIN * 2)
+		{
+			motor_value[i] = THROTTLE_MIN * 2;
+		}
+		else if (motor_value[i] > THROTTLE_MAX * 2) {
+			motor_value[i] = THROTTLE_MAX * 2;
+		}
 	}
-	else if (motor_1_value > max_value)
-		motor_1_value = max_value;
-	if (motor_2_value < IDLE_VALUE * 2)
-	{
-		motor_2_value = IDLE_VALUE * 2;
-	}
-	else if (motor_2_value > max_value)
-		motor_2_value = max_value;
-	if (motor_3_value < IDLE_VALUE * 2)
-	{
-		motor_3_value = IDLE_VALUE * 2;
-	}
-	else if (motor_3_value > max_value)
-		motor_3_value = max_value;
-	if (motor_4_value < IDLE_VALUE * 2)
-	{
-		motor_4_value = IDLE_VALUE * 2;
-	}
-	else if (motor_4_value > max_value)
-		motor_4_value = max_value;
 }
 
 void turn_ON_BLUE_LED()
@@ -265,6 +233,9 @@ void EXTI9_5_IRQHandler()
 	{
 		EXTI->PR |= EXTI_PR_PR5; // clear this bit setting it high
 		USB_check_connection();
+		if (main_usb.class == USB_CLASS_MSC && !main_usb.connected) {
+			NVIC_SystemReset();
+		}
 	}
 	if ((EXTI->PR & EXTI_PR_PR6))
 	{
@@ -312,59 +283,59 @@ void EXTI15_10_IRQHandler()
 	if ((EXTI->PR & EXTI_PR_PR15))
 	{
 		OSD_print_warnings();
-		static uint16_t err_counter[FAILSAFES_COUNTER];
+
 		EXTI->PR |= EXTI_PR_PR15; // clear(setting 1) this bit (and at the same time bit SWIER15)
 
 		switch (FailSafe_status)
 		{
-		case FS_NO_FAILSAFE:
+		case FAILSAFE_NO_FAILSAFE:
 			break;
 
-		case FS_INCORRECT_CHANNELS_VALUES: // BAD_CHANNELS_VALUES
-
-			motor_1_value_pointer = &MOTOR_OFF;
-			motor_2_value_pointer = &MOTOR_OFF;
-			motor_3_value_pointer = &MOTOR_OFF;
-			motor_4_value_pointer = &MOTOR_OFF;
-
-			err_counter[FS_INCORRECT_CHANNELS_VALUES]++;
-			FailSafe_status = FS_NO_FAILSAFE;
-			break;
-		case FS_RX_TIMEOUT: // FS_RX_TIMEOUT
-
-			ARMING_STATUS = DISARMED;
+		case FAILSAFE_INCORRECT_CHANNELS_VALUES: // BAD_CHANNELS_VALUES
 
 			motor_1_value_pointer = &MOTOR_OFF;
 			motor_2_value_pointer = &MOTOR_OFF;
 			motor_3_value_pointer = &MOTOR_OFF;
 			motor_4_value_pointer = &MOTOR_OFF;
 
-			err_counter[FS_RX_TIMEOUT]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+			failsafe_counter[FAILSAFE_INCORRECT_CHANNELS_VALUES]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FS_NO_PREARM:
-			err_counter[FS_NO_PREARM]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+		case FAILSAFE_RX_TIMEOUT: // FAILSAFE_RX_TIMEOUT
+
+			Arming_status = DISARMED;
+
+			motor_1_value_pointer = &MOTOR_OFF;
+			motor_2_value_pointer = &MOTOR_OFF;
+			motor_3_value_pointer = &MOTOR_OFF;
+			motor_4_value_pointer = &MOTOR_OFF;
+
+			failsafe_counter[FAILSAFE_RX_TIMEOUT]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FS_I2C_ERROR:
-			err_counter[FS_I2C_ERROR]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+		case FAILSAFE_NO_PREARM:
+			failsafe_counter[FAILSAFE_NO_PREARM]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FS_SPI_IMU_ERROR:
-			err_counter[FS_SPI_IMU_ERROR]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+		case FAILSAFE_I2C_ERROR:
+			failsafe_counter[FAILSAFE_I2C_ERROR]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FS_SPI_FLASH_ERROR:
-			err_counter[FS_SPI_FLASH_ERROR]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+		case FAILSAFE_SPI_IMU_ERROR:
+			failsafe_counter[FAILSAFE_SPI_IMU_ERROR]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FS_SPI_OSD_ERROR:
-			err_counter[FS_SPI_OSD_ERROR]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+		case FAILSAFE_SPI_FLASH_ERROR:
+			failsafe_counter[FAILSAFE_SPI_FLASH_ERROR]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FS_GYRO_CALIBRATION:
-			err_counter[FS_GYRO_CALIBRATION]++;
-			FailSafe_status = FS_NO_FAILSAFE;
+		case FAILSAFE_SPI_OSD_ERROR:
+			failsafe_counter[FAILSAFE_SPI_OSD_ERROR]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			break;
+		case FAILSAFE_GYRO_CALIBRATION:
+			failsafe_counter[FAILSAFE_GYRO_CALIBRATION]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
 		default:
 			break;

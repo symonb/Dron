@@ -15,7 +15,7 @@
 #include "telemetry.h"
 #include "acro.h"
 
-static ThreeF corrections(float);
+static threef_t corrections(float);
 
 void acro(timeUs_t dt_us)
 {
@@ -23,20 +23,11 @@ void acro(timeUs_t dt_us)
 	set_motors(corrections(dt));
 }
 
-static ThreeF corrections(float dt)
+static threef_t corrections(float dt)
 {
+	static three_t last_measurement = { 0, 0, 0 };
 
-	ThreeF corr = { 0, 0, 0 };
-	static Three last_measurement = { 0, 0, 0 };
-
-	const PIDF R_PIDF = { 500, 0, 25, 0 }; // 590 30 55 0
-	const PIDF P_PIDF = { 700, 0, 40, 0 }; // 750 30 65 0
-	const PIDF Y_PIDF = { 700, 0, 0, 0 };  // 1100 30 30 0
-
-	ThreeF err = { 0, 0, 0 };
-	ThreeF sum_err = { 0, 0, 0 };
-	ThreeF D_corr = { 0, 0, 0 };
-	ThreeF F_corr = { 0, 0, 0 };
+	threef_t err = { 0, 0, 0 };
 
 	if (flight_mode == FLIGHT_MODE_ACRO)
 	{
@@ -53,28 +44,31 @@ static ThreeF corrections(float dt)
 		err.yaw = (desired_rotation_speed.yaw - Gyro_Acc[2] * GYRO_TO_DPS) / RATES_MAX_RATE_Y;
 	}
 
+	corr_PIDF[0].P = R_PIDF.P * err.roll;
+	corr_PIDF[1].P = P_PIDF.P * err.pitch;
+	corr_PIDF[2].P = Y_PIDF.P * err.yaw;
+
 	//	estimate Integral by sum (I term):
-	sum_err.roll += err.roll * dt;
-	sum_err.pitch += err.pitch * dt;
-	sum_err.yaw += err.yaw * dt;
+	corr_PIDF[0].I += err.roll * dt * R_PIDF.I;
+	corr_PIDF[1].I += err.pitch * dt * P_PIDF.I;
+	corr_PIDF[2].I += err.yaw * dt * Y_PIDF.I;
 
 	// D correction will be divide for measurements and set-point corrections:
+	corr_PIDF[0].D = (last_measurement.roll - Gyro_Acc[0]) * 0.0305185f / RATES_MAX_RATE_R / dt * R_PIDF.D;
+	corr_PIDF[1].D = (last_measurement.pitch - Gyro_Acc[1]) * 0.0305185f / RATES_MAX_RATE_P / dt * P_PIDF.D;
+	corr_PIDF[2].D = (last_measurement.yaw - Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y / dt * Y_PIDF.D;
 
-	D_corr.roll = (last_measurement.roll - Gyro_Acc[0]) * 0.0305185f / RATES_MAX_RATE_R / dt;
-	D_corr.pitch = (last_measurement.pitch - Gyro_Acc[1]) * 0.0305185f / RATES_MAX_RATE_P / dt;
-	D_corr.yaw = (last_measurement.yaw - Gyro_Acc[2]) * 0.0305185f / RATES_MAX_RATE_Y / dt;
+	corr_PIDF[0].F = (receiver.channels[0] - receiver.channels_previous_values[0]) * 0.002f / dt * R_PIDF.F;
+	corr_PIDF[1].F = (receiver.channels[1] - receiver.channels_previous_values[1]) * 0.002f / dt * P_PIDF.F;
+	corr_PIDF[2].F = (receiver.channels[3] - receiver.channels_previous_values[3]) * 0.002f / dt * Y_PIDF.F;
 
-	F_corr.roll = (receiver.channels[0] - receiver.channels_previous_values[0]) * 0.002f / dt;
-	F_corr.pitch = (receiver.channels[1] - receiver.channels_previous_values[1]) * 0.002f / dt;
-	F_corr.yaw = (receiver.channels[3] - receiver.channels_previous_values[3]) * 0.002f / dt;
-
-	anti_windup(&sum_err, &R_PIDF, &P_PIDF, &Y_PIDF);
-	D_term_filtering(&D_corr);
+	anti_windup();
+	D_term_filtering();
 
 	//	calculate corrections:
-	corr.roll = (R_PIDF.P * err.roll + R_PIDF.I * sum_err.roll + R_PIDF.D * D_corr.roll + R_PIDF.F * F_corr.roll) * 2;
-	corr.pitch = (P_PIDF.P * err.pitch + P_PIDF.I * sum_err.pitch + P_PIDF.D * D_corr.pitch + P_PIDF.F * F_corr.pitch) * 2;
-	corr.yaw = (Y_PIDF.P * err.yaw + Y_PIDF.I * sum_err.yaw + Y_PIDF.D * D_corr.yaw + Y_PIDF.F * F_corr.yaw) * 2;
+	corr_sum.roll = corr_PIDF[0].P + corr_PIDF[0].I + corr_PIDF[0].D + corr_PIDF[0].F;
+	corr_sum.pitch = corr_PIDF[1].P + corr_PIDF[1].I + corr_PIDF[1].D + corr_PIDF[1].F;
+	corr_sum.yaw = corr_PIDF[2].P + corr_PIDF[2].I + corr_PIDF[2].D + corr_PIDF[2].F;
 
 	//	set current measurements as last measurements:
 
@@ -82,7 +76,7 @@ static ThreeF corrections(float dt)
 	last_measurement.pitch = Gyro_Acc[1];
 	last_measurement.yaw = Gyro_Acc[2];
 
-	return corr;
+	return corr_sum;
 }
 void send_telemetry_acro(timeUs_t time)
 {

@@ -10,11 +10,12 @@
 #include "global_variables.h"
 #include "global_functions.h"
 #include "OSD.h"
-#include "adc1.h"
+#include "battery.h"
 #include "motors.h"
 #include "filters.h"
 #include "setup.h"
 #include "rx.h"
+
 
  /* IMPORTANT:
   APB2 max frequency is 84 [MHz], 168 [MHz] only for timers
@@ -87,6 +88,7 @@ void setup()
 	setup_DMA();
 	setup_D_term_filters();
 	setup_RX();
+
 }
 
 static void setup_HSE()
@@ -788,7 +790,7 @@ static void setup_SPI3()
 {
 	RCC->APB1ENR |= RCC_APB1ENR_SPI3EN;
 
-	SPI3->CR1 &= ~(SPI_CR1_BR);		 // APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
+	SPI3->CR1 &= ~SPI_CR1_BR;//~(SPI_CR1_BR);		 // APB1 clock is 42 [MHz] so baudrate is 42/2=21 [MHz]
 	SPI3->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR | SPI_CR1_CPOL | SPI_CR1_CPHA; // NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is high (CPOL); second edge data capture (CPHA)
 
 	SPI3->CR2 |= SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN;
@@ -832,7 +834,7 @@ static void setup_DMA()
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
 
 	// SPI3 - flash:
-#if defined(USE_FLASH_BLACKBOX)
+#if defined(USE_BLACKBOX)
 #if !defined(USE_I2C1)
 	// reading
 	DMA1_Stream0->CR = 0x0;
@@ -907,17 +909,18 @@ static void setup_DMA()
 	DMA1->HIFCR |= DMA_HIFCR_CTCIF7;
 
 	//-----------------------------END NORMAL DSHOT------------------------------------
-	// bidirectional DSHOT:
-#elif defined(ESC_PROTOCOL_BDSHOT)
+
+
+#elif defined(ESC_PROTOCOL_BDSHOT)// bidirectional DSHOT:
 	// for TIM1
-	DMA2_Stream6->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA2_Stream6->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL;
 	// all the other parameters will be set afterward
 
-	DMA2_Stream2->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
+	DMA2_Stream2->CR |= DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1 | DMA_SxCR_MINC | DMA_SxCR_DIR_0 | DMA_SxCR_TCIE | DMA_SxCR_PL;
 	// all the other parameters will be set afterward
 
-// DSHOT_BURST:
-#elif defined(ESC_PROTOCOL_DSHOT_BURST)
+
+#elif defined(ESC_PROTOCOL_DSHOT_BURST)// DSHOT_BURST:
 
 	//	motor 2 and 3:
 	DMA1_Stream4->CR = 0x0;
@@ -977,8 +980,8 @@ static void setup_DMA()
 
 	//	ADC1:
 	DMA2_Stream4->CR |= DMA_SxCR_MINC | DMA_SxCR_CIRC | DMA_SxCR_TCIE | DMA_SxCR_MSIZE_1 | DMA_SxCR_PSIZE_1;
+	DMA2_Stream4->M0AR = (uint32_t)(main_battery.ADC_value);
 	DMA2_Stream4->PAR = (uint32_t)(&(ADC1->DR));
-	DMA2_Stream4->M0AR = (uint32_t)(ADC1_buffer);
 	DMA2_Stream4->NDTR = 2;
 
 	// I2C1:
@@ -1082,11 +1085,11 @@ void setup_NVIC_2()
 	NVIC_SetPriority(EXTI9_5_IRQn, 10);
 
 	//	nvic interrupt enable (ADC1 interrupt)
-	NVIC_DisableIRQ(ADC_IRQn);
+	NVIC_EnableIRQ(ADC_IRQn);
 	NVIC_SetPriority(ADC_IRQn, 15);
 
 	//	nvic DMA interrupts enable:
-#if defined(USE_FLASH_BLACKBOX) && !defined(USE_I2C1)
+#if defined(USE_BLACKBOX) || defined(USE_I2C1)
 	NVIC_EnableIRQ(DMA1_Stream0_IRQn);
 #endif
 
@@ -1098,13 +1101,13 @@ void setup_NVIC_2()
 	NVIC_SetPriority(DMA1_Stream2_IRQn, 15);
 #endif
 
-#if defined(USE_FLASH_BLACKBOX)
-	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
-	NVIC_SetPriority(DMA1_Stream5_IRQn, 10);
-#endif
-
 	NVIC_EnableIRQ(DMA1_Stream4_IRQn);
 	NVIC_SetPriority(DMA1_Stream4_IRQn, 15);
+
+#if defined(USE_FLASHFS)
+	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+	NVIC_SetPriority(DMA1_Stream5_IRQn, 14);
+#endif
 
 #if defined(ESC_PROTOCOL_DSHOT)
 	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
