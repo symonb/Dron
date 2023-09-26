@@ -5,6 +5,6 @@
 
 void USART1_IRQHandler();
 void DMA2_Stream5_IRQHandler();
-bool Ibus_save(timeUs_t currenttime);
+bool Ibus_save(rx_t* receiver);
 
 #endif /* IBUS_H_ */

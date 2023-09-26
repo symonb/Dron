@@ -68,41 +68,40 @@ void USART1_IRQHandler(void)
 	}
 }
 
-bool Ibus_save(timeUs_t current_time)
+/**
+ *@return true if frame was read succesfully and new data are written to channels, false otherwise
+*/
+bool Ibus_save(rx_t* receiver)
 {
-
-	if ((current_time - time_flag3_1) >= SEC_TO_US(MAX_NO_SIGNAL_TIME))
-	{
-		FailSafe_status = FAILSAFE_RX_TIMEOUT;
-		EXTI->SWIER |= EXTI_SWIER_SWIER15;
-	}
-
-	// checking checksum and rewriting rxBuf to channels:
-	if (receiver.new_data_flag)
-	{
-		time_flag3_1 = current_time;
+	if (receiver->new_data_flag) {
+		// checking checksum: 
 		uint16_t checksum = 0xFFFF;
 		for (int8_t i = 0; i < 30; i++)
 		{
 			checksum -= rxBuf[i];
 		}
+		// if checksum correct rewrite data:
 		if (checksum == ((rxBuf[31] << 8) + rxBuf[30]))
 		{
-			for (int8_t i = 0; i < CHANNELS; i++)
+			// save roll, pitch, yaw, throttle (these channels will be interpolated)
+			for (uint8_t i = 0; i < 4; i++)
 			{
-				receiver.channels_previous_values[i] = receiver.channels[i];
-				receiver.channels[i] = (rxBuf[2 * (i + 1) + 1] << 8) + rxBuf[2 * (i + 1)];
+				receiver->channels_raw[i] = (rxBuf[2 * (i + 1) + 1] << 8) + rxBuf[2 * (i + 1)];
 			}
-
-			failsafe_RX();
-			RX_handling();
+			// save rest of the channels:
+			for (int8_t i = 4; i < CHANNELS; i++)
+			{
+				receiver->channels[i] = (rxBuf[2 * (i + 1) + 1] << 8) + rxBuf[2 * (i + 1)];
+			}
+			//	unlock receiving new RX data:
+			rxindex = 0;
+			USART1->CR1 |= USART_CR1_RXNEIE;
+			return true;
 		}
-		//	unlock receiving new RX data:
-		rxindex = 0;
-		receiver.new_data_flag = false;
-		USART1->CR1 |= USART_CR1_RXNEIE;
-
-		return true;
 	}
+	//	unlock receiving new RX data:
+	rxindex = 0;
+	USART1->CR1 |= USART_CR1_RXNEIE;
 	return false;
+
 }
