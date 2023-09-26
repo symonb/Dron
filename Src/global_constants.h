@@ -14,12 +14,13 @@
 #define MIN(a, b) ((a < b) ? a : b)
 #define GYRO_ACC_SIZE 7				 // 3 for gyro, 3 acc and 1 for temperature
 #define ALL_ELEMENTS_TO_SEND 14		 // telemetry information different values
-#define GYRO_TO_DPS 2000.f / 32767.f // convert gyro register into degrees per second unit
-#define RAD_TO_DEG 180 / M_PI
-#define DEG_TO_RAD M_PI / 180
-#define GYRO_TO_RAD (1.f / 32.767f * DEG_TO_RAD)  // convert gyro register into rad per second unit
-#define ACC_TO_GRAVITY 1.f / 4096.f				  // convert acc register into gravity unit
+#define GYRO_TO_DPS (2000.f / 32767.f) // convert gyro register into degrees per second unit
+#define RAD_TO_DEG (180.f / M_PI)
+#define DEG_TO_RAD (M_PI / 180.f)
+#define GYRO_TO_RAD (1.f / 32.767f * DEG_TO_RAD)  // convert gyro register into rad/second unit
+#define ACC_TO_GRAVITY (1.f / 4096.f)				  // convert acc register into gravity unit
 #define SPI_TIMEOUT_VALUE 0.01f						  // time for SPI_failsafe activation [s]
+#define I2C_TIMEOUT_VALUE 0.0001f						  // time for I2C_failsafe activation [s]
 #define TASK_PERIOD_KHZ(kHz) (1000000000 / (kHz)) // converts frequency in [kHz] into period in [us]
 #define TASK_PERIOD_HZ(Hz) (1000000 / (Hz))		  // converts frequency in [Hz] into [us]
 #define SEC_TO_US(s) ((s)*1000000)				  // converts [s] into [us]
@@ -29,13 +30,13 @@
 //-------------BATTERY------------
 #define BATTERY_SCALE 11
 #define ADC_REFERENCE_VOLTAGE 3.3f	  //	[V]
-#define BATTERY_CELL_MIN_VOLTAGE 3.5f //	[V]
-#define BATTERY_CELL_WARNING_VOLTAGE 3.6f //	[V]
+#define BATTERY_CELL_MIN_VOLTAGE 3.35f //	[V]
+#define BATTERY_CELL_WARNING_VOLTAGE 3.5f //	[V]
 #define BATTERY_CELL_MAX_VOLTAGE 4.2f //	[V]
 
 //-------------BUZZER-------------
-#define BUZZER_TIME_ON 0.2	//	[s]
-#define BUZZER_TIME_OFF 0.8 //	[s]
+#define BUZZER_TIME_ON 0.2f	//	[s]
+#define BUZZER_TIME_OFF 0.8f //	[s]
 
 //-----------RX_SETTINGS----------
 #define CHANNELS 10 // how many channels you want use (4 for steering; 14 is max)
@@ -51,7 +52,7 @@
 #define FLIGHT_MODE_CHANNEL 6
 #define BLACKBOX_CHANNEL 7 //	switch to turn on blackbox data collection
 
-/*Rates setting*/
+// ---------------RATES-----------------
 #define RATES_USE_NO_EXPO // if you want use expo or not RATES_USE_EXPO/RATES_USE_NO_EXPO
 
 #if defined(RATES_USE_EXPO)
@@ -71,15 +72,15 @@ but in general it is curved even with c = 0
 */
 #define RATES_MAX_RATE_P 900	// <0; 2000>
 #define RATES_CENTER_RATE_P 270 // <1; 1000>
-#define RATES_EXPO_P 0.55		// <0; 1>
+#define RATES_EXPO_P 0.55f		// <0; 1>
 
 #define RATES_MAX_RATE_R 900	// <0; 2000>
 #define RATES_CENTER_RATE_R 270 // <1; 1000>
-#define RATES_EXPO_R 0.55		// <0; 1>
+#define RATES_EXPO_R 0.55f		// <0; 1>
 
 #define RATES_MAX_RATE_Y 650	// <0; 2000>
 #define RATES_CENTER_RATE_Y 300 // <1; 1000>
-#define RATES_EXPO_Y 0.42		// <0; 1>
+#define RATES_EXPO_Y 0.42f		// <0; 1>
 
 #elif defined(RATES_USE_NO_EXPO)
 /* Rates description:
@@ -106,6 +107,9 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define RATES_EXPO_Y 0
 #define RATES_MAX_RATE_Y 650	// <0; 2000>
 #define RATES_CENTER_RATE_Y 290 // <1; 1000>
+
+#define THROTTLE_MIN 1000
+#define THROTTLE_MAX 2000
 
 #endif
 
@@ -141,9 +145,11 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #endif
 
 //----------MOTORS_AND_CORRECTIONS-------
-#define MAX_I_CORRECTION 300 // maximal I_corr for PIDs between <0;4000>
-#define THROTTLE_MIN 1050
-#define THROTTLE_MAX 2000
+#define TPA_MAX_VALUE 0.5f		// Throttle PID atennuation (when full throttle PID values are 0.7 of original values (if this is set to 0.3))
+#define TPA_BREAKPOINT 1500	// throttle value when attenuation begins (when throttle vary between 1000-2000 attenuation will start at 1500 and increase up to 2000)
+#define MAX_I_CORRECTION 400 // maximal I_corr for PIDs between <0;1000>
+#define MOTOR_OUTPUT_MIN 1050
+#define MOTOR_OUTPUT_MAX 2000
 #define MOTORS_COUNT 4		  // how many motors are used
 #define MOTOR_1 3			  // PA3
 #define MOTOR_2 0			  // PB0
@@ -161,9 +167,18 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define GYRO_PART 0.995f // complementary filter
 #define ACC_PART 0.005f	 // complementary filter
 
+//---------ALTITUDE_HOLDING----------
+#define THR_ALT_P 1
+#define THROTTLE_HOLD_LOW 1300			// min throttle value for which altitude will be hold (range = range_up - range_low)
+#define THROTTLE_HOLD_UP 1700			// max throttle value for which altitude will be hold (range = range_up - range_low)
+#define MAX_RISING_RATE  1.5f			// [m/s]
+#define MAX_DECLINE_RATE  1.5f			// [m/s]
+
+
 //---------FREQUENCY_SETTINGS--------
 #define FREQUENCY_MAIN_LOOP 2000			//	[Hz]   IF YOU'RE USING PWM MAX is 500[Hz] (little less), IF DSHOT you can go up to 8 [kHz]
 #define FREQUENCY_STABILIZATION_LOOP 200 	//	[Hz]
+#define FREQUENCY_ACC_SAMPLING	1000		//	[Hz]
 #define FREQUENCY_ESC_UPDATE 2000		 	//	[Hz]	SHOULD BE AT LEAST AS MAIN_LOOP
 #define FREQUENCY_RX_READING 200		 	//	[Hz]	set more than it is possible (>150)
 #define FREQUENCY_TELEMETRY_UPDATE 1	 	//	[Hz]
@@ -171,6 +186,8 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define FREQUENCY_OSD_UPDATE 30			 	//	[Hz]
 #define FREQUENCY_USB_CHECK 50				//	[Hz]
 #define FREQUENCY_BLACKBOX FREQUENCY_MAIN_LOOP/(1<<BLACKBOX_SAMPLE_RATE)				//	[Hz]
+#define FREQUENCY_BARO 200					//	[Hz]
+#define FREQUENCY_ALT_HOLD 100				//	[Hz]
 
 //------------FAILSAFE--------------------
 
@@ -180,11 +197,14 @@ typedef enum
 	FAILSAFE_INCORRECT_CHANNELS_VALUES,
 	FAILSAFE_RX_TIMEOUT,
 	FAILSAFE_NO_PREARM,
-	FAILSAFE_I2C_ERROR,
+	FAILSAFE_THROTTLE_PREARM,
 	FAILSAFE_SPI_IMU_ERROR,
 	FAILSAFE_SPI_FLASH_ERROR,
 	FAILSAFE_SPI_OSD_ERROR,
 	FAILSAFE_GYRO_CALIBRATION,
+	FAILSAFE_I2C1_ERROR,
+	FAILSAFE_BLACKBOX_FULL,
+	FAILSAFE_BATTERY_LOW,
 	FAILSAFE_COUNTER
 } failsafe_e;
 
@@ -200,21 +220,11 @@ typedef enum
 //--------------BLACKBOX-------------------
 #define USE_BLACKBOX // USE_BLACKBOX if you want BLACKBOX
 /*define which parameters you would like to save:
- *
- * BLACKBOX_SAVE_FILTERED_GYRO_AND_ACC 	- 6 values
- * BLACKBOX_SAVE_FILTERED_GYRO 			- 3 values
- * BLACKBOX_SAVE_FILTERED_ACC			- 3 values
- * BLACKBOX_SAVE_RAW_GYRO_AND_ACC		- 6 values
- * BLACKBOX_SAVE_RAW_GYRO				- 3 values
- * BLACKBOX_SAVE_RAW_ACC				- 3 values
- * BLACKBOX_SAVE_EULER_ANGLES			- 3 values
- * BLACKBOX_SAVE_SET_ANGLES				- 3 values
- * BLACKBOX_SAVE_STICKS					- 3 values
- *
+ * BLACKBOX_SAVE_RAW_GYRO				- 3 values save gyro values without filtering
+ * BLACKBOX_SAVE_RAW_ACC				- 3 values save acc values without filtering
+ * BLACKBOX_SAVE_CHANNELS_RAW			- 4 values save raw channels values without filtering
  */
-#define BLACKBOX_SAVE_EULER_ANGLES
-#define BLACKBOX_SAVE_SET_ANGLES
-#define BLACKBOX_SAVE_FILTERED_GYRO
+ // #define BLACKBOX_SAVE_CHANNELS_RAW
 #define BLACKBOX_SAMPLE_RATE 1		//	sampling is 1/2^BLACKBOX_SAMPLE_RATE so for 0 it is equal to main PID loop frequency, for half frequency of main loop set this as 1
 
 #define REQUIRE_CC_ARM_PRINTF_SUPPORT
@@ -239,9 +249,15 @@ typedef enum
 #define OSD_WARNING_PLACEMENT 315
 #define OSD_AUTO_NTSC_PAL //	options:	OSD_AUTO_NTSC_PAL/OSD_CAMERA_PAL/OSD_CAMERA_NTSC
 
-//-----------------I2C DEVICES----------------
+//-----------------I2C----------------
 #define USE_I2C1
-#define I2C1_BUFFER_SIZE 10
+
+
+//------------------SENSORS-------------------
+#define USE_BARO
+#define ACC_GYRO_MOUNT 180	// how is IMU mounted refering to drone axes (Z is up, X is pointed with drone's nose and Y is pointed left)
+
+// #define USE_MAG
 
 //-------------------FILTERS------------------
 #define USE_BIQUAD_FILTERS										  // USE_FIR_FILTERS or USE_IIR_FILTERS or USE_BIQUAD_FILTERS
@@ -249,47 +265,38 @@ typedef enum
 #define GYRO_FILTERS_ORDER 2
 #define ACC_FILTERS_ORDER 2
 #define D_TERM_FILTER_ORDER 2
-#else
-#define BIQUAD_LPF_CUTOFF 80		//	[Hz]
-#define BIQUAD_LPF_Q 1.f / sqrtf(2) //	Q factor for Low-pass filters
-#define BIQUAD_NOTCH_Q 10			//	Q factor for notch filters
 #endif
+
+#define USE_RC_SMOOTHING	// if you want use rc smoothing USE_RC_SMOOTHING
+
+#define BIQUAD_LPF_CUTOFF_GYRO 70		//	[Hz]
+#define BIQUAD_LPF_CUTOFF_ACC 10		//	[Hz]
+#define BIQUAD_LPF_CUTOFF_D_TERM 100	//	[Hz]
+#define BIQUAD_LPF_CUTOFF_FF_TERM 100	//  [Hz]
+#define BIQUAD_LPF_CUTOFF_RC 50			//  [Hz]
+
+#define BIQUAD_LPF_Q (1.f / sqrtf(2)) 	//	Q factor for Low-pass filters
+#define BIQUAD_NOTCH_Q 10				//	Q factor for notch filters
+
+
 // RPM filter:
 #if defined(ESC_PROTOCOL_BDSHOT)
 #define USE_RPM_FILTER_GYRO // if you want use RPM_filter for gyro	USE_RPM_FILTER_GYRO
-#define USE_RPM_FILTER_ACC	// if you want use RPM_filter for acc USE_RPM_FILTER_ACC
+// #define USE_RPM_FILTER_ACC	// if you want use RPM_filter for acc USE_RPM_FILTER_ACC
 #endif
-#define RPM_MIN_FREQUENCY_HZ 50 // all frequencies <= than this value will not be filtered by RPM filter
+
+#define RPM_MIN_FREQUENCY_HZ 70 // all frequencies <= than this value will not be filtered by RPM filter
 #define RPM_FADE_RANGE_HZ 50	// fade out notch when approaching RPM_MIN_FREQUENCY_HZ (turn it off for RPM_MIN_FREQUENCY_HZ)
-#define RPM_Q_FACTOR 100		// Q factor for all notches. It is VERY HIGH therefore notches are really narrow and selective
+#define RPM_Q_FACTOR 400		// Q factor for all notches. It is VERY HIGH therefore notches are really narrow and selective
 #define RPM_MAX_HARMONICS 3		// max. number of filtered harmonics
 
 //	remember to define coefficients in global_variables.c
 
 //-----------OFFSETS and CALIBRATIONS VALUE----------
-#define PITCH_OFFSET -7
-#define ROLL_OFFSET 0
 #define GYRO_STARTUP_CALIB_DURATION 1.5f // time when gyro bias is measured in [s]
-#define GYRO_STARTUP_CALIB_MAX_DEV 60 // maximum deviation accepted after gyro calibration
+#define GYRO_STARTUP_CALIB_MAX_DEV 0.5f // maximum deviation accepted for gyro calibration [degree/s]
 
-//	average error on each drone' axis:
 
-#define ACC_ROLL_OFFSET 2.862f
-#define ACC_PITCH_OFFSET 125.6525f
-#define ACC_YAW_OFFSET 50.325f
-
-//
-#define ACC_CALIBRATION_X_X 4249.908f
-#define ACC_CALIBRATION_X_Y -43.456f
-#define ACC_CALIBRATION_X_Z 108.501f
-
-#define ACC_CALIBRATION_Y_X 184.890f
-#define ACC_CALIBRATION_Y_Y 4107.778f
-#define ACC_CALIBRATION_Y_Z 755.494f
-
-#define ACC_CALIBRATION_Z_X -114.671f
-#define ACC_CALIBRATION_Z_Y -279.031f
-#define ACC_CALIBRATION_Z_Z 4521.060f
 
 //-------------DEBUGGING--------------
 

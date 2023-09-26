@@ -2,7 +2,7 @@
 #define BLACKBOX_H_
 #include "global_variables.h"
 void blackbox_update(timeUs_t time);
-void blackbox_reserve_partition();
+bool blackbox_reserve_partition(uint32_t size);
 bool blackbox_end_partition();
 bool blackbox_init();
 
@@ -55,6 +55,14 @@ typedef struct blackboxMainState_s
 
     uint16_t vbatLatest;
     int32_t amperageLatest;
+
+#ifdef USE_BARO
+    int32_t baroAlt;
+#endif
+#ifdef USE_MAG
+    int16_t magADC[XYZ_AXIS_COUNT];
+#endif
+
     uint16_t rssi;
 } blackboxMainState_t;
 

@@ -86,9 +86,15 @@ void setup()
 	setup_EXTI();
 	setup_I2C1();
 	setup_DMA();
-	setup_D_term_filters();
-	setup_RX();
-
+	setup_rx();
+	// filters initialization:
+	gyro_acc_filters_init();
+	D_term_filters_init();
+	ff_filters_init();
+#if defined(USE_RC_SMOOTHING)
+	rc_filters_init();
+#endif
+	baro_filters_init();
 }
 
 static void setup_HSE()
@@ -315,6 +321,8 @@ static void setup_GPIOB()
 		GPIO_OSPEEDER_OSPEEDR3 |
 		GPIO_OSPEEDER_OSPEEDR4 |
 		GPIO_OSPEEDER_OSPEEDR5 |
+		GPIO_OSPEEDER_OSPEEDR6 |
+		GPIO_OSPEEDER_OSPEEDR7 |
 		GPIO_OSPEEDER_OSPEEDR10 |
 		GPIO_OSPEEDER_OSPEEDR12 |
 		GPIO_OSPEEDER_OSPEEDR13 |
@@ -989,7 +997,7 @@ static void setup_DMA()
 	// reading
 	DMA1_Stream0->CR |= DMA_SxCR_CHSEL_0 | DMA_SxCR_MINC | DMA_SxCR_TCIE | DMA_SxCR_PL_0;
 	DMA1_Stream0->PAR = (uint32_t)(&(I2C1->DR));
-	DMA1_Stream0->M0AR = (uint32_t)(I2C1_read_buffer); // it will be set during reception anyway
+
 #endif
 }
 
@@ -1029,7 +1037,7 @@ static void setup_I2C1()
 	// DMA requests enable, NACK at the end of DMA reception:
 	I2C1->CR2 |= I2C_CR2_DMAEN | I2C_CR2_LAST;
 
-	/*400kHz setting (datasheet says that main clock should have been multiply of 10 [MHz] but it should work)
+	/*400kHz setting (datasheet says that main clock should been multiply of 10 [MHz] but it should work)
 	 * APB1 clock has 42 [MHz] -> 1/42 [us] is main clock period
 	 * according datasheet:
 	 * in FM mode Low time (T_L) = 2*High time (T_H) so whole period is 3*T_H

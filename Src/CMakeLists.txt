@@ -15,7 +15,7 @@ set(MAIN_SRC
     drivers/SPI1.c
     drivers/SPI2.c
     drivers/SPI3.c
-    drivers/i2c1.c
+    drivers/I2C1.c
     filters.c
     flash.c
     global_functions.c
@@ -25,12 +25,14 @@ set(MAIN_SRC
     math/quaternions.c
     math/math_quicker.c
     motors.c
-    MPU6000.c
     OSD.c
     rx.c
     scheduler.c
     stabilize.c
-
+    sensors/barometer.c
+    sensors/MPU6000.c
+    sensors/MS5XXX.c
+    sensors/QMC5883L.c
     startup/startup_stm32f405xx.s
     startup/system_stm32f4xx.c
     startup/stm32f4xx_it.c

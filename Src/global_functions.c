@@ -148,43 +148,48 @@ void anti_windup()
 	{
 		//	limit I_corrections:
 		for (uint8_t i = 0;i < 3;i++) {
-			if ((corr_PIDF[i].I) > MAX_I_CORRECTION)
+			if ((corr_att[i].I) > MAX_I_CORRECTION)
 			{
-				corr_PIDF[i].I = MAX_I_CORRECTION;
+				corr_att[i].I = MAX_I_CORRECTION;
 			}
-			else if ((corr_PIDF[i].I) < -MAX_I_CORRECTION)
+			else if ((corr_att[i].I) < -MAX_I_CORRECTION)
 			{
-				corr_PIDF[i].I = -MAX_I_CORRECTION;
+				corr_att[i].I = -MAX_I_CORRECTION;
 			}
 		}
 	}
 	else
 	{ // quad is disarmed so turn off I term of corrections
-		corr_PIDF[0].I = 0;
-		corr_PIDF[1].I = 0;
-		corr_PIDF[2].I = 0;
+		corr_att[0].I = 0;
+		corr_att[1].I = 0;
+		corr_att[2].I = 0;
 	}
 }
 
 void set_motors(threef_t corr)
 {
-	//	Make corrections:
+
+	// MIXER:
+	if (flight_mode == FLIGHT_MODE_ACRO || flight_mode == FLIGHT_MODE_STABLE) {
+		throttle = receiver.Throttle;
+	}
+
 	//	right back:
-	motor_value[0] = (receiver.Throttle - corr.roll + corr.pitch - corr.yaw) * 2;
+	motor_value[0] = (throttle - corr.roll + corr.pitch - corr.yaw) * 2;
 	//	right front:
-	motor_value[1] = (receiver.Throttle - corr.roll - corr.pitch + corr.yaw) * 2;
+	motor_value[1] = (throttle - corr.roll - corr.pitch + corr.yaw) * 2;
 	//	left back:
-	motor_value[2] = (receiver.Throttle + corr.roll + corr.pitch + corr.yaw) * 2;
+	motor_value[2] = (throttle + corr.roll + corr.pitch + corr.yaw) * 2;
 	//	left front:
-	motor_value[3] = (receiver.Throttle + corr.roll - corr.pitch - corr.yaw) * 2;
+	motor_value[3] = (throttle + corr.roll - corr.pitch - corr.yaw) * 2;
+
 
 	for (uint8_t i = 0; i < MOTORS_COUNT;++i) {
-		if (motor_value[i] < THROTTLE_MIN * 2)
-		{
-			motor_value[i] = THROTTLE_MIN * 2;
+		if (motor_value[i] < MOTOR_OUTPUT_MIN * 2) {
+			motor_value[i] = MOTOR_OUTPUT_MIN * 2;
 		}
-		else if (motor_value[i] > THROTTLE_MAX * 2) {
-			motor_value[i] = THROTTLE_MAX * 2;
+		else if (motor_value[i] > MOTOR_OUTPUT_MAX * 2) {
+			motor_value[i] = MOTOR_OUTPUT_MAX * 2;
 		}
 	}
 }
@@ -317,8 +322,8 @@ void EXTI15_10_IRQHandler()
 			failsafe_counter[FAILSAFE_NO_PREARM]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
-		case FAILSAFE_I2C_ERROR:
-			failsafe_counter[FAILSAFE_I2C_ERROR]++;
+		case FAILSAFE_THROTTLE_PREARM:
+			failsafe_counter[FAILSAFE_THROTTLE_PREARM]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
 		case FAILSAFE_SPI_IMU_ERROR:
@@ -335,6 +340,19 @@ void EXTI15_10_IRQHandler()
 			break;
 		case FAILSAFE_GYRO_CALIBRATION:
 			failsafe_counter[FAILSAFE_GYRO_CALIBRATION]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			break;
+		case FAILSAFE_I2C1_ERROR:
+			failsafe_counter[FAILSAFE_I2C1_ERROR]++;
+			MS5XXX_unstack();
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			break;
+		case FAILSAFE_BLACKBOX_FULL:
+			failsafe_counter[FAILSAFE_BLACKBOX_FULL]++;
+			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			break;
+		case FAILSAFE_BATTERY_LOW:
+			failsafe_counter[FAILSAFE_BATTERY_LOW]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
 			break;
 		default:

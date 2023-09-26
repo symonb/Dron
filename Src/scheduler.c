@@ -42,10 +42,14 @@ bool scheduler_initialization(scheduler_t* scheduler)
 	add_to_queue(&all_tasks[TASK_TELEMETRY], scheduler);
 	add_to_queue(&all_tasks[TASK_UPDATE_MOTORS], scheduler);
 	add_to_queue(&all_tasks[TASK_BUZZER], scheduler);
-	add_to_queue(&all_tasks[TASK_OSD], scheduler);
+	add_to_queue(&all_tasks[TASK_OSD_INIT], scheduler);
 	add_to_queue(&all_tasks[TASK_USB_HANDLING], scheduler);
 	add_to_queue(&all_tasks[TASK_BLACKBOX_INIT], scheduler);
 	add_to_queue(&all_tasks[TASK_BLACKBOX], scheduler);
+#if defined(USE_BARO)
+	add_to_queue(&all_tasks[TASK_BARO_INIT], scheduler);
+	add_to_queue(&all_tasks[TASK_ALT_HOLD], scheduler);
+#endif
 
 	scheduler_reset_tasks_statistics(scheduler);
 
@@ -70,14 +74,14 @@ void scheduler_execute(scheduler_t* scheduler)
 	// execute current task:
 	if (scheduler->current_task != NULL)
 	{
-		timeUs_t time_before_execution = get_Global_Time();
+		timeUs_t execution_time = get_Global_Time();
 		// execute task function:
-		scheduler->current_task->task_fun(time_before_execution);
+		scheduler->current_task->task_fun(execution_time);
 		// update task stats:
-		scheduler->current_task->last_execution = time_before_execution;
+		scheduler->current_task->last_execution = execution_time;
 		scheduler->current_task->avg_delayed_cycles = scheduler->current_task->avg_delayed_cycles * 0.95f + (scheduler->current_task->dynamic_priority / scheduler->current_task->static_priority - 1) * 0.05f;
 		scheduler->current_task->dynamic_priority = 0;
-		scheduler->current_task->avg_execution_time = scheduler->current_task->avg_execution_time * 0.95f + (get_Global_Time() - time_before_execution) * 0.05f;
+		scheduler->current_task->avg_execution_time = scheduler->current_task->avg_execution_time * 0.95f + (get_Global_Time() - execution_time) * 0.05f;
 	}
 	// if nothing to do wait 10 [us]:
 	else
@@ -100,7 +104,7 @@ static void scheduler_reschedule(scheduler_t* scheduler)
 
 		if (task->check_fun)		//	if task.check_fun() exists:
 		{
-			if (task->check_fun(current_time, current_time - task->last_execution))//	if .check_fun() return true (if not dynamic priority will stay 0):
+			if (task->check_fun(current_time, current_time - task->last_execution - task->avg_execution_time))//	if .check_fun() return true (if not dynamic priority will stay 0):
 			{
 				//	update dynamic priority (dividing int so if not >1 will stay 0):
 				task->dynamic_priority = (current_time - task->last_execution) / (task->desired_period) * task->static_priority;

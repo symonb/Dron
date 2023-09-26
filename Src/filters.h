@@ -77,10 +77,12 @@ typedef struct
 
 } RPM_filter_t;
 
-void FIR_filter_init(FIR_Filter* fir);
+void FIR_filter_init(FIR_Filter* fir, uint8_t order);
+void FIR_filter_cleanup(FIR_Filter* fir);
 float FIR_filter_apply(FIR_Filter* fir, float input);
 
-void IIR_filter_init(IIR_Filter* fir);
+void IIR_filter_init(IIR_Filter* fir, uint8_t order);
+void IIR_filter_cleanup(IIR_Filter* iir);\
 float IIR_filter_apply(IIR_Filter* fir, float input);
 
 void biquad_filter_init(biquad_Filter_t* filter, biquad_Filter_type filter_type, float center_frequency_Hz, float quality_factor, uint16_t sampling_frequency_Hz);
@@ -90,12 +92,22 @@ float biquad_filter_apply_DF2(biquad_Filter_t* filter, float input);
 void RPM_filter_init(RPM_filter_t* filter, uint16_t sampling_frequency_Hz);
 float RPM_filter_apply(RPM_filter_t* filter, uint8_t axis, float input);
 
-void Gyro_Acc_filters_setup();
+void gyro_acc_filters_init();
 void gyro_filtering(const float* temporary);
 void acc_filtering(const float* temporary);
 
-
-void setup_D_term_filters();
+void D_term_filters_init();
 void D_term_filtering();
+
+void ff_filters_init();
+void ff_filtering();
+
+void rc_filters_init();
+void rc_filtering();
+
+void baro_filters_init();
+void baro_D_term_filtering();
+void baro_preasure_filtering();
+void baro_vel_filtering();
 
 #endif /* FILTERS_H_ */

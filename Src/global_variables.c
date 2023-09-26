@@ -17,9 +17,10 @@ volatile flight_mode_e flight_mode;
 
 volatile arming_e Arming_status;
 
-gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_raw_data_flag = false,.address = 0, .rev_id = 0, .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
-acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_raw_data_flag = false, .id = 0 , .offset.roll = 0, .offset.pitch = 0,.offset.yaw = 0 };
-
+gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_raw_data_flag = false,.address = 0, .rev_id = 0, .offset = {0,0,0} };
+acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_raw_data_flag = false, .id = 0 ,
+ .offset = {-0.022267f,  -0.008086f, -0.016104f}, .scale = { 1.000239f, 0.994042f, 0.991673f } };
+baro_t baro_1 = { .name = "MS5611",.h0_preasure = 1013,.ver_vel = 0 };
 
 //----------TIME VARIABLES--------
 volatile timeUs_t Global_Time = 0;
@@ -32,40 +33,60 @@ timeUs_t time_flag0_1 = 0;
 timeUs_t time_flag1_1 = 0;
 // acro:
 timeUs_t time_flag2_2 = 0;
-// ibus:
-timeUs_t time_flag3_1 = 0;
 // MPU:
 timeUs_t time_flag4_1 = 0;
 // flash:
 timeUs_t time_flag5_1 = 0;
 //	OSD:
 timeUs_t time_flag6_1 = 0;
+// I2C1:
+timeUs_t time_flag7_1 = 0;
 
 //---------VARIABLES-----------
 
+
 //------------PIDF-------------
+// angular speed control:
+PIDF_t R_PIDF = { 1000, 2300, 16, 2 };
+PIDF_t P_PIDF = { 1200, 2600, 20, 4 };
+PIDF_t Y_PIDF = { 700, 100, 0.1, 0 };
+float tpa_coef = 1; // Throttle PID atenuation value tpa_coef = 1-TPA_MAX_VALUE * (throttle-TPA_BREAKPOINT)/(THROTTLE_MAX_VALUE - TPA_BREAKPOINT)
 
-PIDF_t R_PIDF = { 500, 0, 25, 0 }; // 590 30 55 0
-PIDF_t P_PIDF = { 700, 0, 40, 0 }; // 750 30 65 0
-PIDF_t Y_PIDF = { 700, 0, 0, 0 };  // 1100 30 30 0
+// attitiude control:
+PIDF_t att_PIDF = { 1.5,0.5,0,0 };    // Only P and I values are used
 
-PIDF_t corr_PIDF[3];
+// altitiude control:
+PIDF_t rate_throttle_PIDF = { 0.2, 0.1,0 };// { 100, 50, 200, 0 };//{ 80, 20, 100, 0 };
+PIDF_t corr_rate_throttle;
+PIDF_t acc_throttle_PIDF = { 250, 50, 5, 0 };
+PIDF_t corr_acc_throttle;
+
+PIDF_t corr_att[3];
 threef_t corr_sum;
+PIDF_t corr_baro;
+float throttle; // throttle value send to mixer (for acro/stabilize the same with receiver acro but not the same for ALH or other modes)
 
 float MCU_temperature = 0;
 
 bool buzzer_active = false;
 
-rx_t receiver = { .number_of_channels = 14, .type = RX_IBUS };
+rx_t receiver = { .number_of_channels = 14, .type = RX_IBUS , .last_time = 0 };
 
 threef_t global_euler_angles = { 0, 0, 0 };
 
 threef_t global_angles = { 0, 0, 0 };
 
-quaternion_t q_global_position = { 1, 0, 0, 0 };
+quaternion_t q_global_attitude = { 1, 0, 0, 0 };
 
+//  quaternion transforming from IMU frame (acc and gyro) to drone frame
+quaternion_t q_trans_sensor_to_body_frame = { -0.000019f, 0.001861f, 0.010147f, 0.999947f };
+
+
+//------------SETPOINTS---------------
 threef_t desired_rotation_speed = { 0, 0, 0 };
 threef_t desired_angles = { 0, 0, 0 };
+
+float desired_altitude = 0;
 
 // motor's values set by PID's:
 uint16_t motor_value[MOTORS_COUNT];
@@ -84,8 +105,7 @@ uint16_t* motor_2_value_pointer = &MOTOR_OFF;
 uint16_t* motor_3_value_pointer = &MOTOR_OFF;
 uint16_t* motor_4_value_pointer = &MOTOR_OFF;
 
-int16_t Gyro_Acc[GYRO_ACC_SIZE]; // table for measurements 3 gyro, 3 accelerometer, 1 temperature
-int16_t Gyro_Acc_raw[GYRO_ACC_SIZE - 1]; // table for measurements 3 gyro, 3 accelerometer
+float Gyro_Acc[GYRO_ACC_SIZE]; // table for measurements 3 gyro, 3 accelerometer, 1 temperature
 
 uint16_t table_to_send[ALL_ELEMENTS_TO_SEND];
 
@@ -127,12 +147,12 @@ const float D_TERM_FILTER_FORW_COEF[D_TERM_FILTER_ORDER + 1] = { 0.02008336f, 0.
 const float D_TERM_FILTER_BACK_COEF[D_TERM_FILTER_ORDER] = { -1.56101807f, 0.6413515f };
 
 #endif
-
-//---------------I2C1---------------
-uint8_t I2C1_read_write_flag = 1;
-uint8_t I2C1_read_buffer[I2C1_BUFFER_SIZE];
-
+//-----------TELEMETRY-------------
 bool transmitting_is_Done = true;
+
+
+
+//------------ESC PROTOCOL VARIABLES-----------
 #if defined(ESC_PROTOCOL_DSHOT)
 uint32_t dshot_buffer_1[DSHOT_BUFFER_LENGTH];
 uint16_t dshot_buffer_2[DSHOT_BUFFER_LENGTH];

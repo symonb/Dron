@@ -111,7 +111,7 @@ static uint16_t vbatReference;
 
 
 blackbox_config_t blackbox_config = {
-    .fields_disabled_mask = ~(1 << (FIELD_SELECT(BATTERY)) | 1 << (FIELD_SELECT(GYRO)) | 1 << (FIELD_SELECT(ACC)) | 1 << (FIELD_SELECT(MOTOR)) | 1 << (FIELD_SELECT(RC_COMMANDS)) | 1 << (FIELD_SELECT(SETPOINT)) | 1 << (FIELD_SELECT(PID))),
+    .fields_disabled_mask = ~(1 << (FIELD_SELECT(BATTERY)) | 1 << (FIELD_SELECT(GYRO)) | 1 << (FIELD_SELECT(ACC)) | 1 << (FIELD_SELECT(MOTOR)) | 1 << (FIELD_SELECT(RC_COMMANDS)) | 1 << (FIELD_SELECT(SETPOINT)) | 1 << (FIELD_SELECT(PID)) | 1 << (FIELD_SELECT(ALTITUDE))),
     .sample_rate = BLACKBOX_SAMPLE_RATE };
 
 static const char blackboxHeader[] =
@@ -218,6 +218,16 @@ static const blackboxDeltaFieldDefinition_t blackboxMainFields[] = {
 
     {"vbatLatest", -1, UNSIGNED, .Ipredict = PREDICT(VBATREF), .Iencode = ENCODING(NEG_14BIT), .Ppredict = PREDICT(PREVIOUS), .Pencode = ENCODING(TAG8_8SVB), CONDITION(VBAT)},
     {"amperageLatest",-1, SIGNED,   .Ipredict = PREDICT(0),        .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),  .Pencode = ENCODING(TAG8_8SVB), CONDITION(AMPERAGE_ADC)},
+
+
+#ifdef USE_MAG
+    {"magADC", 0, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS), .Pencode = ENCODING(TAG8_8SVB), CONDITION(MAG)},
+    {"magADC", 1, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS), .Pencode = ENCODING(TAG8_8SVB), CONDITION(MAG)},
+    {"magADC", 2, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS), .Pencode = ENCODING(TAG8_8SVB), CONDITION(MAG)},
+#endif
+#ifdef USE_BARO
+    {"baroAlt", -1, SIGNED, .Ipredict = PREDICT(0), .Iencode = ENCODING(SIGNED_VB), .Ppredict = PREDICT(PREVIOUS), .Pencode = ENCODING(TAG8_8SVB), CONDITION(BARO)},
+#endif
 
     {"rssi",       -1, UNSIGNED, .Ipredict = PREDICT(0),       .Iencode = ENCODING(UNSIGNED_VB), .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(TAG8_8SVB), CONDITION(RSSI)},
 
@@ -346,6 +356,20 @@ static bool testBlackboxConditionUncached(FlightLogFieldCondition condition)
     case CONDITION(SETPOINT):
         return isFieldEnabled(FIELD_SELECT(SETPOINT));
 
+    case CONDITION(MAG):
+#ifdef USE_MAG
+        return sensors(SENSOR_MAG) && isFieldEnabled(FIELD_SELECT(MAG));
+#else
+        return false;
+#endif
+
+    case CONDITION(BARO):
+#ifdef USE_BARO
+        return  isFieldEnabled(FIELD_SELECT(ALTITUDE));
+#else
+        return false;
+#endif
+
     case CONDITION(VBAT):
         return isFieldEnabled(FIELD_SELECT(BATTERY));
         // return (batteryConfig()->voltageMeterSource != VOLTAGE_METER_NONE) && isFieldEnabled(FIELD_SELECT(BATTERY));
@@ -426,28 +450,60 @@ static void loadMainState(timeUs_t currentTimeUs)
 
     for (int i = 0; i < 3; i++)
     {
-        blackboxCurrent->axisPID_P[i] = lrintf(corr_PIDF[i].P);
-        blackboxCurrent->axisPID_I[i] = lrintf(corr_PIDF[i].I);
-        blackboxCurrent->axisPID_D[i] = lrintf(corr_PIDF[i].D);
-        blackboxCurrent->axisPID_F[i] = lrintf(corr_PIDF[i].F);
-        blackboxCurrent->gyroADC[i] = Gyro_Acc[i] * GYRO_TO_DPS;
-        blackboxCurrent->accADC[i] = lrintf(Gyro_Acc[i + 3]);
+        blackboxCurrent->axisPID_P[i] = lrintf(corr_att[i].P);
+        blackboxCurrent->axisPID_I[i] = lrintf(corr_att[i].I);
+        blackboxCurrent->axisPID_D[i] = lrintf(corr_att[i].D);
+        blackboxCurrent->axisPID_F[i] = lrintf(corr_att[i].F);
+#if defined(BLACKBOX_SAVE_RAW_GYRO)
+        blackboxCurrent->gyroADC[i] = gyro_1.raw_data[i]
+#else 
+        blackboxCurrent->gyroADC[i] = Gyro_Acc[i];
+#endif
+#if defined(BLACKBOX_SAVE_RAW_ACC)
+        blackboxCurrent->accADC[i] = acc_1.raw_data[i]
+#else
+        blackboxCurrent->accADC[i] = Gyro_Acc[i + 3] / ACC_TO_GRAVITY;
+#endif
+
+
+#ifdef USE_MAG
+        blackboxCurrent->magADC[i] = lrintf(mag.magADC[i]);
+#endif
     }
 
-
+#if defined(BLACKBOX_SAVE_CHANNELS_RAW)
+    blackboxCurrent->rcCommand[0] = receiver.channels_raw[0] - 1500;
+    blackboxCurrent->rcCommand[1] = receiver.channels_raw[1] - 1500;
+    blackboxCurrent->rcCommand[2] = receiver.channels_raw[3] - 1500;
+    blackboxCurrent->rcCommand[3] = receiver.channels_raw[2];
+#else
     blackboxCurrent->rcCommand[0] = receiver.channels[0] - 1500;
     blackboxCurrent->rcCommand[1] = receiver.channels[1] - 1500;
     blackboxCurrent->rcCommand[2] = receiver.channels[3] - 1500;
     blackboxCurrent->rcCommand[3] = receiver.channels[2];
-
-
+#endif
     // log the currentPidSetpoint values applied to the PID controller
     blackboxCurrent->setpoint[0] = lrintf(corr_sum.roll);
     blackboxCurrent->setpoint[1] = lrintf(corr_sum.pitch);
     blackboxCurrent->setpoint[2] = lrintf(corr_sum.yaw);
 
+    // if debugging althold:
+    // blackboxCurrent->axisPID_P[2] = lrintf(corr_rate_throttle.P);
+    // blackboxCurrent->axisPID_I[2] = lrintf(corr_rate_throttle.I);
+    // blackboxCurrent->axisPID_D[2] = lrintf(corr_rate_throttle.D);
+    // blackboxCurrent->axisPID_F[2] = lrintf(corr_rate_throttle.F);
+    // blackboxCurrent->gyroADC[2] = lrintf(baro_1.ver_vel * 100);
+
+    blackboxCurrent->axisPID_P[2] = lrintf(corr_acc_throttle.P);
+    blackboxCurrent->axisPID_I[2] = lrintf(corr_acc_throttle.I);
+    blackboxCurrent->axisPID_D[2] = lrintf(corr_acc_throttle.D);
+    blackboxCurrent->axisPID_F[2] = lrintf(corr_rate_throttle.P * 100);
+    blackboxCurrent->gyroADC[2] = lrintf(baro_1.ver_vel * 100);
+
+    //
+
     // log the final throttle value used in the mixer
-    blackboxCurrent->setpoint[3] = (receiver.Throttle);
+    blackboxCurrent->setpoint[3] = (throttle);
 
     const int motorCount = MOTORS_COUNT;
     for (int i = 0; i < motorCount; i++)
@@ -457,6 +513,10 @@ static void loadMainState(timeUs_t currentTimeUs)
 
     blackboxCurrent->vbatLatest = battery_get_voltage() * 100;
     blackboxCurrent->amperageLatest = 0;
+
+#ifdef USE_BARO
+    blackboxCurrent->baroAlt = baro_1.altitude * 100;
+#endif
 
     blackboxCurrent->rssi = 0;
 
@@ -667,7 +727,7 @@ static void blackboxLogIteration(timeUs_t currentTimeUs)
     else
     {
         // blackboxCheckAndLogArmingBeep();
-        //blackboxCheckAndLogFlightMode(); // Check for FlightMode status change event
+        blackboxCheckAndLogFlightMode(); // Check for FlightMode status change event
 
         if (blackboxShouldLogPFrame())
         {
@@ -688,7 +748,15 @@ static void blackboxLogIteration(timeUs_t currentTimeUs)
 /* monitor the flight mode event status and trigger an event record if the state changes */
 static void blackboxCheckAndLogFlightMode(void)
 {
-    // not used yet
+    // Use != so that we can still detect a change if the counter wraps
+    if (flight_mode != blackboxLastFlightModeFlags)
+    {
+        flightLogEvent_flightMode_t eventData; // Add new data for current flight mode flags
+        eventData.lastFlags = blackboxLastFlightModeFlags;
+        blackboxLastFlightModeFlags = flight_mode;
+        eventData.flags = flight_mode;
+        blackboxLogEvent(FLIGHT_LOG_EVENT_FLIGHTMODE, (flightLogEventData_t*)&eventData);
+    }
 }
 
 // Called once every FC loop in order to keep track of how many FC loop iterations have passed
@@ -761,7 +829,7 @@ void blackbox_update(timeUs_t currentTimeUs)
         //On entry of this state, xmitState.headerIndex is 0 and xmitState.u.fieldIndex is -1
         if (!sendFieldDefinition('S', 0, blackboxSlowFields, blackboxSlowFields + 1, ARRAYLEN(blackboxSlowFields),
             NULL, NULL)) {
-            // cacheFlushNextState = BLACKBOX_STATE_SEND_SYSINFO;
+            // cacheFlushNextState = BLACKBOX_STATE_SEND_SYSINFO; // no need
             blackboxSetState(BLACKBOX_STATE_SEND_SYSINFO);
         }
         break;
@@ -822,6 +890,7 @@ void blackbox_update(timeUs_t currentTimeUs)
         if (Arming_status == DISARMED && Blackbox_status != BLACKBOX_IDLE) {
             if (blackbox_end_partition()) {
                 Blackbox_status = BLACKBOX_IDLE;
+                blackboxSetState(BLACKBOX_STATE_STOPPED);
             }
         }
         break;
@@ -932,19 +1001,21 @@ static bool blackboxWriteSysinfo(void)
         BLACKBOX_PRINT_HEADER_LINE("I interval", "%d", blackboxIInterval);
         BLACKBOX_PRINT_HEADER_LINE("P interval", "%d", blackboxPInterval);
         BLACKBOX_PRINT_HEADER_LINE("P ratio", "%d", (uint16_t)(blackboxIInterval / blackboxPInterval));
-        BLACKBOX_PRINT_HEADER_LINE("minthrottle", "%d", THROTTLE_MIN);
-        BLACKBOX_PRINT_HEADER_LINE("maxthrottle", "%d", THROTTLE_MAX);
+        BLACKBOX_PRINT_HEADER_LINE("minthrottle", "%d", MOTOR_OUTPUT_MIN);
+        BLACKBOX_PRINT_HEADER_LINE("maxthrottle", "%d", MOTOR_OUTPUT_MAX);
         BLACKBOX_PRINT_HEADER_LINE("gyro_scale", "0x%x", castFloatBytesToInt(1.74532925199432E-08f));
-        BLACKBOX_PRINT_HEADER_LINE("acc_1G", "%u", 4096);
+        BLACKBOX_PRINT_HEADER_LINE("acc_1G", "%u", (uint16_t)(1.f / ACC_TO_GRAVITY));
+        BLACKBOX_PRINT_HEADER_LINE("rates_type", "%u", 0);
         BLACKBOX_PRINT_HEADER_LINE("rc_rates", "%d,%d,%d", RATES_CENTER_RATE_R, RATES_CENTER_RATE_P, RATES_CENTER_RATE_Y);
         BLACKBOX_PRINT_HEADER_LINE("rc_expo", "%d,%d,%d", RATES_EXPO_R, RATES_EXPO_P, RATES_EXPO_Y);
         BLACKBOX_PRINT_HEADER_LINE("rate_limits", "%d,%d,%d", RATES_MAX_RATE_R, RATES_MAX_RATE_P, RATES_MAX_RATE_Y);
         BLACKBOX_PRINT_HEADER_LINE("rollPID", "%d,%d,%d", (int)R_PIDF.P, (int)R_PIDF.I, (int)R_PIDF.D);
         BLACKBOX_PRINT_HEADER_LINE("pitchPID", "%d,%d,%d", (int)P_PIDF.P, (int)P_PIDF.I, (int)P_PIDF.D);
-        BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)Y_PIDF.P, (int)Y_PIDF.I, (int)Y_PIDF.D);
+        // BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)Y_PIDF.P, (int)Y_PIDF.I, (int)Y_PIDF.D);
+        // BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)rate_throttle_PIDF.P, (int)rate_throttle_PIDF.I, (int)rate_throttle_PIDF.D);
+        BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)acc_throttle_PIDF.P, (int)acc_throttle_PIDF.I, (int)acc_throttle_PIDF.D);
         BLACKBOX_PRINT_HEADER_LINE("vbat_scale", "%u", 124);
         BLACKBOX_PRINT_HEADER_LINE("vbatcellvoltage", "%u,%u,%u", (uint16_t)(BATTERY_CELL_MIN_VOLTAGE * 100), (uint16_t)(BATTERY_CELL_WARNING_VOLTAGE * 100), (uint16_t)(BATTERY_CELL_MAX_VOLTAGE * 100));
-
         BLACKBOX_PRINT_HEADER_LINE("vbatref", "%u", vbatReference);
         BLACKBOX_PRINT_HEADER_LINE("looptime", "%d", TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP));
 
@@ -1091,6 +1162,23 @@ static void writeInterframe(void)
         deltas[optionalFieldCount++] = blackboxCurrent->amperageLatest - blackboxLast->amperageLatest;
     }
 
+#ifdef USE_MAG
+    if (testBlackboxCondition(CONDITION(MAG)))
+    {
+        for (int x = 0; x < XYZ_AXIS_COUNT; x++)
+        {
+            deltas[optionalFieldCount++] = blackboxCurrent->magADC[x] - blackboxLast->magADC[x];
+        }
+    }
+#endif
+
+#ifdef USE_BARO
+    if (testBlackboxCondition(CONDITION(BARO)))
+    {
+        deltas[optionalFieldCount++] = blackboxCurrent->baroAlt - blackboxLast->baroAlt;
+    }
+#endif
+
     blackboxWriteTag8_8SVB(deltas, optionalFieldCount);
 
     // Since gyros, accs and motors are noisy, base their predictions on the average of the history:
@@ -1177,7 +1265,19 @@ static void writeIntraframe(void)
     //     blackboxWriteSignedVB(blackboxCurrent->amperageLatest);
     // }
 
+#ifdef USE_MAG
+    if (testBlackboxCondition(CONDITION(MAG)))
+    {
+        blackboxWriteSigned16VBArray(blackboxCurrent->magADC, XYZ_AXIS_COUNT);
+    }
+#endif
 
+#ifdef USE_BARO
+    if (testBlackboxCondition(CONDITION(BARO)))
+    {
+        blackboxWriteSignedVB(blackboxCurrent->baroAlt);
+    }
+#endif
 
     // if (testBlackboxCondition(CONDITION(RSSI)))
     // {
@@ -1197,7 +1297,7 @@ static void writeIntraframe(void)
     if (isFieldEnabled(FIELD_SELECT(MOTOR)))
     {
         // Motors can be below minimum output when disarmed, but that doesn't happen much
-        blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - THROTTLE_MIN);
+        blackboxWriteUnsignedVB(blackboxCurrent->motor[0] - MOTOR_OUTPUT_MIN);
 
         // Motors tend to be similar to each other so use the first motor's value as a predictor of the others
         const int motorCount = MOTORS_COUNT;
@@ -1298,8 +1398,8 @@ bool blackbox_init() {
         if (res != FR_OK) {
             return false;
         }
-        // if file is empty will be overwritten:
-        if (f_size(&file) > 0) {
+        // if file is empty (only header), it will be overwritten:
+        if (f_size(&file) > 4096) {
             // file not empty - create a next file:
             res = f_close(&file);
             if (res != FR_OK) {
@@ -1313,6 +1413,21 @@ bool blackbox_init() {
                 return false;
             }
         }
+        else {
+            // delete header() maybe some changed so we want a new header), it will be written at the begining of blackbox writing
+
+            // uint8_t buff_temp[4096];
+            // memset(buff_temp, 0xFF, 4096);
+            // res = f_write(&file, );
+            flash_global_write_address = (file.obj.fs->database + file.obj.fs->csize * (file.obj.sclust - 2)) * FF_MAX_SS;
+            res = f_close(&file);
+            if (res != FR_OK) {
+                return false;
+            }
+            W25Q128_erase(FLASH_ERASE_SECTOR_4KB, flash_global_write_address);
+            blackboxInit();
+            return true;
+        }
     }
     else {
         // no file found so create a first one:
@@ -1322,13 +1437,7 @@ bool blackbox_init() {
             return false;
         }
     }
-    // f_printf(&file, "--------------BLACKBOX--------------\n");
-    // FRESULT res = f_close(&file);
-    // res = f_open(&file, file_name, FA_WRITE | FA_OPEN_ALWAYS);
 
-    // FRESULT res = f_expand(&file, 12000, 1);
-
-    // res = f_lseek(&file, FF_MAX_SS);
     res = f_expand(&file, FF_MAX_SS, 1);
     if (res != FR_OK) {
         return false;
@@ -1339,17 +1448,6 @@ bool blackbox_init() {
         return false;
     }
     blackboxInit();
-
-    // blackbox_print_header();
-    // uint16_t remaining_bytes = flash_flush();
-    // // add padding to align data:
-    // for (uint16_t i = 0;i < remaining_bytes;++i) {
-    //     flash_save(' ');
-    // }
-    // remaining_bytes = flash_flush();
-    // f_open(&file, file_name, FA_WRITE | FA_OPEN_ALWAYS);
-    // f_lseek(&file, 2 * FF_MAX_SS);
-    // f_close(&file);
 
 #endif
     return true;
@@ -1392,18 +1490,37 @@ static bool find_last_log(char* path, char* name, char* prefix) {
     return true;
 }
 
-void blackbox_reserve_partition() {
+/**
+*@brief  function allocating contigous block in flash
+*@param size number of bytes to define size of contigous block
+*@retval - "true" if allocation succeed "false" otherwise,
+*@retval - global variable flash writing address will be set to the begining of this block of memory.
+*@note after allocating you can use low level functions for saving data to flash, and it will be for sure contigous block.
+After you finished writing you can resize file (f_truncate()) and set write/read pointer to end of your data.
+Otherwise file will be as big as you defined here and data after your will be as bytes in flash (probably 0xFF if you erased flash).
+*/
+bool blackbox_reserve_partition(uint32_t size) {
     //  nOt finished yet - don't use 
-    flash_write_counter = 0;
     FRESULT fr;
     fr = f_open(&file, file_name, FA_OPEN_APPEND | FA_WRITE);
-    // TO USE EXPAND FILE HAS TO BE TRUNCATED
+    if (fr != FR_OK) {
+        return false;
+    }
+    // to expand file, it has to be truncated (if a file is not modified it is not necessary):
     fr = f_truncate(&file);
-    fr = f_expand(&file, 512000, 1);
-    // contigous block off memory allocated. Now it is possible to acces directly with Flash functions:
-    flash_global_write_address = (file.sect + 1) * FF_MAX_SS;
-    fr = f_close(&file);
+    if (fr != FR_OK) {
+        return false;
+    }
+    fr = f_expand(&file, size, 1);
+    if (fr != FR_OK) {
+        return false;
+    }
+    // contigous block off memory allocated. Now it is possible to acces directly with Flash functions
+    // set address where you can acces data in flash:
+    flash_global_write_address = (file.obj.fs->database + file.obj.fs->csize * (file.obj.sclust - 2)) * FF_MAX_SS;
+    f_close(&file);
 
+    return true;
 }
 
 bool blackbox_end_partition() {

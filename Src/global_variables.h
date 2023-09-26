@@ -10,8 +10,13 @@
 
 #include "stdint.h"
 #include "stdbool.h"
+#include "sensors/MS5XXX.h"
 
  //---------GLOBAL NEW TYPES-------------
+
+
+typedef uint64_t timeUs_t;
+typedef uint32_t timeMs_t;
 
 // roll pitch yaw struct for double
 typedef struct
@@ -64,6 +69,7 @@ typedef enum
 {
 	FLIGHT_MODE_ACRO,
 	FLIGHT_MODE_STABLE,
+	FLIGHT_MODE_ALT_HOLD,
 	FLIGHT_MODE_COUNT
 } flight_mode_e;
 
@@ -72,7 +78,7 @@ typedef struct {
 	uint8_t	address;
 	uint8_t rev_id;
 	int16_t raw_data[3];
-	threef_t offset;
+	float offset[3];
 	bool calibrated;
 	bool new_raw_data_flag;
 	bool new_filtered_data;
@@ -82,9 +88,11 @@ typedef struct {
 	char* name;
 	uint8_t id;
 	int16_t raw_data[3];
-	threef_t offset;
+	float offset[3];
+	float scale[3];
 	bool calibrated;
 	bool new_raw_data_flag;
+	bool new_filtered_data;
 } acc_t;
 
 typedef enum
@@ -97,10 +105,11 @@ typedef struct
 	rx_protocol_e type;
 	const uint8_t number_of_channels;
 	uint8_t number_of_used_channels;
-	uint16_t* channels;
-	uint16_t* channels_previous_values;
+	float* channels;
+	float channels_raw[4];	//only for roll, pitch, yaw, throttle
+	float channels_previous[4]; //only for roll, pitch, yaw, throttle
 	int16_t Throttle;
-
+	timeUs_t last_time;
 	bool new_data_flag;
 
 } rx_t;
@@ -113,9 +122,9 @@ extern volatile arming_e Arming_status;
 
 extern gyro_t gyro_1;
 extern acc_t acc_1;
-
-typedef uint64_t timeUs_t;
-typedef uint32_t timeMs_t;
+#if defined(USE_BARO)
+extern baro_t baro_1;
+#endif
 
 // FOR DEBUG ONLY:
 extern double debug_variable_1;
@@ -140,6 +149,8 @@ extern timeUs_t time_flag4_1;
 extern timeUs_t time_flag5_1;
 //	OSD:
 extern timeUs_t time_flag6_1;
+// I2C1:
+extern timeUs_t time_flag7_1;
 
 //---------VARIABLES-----------
 
@@ -149,8 +160,20 @@ extern PIDF_t R_PIDF;
 extern PIDF_t P_PIDF;
 extern PIDF_t Y_PIDF;
 
-extern PIDF_t corr_PIDF[];
+extern float tpa_coef;
+
+extern PIDF_t att_PIDF;
+
+extern PIDF_t rate_throttle_PIDF;
+extern PIDF_t acc_PIDF;
+extern PIDF_t corr_rate_throttle;
+extern PIDF_t acc_throttle_PIDF;
+extern PIDF_t corr_acc_throttle;
+
+extern PIDF_t corr_att[];
 extern threef_t corr_sum;
+extern PIDF_t corr_baro;
+extern float throttle;
 
 extern float MCU_temperature;
 
@@ -160,10 +183,14 @@ extern threef_t global_euler_angles;
 
 extern threef_t global_angles;
 
-extern quaternion_t q_global_position;
+extern quaternion_t q_global_attitude;
 
+extern quaternion_t q_trans_sensor_to_body_frame;
+
+//------------SETPOINTS---------------
 extern threef_t desired_rotation_speed;
 extern threef_t desired_angles;
+extern float desired_altitude;
 
 extern uint16_t motor_value[];
 
@@ -178,8 +205,7 @@ extern uint16_t* motor_2_value_pointer;
 extern uint16_t* motor_3_value_pointer;
 extern uint16_t* motor_4_value_pointer;
 
-extern int16_t Gyro_Acc[];
-extern int16_t Gyro_Acc_raw[];
+extern float Gyro_Acc[];
 
 extern uint16_t table_to_send[];
 
@@ -222,12 +248,13 @@ extern const float D_TERM_FILTER_BACK_COEF[];
 
 #endif
 
-//--------------------I2C1----------------------
-extern uint8_t I2C1_read_write_flag;
-extern uint8_t I2C1_read_buffer[];
-
+//----------TELEMETRY----------
 extern bool transmitting_is_Done;
 
+
+
+
+//------------ESC PROTOCOL VARIABLES-----------
 extern uint32_t dshot_buffer_1[];
 extern uint16_t dshot_buffer_2[];
 extern uint16_t dshot_buffer_3[];
