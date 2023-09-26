@@ -13,10 +13,9 @@
 #include "filters.h"
 #include "flash.h"
 #include "math/statistics.h"
+#include"math/quaternions.h"
 #include "drivers/SPI1.h"
-#include "MPU6000.h"
-
-
+#include "sensors/MPU6000.h"
 
 static void	check_gyro_version(gyro_t* gyro);
 static void setup_conf();
@@ -26,59 +25,8 @@ static void MPU6000_self_test_configuration();
 static void MPU6000_self_test_measurements();
 #endif
 
-// float transform_matrix[3][3] = { { (ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET)
-//		/ sqrtf(
-//				powf(ACC_CALIBRATION_X_Z - ACC_YAW_OFFSET, 2)
-//						+ powf(ACC_CALIBRATION_X_Y - ACC_ROLL_OFFSET, 2)
-//						+ powf(ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET, 2)),
-//		(ACC_CALIBRATION_X_Y - ACC_ROLL_OFFSET)
-//				/ sqrtf(
-//						powf(ACC_CALIBRATION_X_Z - ACC_YAW_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_X_Y - ACC_ROLL_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET,
-//										2)), (ACC_CALIBRATION_X_Z
-//				- ACC_YAW_OFFSET)
-//				/ sqrtf(
-//						powf(ACC_CALIBRATION_X_Z - ACC_YAW_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_X_Y - ACC_ROLL_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_X_X - ACC_PITCH_OFFSET,
-//										2)) }, { (ACC_CALIBRATION_Y_X
-//		- ACC_PITCH_OFFSET)
-//		/ sqrtf(
-//				powf(ACC_CALIBRATION_Y_Z - ACC_YAW_OFFSET, 2)
-//						+ powf(ACC_CALIBRATION_Y_Y - ACC_ROLL_OFFSET, 2)
-//						+ powf(ACC_CALIBRATION_Y_X - ACC_PITCH_OFFSET, 2)),
-//		(ACC_CALIBRATION_Y_Y - ACC_ROLL_OFFSET)
-//				/ sqrtf(
-//						powf(ACC_CALIBRATION_Y_Z - ACC_YAW_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Y_Y - ACC_ROLL_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Y_X - ACC_PITCH_OFFSET,
-//										2)), (ACC_CALIBRATION_Y_Z
-//				- ACC_YAW_OFFSET)
-//				/ sqrtf(
-//						powf(ACC_CALIBRATION_Y_Z - ACC_YAW_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Y_Y - ACC_ROLL_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Y_X - ACC_PITCH_OFFSET,
-//										2)) }, { (ACC_CALIBRATION_Z_X
-//		- ACC_PITCH_OFFSET)
-//		/ sqrtf(
-//				powf(ACC_CALIBRATION_Z_Z - ACC_YAW_OFFSET, 2)
-//						+ powf(ACC_CALIBRATION_Z_Y - ACC_ROLL_OFFSET, 2)
-//						+ powf(ACC_CALIBRATION_Z_X - ACC_PITCH_OFFSET, 2)),
-//		(ACC_CALIBRATION_Z_Y - ACC_ROLL_OFFSET)
-//				/ sqrtf(
-//						powf(ACC_CALIBRATION_Z_Z - ACC_YAW_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Z_Y - ACC_ROLL_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Z_X - ACC_PITCH_OFFSET,
-//										2)), (ACC_CALIBRATION_Z_Z
-//				- ACC_YAW_OFFSET)
-//				/ sqrtf(
-//						powf(ACC_CALIBRATION_Z_Z - ACC_YAW_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Z_Y - ACC_ROLL_OFFSET, 2)
-//								+ powf(ACC_CALIBRATION_Z_X - ACC_PITCH_OFFSET,
-//										2)) } };
 
-static float transform_matrix[3][3] = { {-1, 0, 0}, {0, -1, 0}, {0, 0, 1} };
+
 static uint8_t rx_buffer[14];
 
 
@@ -135,8 +83,6 @@ void setup_MPU6000()
 	setup_conf();
 	// 	check device id and update variable:
 	check_gyro_version(&gyro_1);
-
-	Gyro_Acc_filters_setup();
 	//change SPI speed up to 20 [MHz] for reading gyro and acc:
 	SPI1_disable();
 	SPI1->CR1 &= ~SPI_CR1_BR;
@@ -333,7 +279,6 @@ void read_gyro()
 
 void read_all()
 {
-
 	SPI1_enable();
 	//	burst reading sensors:
 	MPU6000_SPI_read(MPU6000_ACCEL_READ, &rx_buffer[0], 14);
@@ -355,153 +300,192 @@ void read_all_DMA() {
 
 void gyro_update(timeUs_t time)
 {
-	static float temporary[3];
-	for (int j = 0; j < 3; j++)
-	{
-		temporary[j] = gyro_1.raw_data[0] * transform_matrix[j][0];
-		temporary[j] += gyro_1.raw_data[1] * transform_matrix[j][1];
-		temporary[j] += gyro_1.raw_data[2] * transform_matrix[j][2];
-	}
+	// convert raw input to [degree/s]:
+	threef_t temp = { GYRO_TO_DPS * gyro_1.raw_data[0] - gyro_1.offset[0],
+	GYRO_TO_DPS * gyro_1.raw_data[1] - gyro_1.offset[1],
+	GYRO_TO_DPS * gyro_1.raw_data[2] - gyro_1.offset[2] };
+	// transform raw data from sensor frame into drone frame:
+	temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
+	float temporary[3] = { temp.roll,temp.pitch,temp.yaw };
+	// filter raw data:
 	gyro_filtering(temporary);
-
+	// set flags:
 	gyro_1.new_raw_data_flag = false;
 	gyro_1.new_filtered_data = true;
 }
 
+/**
+ *Function process and filter raw data from accelerometer
+ *@param time not used
+*/
 void acc_update(timeUs_t time)
 {
-	float temporary[3] = { 0,0,0 };
-	for (int j = 0; j < 3; j++)
-	{
-		temporary[j] = acc_1.raw_data[0] * transform_matrix[j][0];
-		temporary[j] += acc_1.raw_data[1] * transform_matrix[j][1];
-		temporary[j] += acc_1.raw_data[2] * transform_matrix[j][2];
-	}
+	// convert raw data to [g] unit:
+	threef_t temp = {
+	acc_1.scale[0] * (ACC_TO_GRAVITY * acc_1.raw_data[0] - acc_1.offset[0]),
+	acc_1.scale[1] * (ACC_TO_GRAVITY * acc_1.raw_data[1] - acc_1.offset[1]),
+	acc_1.scale[2] * (ACC_TO_GRAVITY * acc_1.raw_data[2] - acc_1.offset[2]) };
+	// trnansform raw data from sensor frame into drone frame:
+	temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
+	float temporary[3] = { temp.roll, temp.pitch, temp.yaw };
+	// filter raw data:
 	acc_filtering(temporary);
-
+	// set flags:
 	acc_1.new_raw_data_flag = false;
+	acc_1.new_filtered_data = true;
 }
 
 void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time)
 {
 	static timeUs_t calibration_start;
-	static stdev_t gyro_roll_dev;
-	static stdev_t gyro_pitch_dev;
-	static stdev_t gyro_yaw_dev;
-
+	static stdev_t gyro_dev[3];
 	// start calibration in first loop:
 	if (calibration_start == 0) {
 		calibration_start = time;
 	}
 
-	dev_push(&gyro_roll_dev, Gyro_Acc[0]);
-	dev_push(&gyro_pitch_dev, Gyro_Acc[1]);
-	dev_push(&gyro_yaw_dev, Gyro_Acc[2]);
+	for (uint8_t i = 0;i < 3;i++)
+	{
+		dev_push(&gyro_dev[i], gyro_1.raw_data[i] * GYRO_TO_DPS);
+	}
 
 	//check deviation end update variable or start over:
-	if (dev_standard_deviation(&gyro_roll_dev) <= GYRO_STARTUP_CALIB_MAX_DEV
-		&& dev_standard_deviation(&gyro_pitch_dev) <= GYRO_STARTUP_CALIB_MAX_DEV
-		&& dev_standard_deviation(&gyro_yaw_dev) <= GYRO_STARTUP_CALIB_MAX_DEV) {
+	if (dev_standard_deviation(&gyro_dev[0]) <= GYRO_STARTUP_CALIB_MAX_DEV
+		&& dev_standard_deviation(&gyro_dev[1]) <= GYRO_STARTUP_CALIB_MAX_DEV
+		&& dev_standard_deviation(&gyro_dev[2]) <= GYRO_STARTUP_CALIB_MAX_DEV) {
 
 		// if calibration is long enough end whole calibration:
 		if (time - calibration_start >= SEC_TO_US(GYRO_STARTUP_CALIB_DURATION)) {
 
 			gyro_to_calibrate->calibrated = true;
-
-			gyro_to_calibrate->offset.roll = gyro_roll_dev.m_newM;
-			gyro_to_calibrate->offset.pitch = gyro_pitch_dev.m_newM;
-			gyro_to_calibrate->offset.yaw = gyro_yaw_dev.m_newM;
-
+			for (uint8_t i = 0;i < 3;i++) {
+				gyro_to_calibrate->offset[i] = gyro_dev[i].m_newM;
+			}
 		}
 	}
 	else {
 		//start calibration again
 		calibration_start = 0;
-		dev_clear(&gyro_roll_dev);
-		dev_clear(&gyro_pitch_dev);
-		dev_clear(&gyro_yaw_dev);
+		for (uint8_t i = 0;i < 3;++i) {
+			dev_clear(&gyro_dev[i]);
+		}
 	}
 
 }
 
+void acc_level_calibration(acc_t* acc_to_calibrate) {
+	timeUs_t calibration_start = get_Global_Time();
+	stdev_t acc_x_dev = { .m_n = 0 };
+	stdev_t acc_y_dev = { .m_n = 0 };
+	stdev_t acc_z_dev = { .m_n = 0 };
+	const float MAX_DEV = 0.001f;	// maximal deviation for succesful calibration [g] units
 
-#if defined(IMU_TEST)
+	acc_to_calibrate->calibrated = false;
+	q_trans_sensor_to_body_frame = (quaternion_t){ 0, 0, 0, 1 };
 
-static void MPU6000_self_test_configuration()
-{
-	SPI1_enable();
-	// 0x1B- address of Gyroscope Configuration register:
-	// set +/-250[deg/s] and Self_test activate
-	MPU6000_SPI_write(0x1B, 0xE0);
-	delay_micro(15);
 
-	//	0x1C - address of Accelerometer Configuration register:
-	// set +/-8[g]	and Self_test activate
+	while (!acc_to_calibrate->calibrated) {
 
-	MPU6000_SPI_write(0x1C, 0xF0);
-	delay_micro(15);
+		acc_update(0);
+
+		dev_push(&acc_x_dev, Gyro_Acc[3]);
+		dev_push(&acc_y_dev, Gyro_Acc[4]);
+		dev_push(&acc_z_dev, Gyro_Acc[5]);
+
+		//check deviation end update variable or start over:
+		if (dev_standard_deviation(&acc_x_dev) <= MAX_DEV
+			&& dev_standard_deviation(&acc_y_dev) <= MAX_DEV
+			&& dev_standard_deviation(&acc_z_dev) <= MAX_DEV) {
+
+			// if calibration is long enough end whole calibration:
+			if (get_Global_Time() - calibration_start >= SEC_TO_US(1)) {
+				// convert acc reading to quaternion transforming from sensor frame to body frame and set it as 
+				// q_trans_sensor_to_body_frame used for acc and gyro data transforamtion
+				threef_t euler_angles = quaternion_to_euler_angles(q_trans_sensor_to_body_frame);
+				euler_angles.roll += -atan2f(acc_y_dev.m_newM, acc_z_dev.m_newM) * RAD_TO_DEG;
+				euler_angles.pitch += atan2f(acc_x_dev.m_newM, acc_z_dev.m_newM) * RAD_TO_DEG;
+				q_trans_sensor_to_body_frame = quaternion_conjugate(euler_angles_to_quaternion(euler_angles));
+				acc_to_calibrate->calibrated = true;
+			}
+		}
+		else {
+			//start calibration again
+			calibration_start = get_Global_Time();
+			dev_clear(&acc_x_dev);
+			dev_clear(&acc_y_dev);
+			dev_clear(&acc_z_dev);
+		}
+		// acc is updated with frequency = 1000 [Hz]
+		delay_micro(TASK_PERIOD_HZ(1000));
+	}
 
 }
 
-static void MPU6000_self_test_measurements(const float temporary[])
-{
-	static int i;
-	static float averagegyroX;
-	static float averagegyroY;
-	static float averagegyroZ;
-	static float averageaccX;
-	static float averageaccY;
-	static float averageaccZ;
+/**
+ *@brief Full accelerometer calibration.
+ *@note Require seting accelerometer on each side: nose up, nose down, side up, side down, bottom down, bottom up
+ *@return After end of each step returns number of remaining steps, 0 if calibration completed
+*/
+uint8_t acc_calibration(acc_t* acc_to_calibrate) {
+	timeUs_t calibration_start = get_Global_Time();
+	stdev_t acc_x_dev = { .m_n = 0 };
+	stdev_t acc_y_dev = { .m_n = 0 };
+	stdev_t acc_z_dev = { .m_n = 0 };
+	float MAX_DEV = 5; // maximal deviation for succesful calibration 
+	static uint8_t step;
+	static float calibration_tab[6][3];
 
-
-
-	if (i < 1000)
-	{
-		static float averagegyroX_ST;
-		static float averagegyroY_ST;
-		static float averagegyroZ_ST;
-		static float averageaccX_ST;
-		static float averageaccY_ST;
-		static float averageaccZ_ST;
-		averagegyroX_ST += temporary[0] / 1000;
-		averagegyroY_ST += temporary[1] / 1000;
-		averagegyroZ_ST += temporary[2] / 1000;
-		averageaccX_ST += temporary[3] / 1000;
-		averageaccY_ST += temporary[4] / 1000;
-		averageaccZ_ST += temporary[5] / 1000;
-		i++;
+	acc_to_calibrate->calibrated = false;
+	for (uint8_t i = 0;i < 3;++i) {
+		acc_to_calibrate->offset[i] = 0;
+		acc_to_calibrate->scale[i] = 1;
 	}
-	else if (i == 1000)
-	{
-		SPI1_enable();
-		// 0x1B- address of Gyroscope Configuration register:
-		// set +/-250[deg/s] and Self_test deactivate
-		MPU6000_SPI_write(0x1B, 0x00);
-		delay_micro(15);
 
-		//	0x1C - address of Accelerometer Configuration register:
-		// set +/-8[g]	and Self_test deactivate
-
-		MPU6000_SPI_write(0x1C, 0x10);
-		delay_micro(15);
-
-		i++;
-	}
-	else if (i < 2001)
+	if (step == 6)
 	{
-		averagegyroX += temporary[0] / 1000;
-		averagegyroY += temporary[1] / 1000;
-		averagegyroZ += temporary[2] / 1000;
-		averageaccX += temporary[3] / 1000;
-		averageaccY += temporary[4] / 1000;
-		averageaccZ += temporary[5] / 1000;
-		i++;
+		// process collected data:
+		newton_gauss_method(calibration_tab, 6);
+
+		acc_to_calibrate->calibrated = true;
+		step = 0;
+		return 0;
 	}
-	else if (i == 2001)
-	{
-		i = 12345; // end of measurements
+
+	while (1) {
+		acc_update(0);
+
+		dev_push(&acc_x_dev, acc_1.raw_data[0] * ACC_TO_GRAVITY);
+		dev_push(&acc_y_dev, acc_1.raw_data[1] * ACC_TO_GRAVITY);
+		dev_push(&acc_z_dev, acc_1.raw_data[2] * ACC_TO_GRAVITY);
+
+		//check deviation end update variable or start over:
+		if (dev_standard_deviation(&acc_x_dev) <= MAX_DEV
+			&& dev_standard_deviation(&acc_y_dev) <= MAX_DEV
+			&& dev_standard_deviation(&acc_z_dev) <= MAX_DEV) {
+
+			// if calibration is long enough end whole calibration:
+			if (get_Global_Time() - calibration_start >= SEC_TO_US(1)) {
+
+				calibration_tab[step][0] = acc_x_dev.m_newM;
+				calibration_tab[step][1] = acc_y_dev.m_newM;
+				calibration_tab[step][2] = acc_z_dev.m_newM;
+				step++;
+				break;
+			}
+		}
+		else {
+			//start calibration again
+			calibration_start = get_Global_Time();
+			dev_clear(&acc_x_dev);
+			dev_clear(&acc_y_dev);
+			dev_clear(&acc_z_dev);
+		}
+		// acc is updated with frequency = 1000 [Hz]
+		delay_micro(TASK_PERIOD_HZ(1000));
 	}
+
+	return 7 - step;
 }
-#endif
+
 
 

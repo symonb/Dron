@@ -26,10 +26,10 @@ typedef struct
     usb_class_e class;
     bool connected;
     usb_state_e status;
-    uint8_t data_to_send[250];
+    uint8_t data_to_send[300];
     uint8_t data_to_send_len;
-    uint8_t data_received[150];
-    uint8_t data_received_len;
+    volatile uint8_t data_received[150];
+    volatile uint8_t data_received_len;
 }usb_t;
 
 extern usb_t main_usb;

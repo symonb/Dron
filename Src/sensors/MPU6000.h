@@ -19,6 +19,8 @@ void MPU6000_SPI_read_DMA(const uint8_t adress_of_register, uint8_t* data, uint1
 void gyro_update(timeUs_t time);
 void acc_update(timeUs_t time);
 void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time);
+uint8_t acc_calibration(acc_t* acc_to_calibrate);
+void acc_level_calibration(acc_t* acc_to_calibration);
 void read_acc();
 void read_gyro();
 void read_temp();

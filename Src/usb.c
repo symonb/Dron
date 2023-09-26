@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "stm32f4xx.h"
 #include "global_constants.h"
 #include "global_variables.h"
@@ -15,6 +16,7 @@
 #include "ff.h"
 #include "usb.h" 
 #include "scheduler.h"
+#include "sensors/MPU6000.h"
 
 usb_t main_usb = { .class = USB_CLASS_CDC, .status = USB_STATE_NOT_CONNECTED, .connected = false };
 
@@ -62,8 +64,9 @@ void usb_communication(timeUs_t time) {
                 "\n\rpossible commands:"
                 "\n\rset_mode\t<MODE>\tchange USB mode <MSC, DFU>"
                 "\n\rPID_show\t\tshow current PID values"
-                "\n\rflash_format\t\tformat flash memory"
-                "\n\rflash_erase\t\terase flash memory"
+                "\n\rflash_format\t\terase and format flash memory"
+                "\n\racc_level\t\tlevel up drone (set curent attitiude as level)"
+                "\n\racc_calibrate\t\tcalibrate accelerometer"
                 "\n\rreboot\t\t\treboot drone"
                 "\n\rhelp\t\t\thelp info\n\r");
             CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
@@ -113,21 +116,6 @@ void usb_communication(timeUs_t time) {
         }
         else if (strcmp((char*)main_usb.data_received, "flash_format") == 0) {
             strcpy((char*)main_usb.data_to_send,
-                "\n\rformatting...");
-
-            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
-            int result = f_format();
-            if (result != 0) {
-                snprintf((char*)main_usb.data_to_send, sizeof main_usb.data_to_send, "\rformatting ERROR: %d\n\r", result);
-            }
-            else {
-                strcpy((char*)main_usb.data_to_send,
-                    "\rformatting SUCCEED!\n\r");
-            }
-            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
-        }
-        else if (strcmp((char*)main_usb.data_received, "flash_erase") == 0) {
-            strcpy((char*)main_usb.data_to_send,
                 "\n\rerasing...");
 
             CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
@@ -142,8 +130,83 @@ void usb_communication(timeUs_t time) {
                 "\rerasing SUCCEED!\n\r");
 
             CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
-        }
+            strcpy((char*)main_usb.data_to_send,
+                "\n\rformatting...");
 
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+            int result = f_format();
+            if (result != 0) {
+                snprintf((char*)main_usb.data_to_send, sizeof main_usb.data_to_send, "\rformatting ERROR: %d\n\r", result);
+            }
+            else {
+                strcpy((char*)main_usb.data_to_send,
+                    "\rformatting SUCCEED!\n\r");
+            }
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+        }
+        else if (strcmp((char*)main_usb.data_received, "acc_level") == 0) {
+            strcpy((char*)main_usb.data_to_send,
+                "\n\raccelerometer leveling - don't move a drone\n\r");
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+            delay_mili(10);
+            acc_level_calibration(&acc_1);
+            snprintf((char*)main_usb.data_to_send, sizeof main_usb.data_to_send,
+                "\rleveling SUCCEED!\n\r"
+                "new values for q_trans_sensor_to_body_frame:\n\r"
+                "w = %lf\n\r"
+                "i = %lf\n\r"
+                "j = %lf\n\r"
+                "k = %lf\n\r",
+                q_trans_sensor_to_body_frame.w,
+                q_trans_sensor_to_body_frame.x,
+                q_trans_sensor_to_body_frame.y,
+                q_trans_sensor_to_body_frame.z
+            );
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+
+        }
+        else if (strcmp((char*)main_usb.data_received, "acc_calibrate") == 0) {
+            strcpy((char*)main_usb.data_to_send,
+                "\n\raccelerometer calibration\n\r");
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+            delay_mili(10);
+            char* tab[] = { "set drone NOSE UP, next send \"ok\"",
+            "\t- DONE \n\rset drone NOSE DOWN, next send \"ok\"",
+            "\t- DONE \n\rset drone SIDE UP, next send \"ok\"",
+            "\t- DONE \n\rset drone SIDE DOWN, next send \"ok\"",
+            "\t- DONE \n\rset drone BOTTOM UP, next send \"ok\"",
+            "\t- DONE \n\rset drone BOTTTOM DOWN, next send \"ok\"",
+            "\t- DONE \n\rcollecting data finished - calibration is started\n\r" };
+            uint8_t i = 0;
+            while (true) {
+                strcpy((char*)main_usb.data_to_send, tab[i++]);
+                CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+
+                while (true) {
+                    // wait for user to send "ok"
+                    char ok[] = "ok";
+                    if (strcmp((char*)main_usb.data_received, (char*)ok) == 0 && main_usb.data_received_len != 0) {
+                        main_usb.data_received_len = 0;
+                        break;
+                    }
+                }
+                if (acc_calibration(&acc_1) == 1) {
+                    strcpy((char*)main_usb.data_to_send, tab[i++]);
+                    CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+                    acc_calibration(&acc_1);
+                    break;
+                }
+            }
+
+            snprintf((char*)main_usb.data_to_send, sizeof main_usb.data_to_send,
+                "\rcalibration SUCCEED!\n\roffsets:{ %lf, %lf, %lf }\n\r"
+                "scales:{ %lf, %lf, %lf }\n\r",
+                acc_1.offset[0], acc_1.offset[1], acc_1.offset[2],
+                acc_1.scale[0], acc_1.scale[1], acc_1.scale[2]);
+
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+
+        }
         else {
             strcpy((char*)main_usb.data_to_send, "\n\rreceived:\n\r\"");
             strcat((char*)main_usb.data_to_send, (char*)main_usb.data_received);
