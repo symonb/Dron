@@ -77,12 +77,16 @@ void battery_manage()
     else if (main_battery.status >= BATTERY_OK)
     {
         main_battery.cell_voltage = main_battery.voltage_filtered / main_battery.cells_number;
-        if (main_battery.cell_voltage < BATTERY_CELL_WARNING_VOLTAGE) {
-            main_battery.status = BATTERY_LOW;
-        }
-        else if (main_battery.cell_voltage < BATTERY_CELL_MIN_VOLTAGE)
+        if (main_battery.cell_voltage < BATTERY_CELL_MIN_VOLTAGE)
         {
             main_battery.status = BATTERY_VERY_LOW;
+            FailSafe_status = FAILSAFE_BATTERY_LOW;
+            EXTI->SWIER |= EXTI_SWIER_SWIER15;
+        }
+        else if (main_battery.cell_voltage < BATTERY_CELL_WARNING_VOLTAGE) {
+            main_battery.status = BATTERY_LOW;
+            FailSafe_status = FAILSAFE_BATTERY_LOW;
+            EXTI->SWIER |= EXTI_SWIER_SWIER15;
         }
 
         //  if battery disconnected:

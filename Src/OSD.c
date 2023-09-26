@@ -33,7 +33,6 @@ static void OSD_set_vertical_offset(int8_t offset);
 static void OSD_set_horizontal_offset(int8_t offset);
 static void OSD_NTSC_PAL_selection();
 static void OSD_enable_auto_black_control();
-static void OSD_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
 
 osd_t main_OSD = { .calibrated = false, .chip_name = "MAX7456", .logo_time = SEC_TO_US(4) };
 
@@ -54,7 +53,6 @@ bool OSD_init()
 {
 	static uint8_t setup_stage;
 	static timeUs_t time_flag;
-	// CS_SPI2_disable();
 
 	//	wait for saving changes (until OSD is not busy):
 	switch (setup_stage)
@@ -428,11 +426,6 @@ void OSD_print_battery_voltage()
 	OSD_characters_from_text("BAT:", battery_text_tab);
 	OSD_characters_from_float(main_battery.voltage_filtered, &battery_text_tab[4], 2);
 	OSD_write_to_Display_Memory_16bit_AI(battery_text_tab, OSD_BATTERY_VOLTAGE_PLACEMENT, 8);
-	if (main_battery.cell_voltage < BATTERY_CELL_MIN_VOLTAGE)
-	{
-		OSD_characters_from_text("LOW BATTERY", battery_text_tab);
-		OSD_blinking(battery_text_tab, OSD_WARNING_PLACEMENT - 6, 11);
-	}
 }
 
 void OSD_print_battery_cell_voltage()
@@ -468,6 +461,10 @@ void OSD_print_flight_mode()
 		OSD_characters_from_text("STAB", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_FLIGHT_MODE_PLACEMENT, 4);
 		break;
+	case FLIGHT_MODE_ALT_HOLD:
+		OSD_characters_from_text("ALTH", text_tab);
+		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_FLIGHT_MODE_PLACEMENT, 4);
+		break;
 
 	default:
 
@@ -475,7 +472,7 @@ void OSD_print_flight_mode()
 	}
 }
 
-static void OSD_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length)
+void OSD_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length)
 {
 	//	define position on the display of the first character:
 	//	set MSB:
@@ -501,8 +498,8 @@ void OSD_print_warnings()
 	switch (FailSafe_status)
 	{
 	case FAILSAFE_NO_FAILSAFE:
-		OSD_characters_from_text("            ", text_tab);
-		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 6, 12);
+		OSD_characters_from_text("               ", text_tab);
+		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 7, 15);
 		break;
 	case FAILSAFE_RX_TIMEOUT:
 		OSD_characters_from_text("NO RX", text_tab);
@@ -512,10 +509,32 @@ void OSD_print_warnings()
 		OSD_characters_from_text("NO PREARM", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 4, 9);
 		break;
+	case FAILSAFE_THROTTLE_PREARM:
+		OSD_characters_from_text("THROTTLE PREARM", text_tab);
+		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 7, 15);
+		break;
 	case FAILSAFE_GYRO_CALIBRATION:
 		OSD_characters_from_text("GYRO CALIB", text_tab);
 		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 4, 10);
 		break;
+	case FAILSAFE_BLACKBOX_FULL:
+		OSD_characters_from_text("BLACKBOX FULL", text_tab);
+		OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 6, 13);
+		break;
+	case FAILSAFE_BATTERY_LOW:
+		switch (main_battery.status) {
+		case BATTERY_LOW:
+			OSD_characters_from_text("LOW BATTERY", text_tab);
+			OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 6, 11);
+			break;
+		case BATTERY_VERY_LOW:
+			OSD_characters_from_text("LAND NOW", text_tab);
+			OSD_write_to_Display_Memory_16bit_AI(text_tab, OSD_WARNING_PLACEMENT - 4, 8);
+			break;
+		default:
+			break;
+		}
+
 	default:
 		break;
 

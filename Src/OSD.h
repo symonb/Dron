@@ -65,6 +65,7 @@ void OSD_write_to_Display_Memory_8bit(uint8_t character_number, uint16_t charact
 
 void OSD_write_to_Display_Memory_16bit(uint8_t character_number, uint16_t character_position_on_display);
 void OSD_write_to_Display_Memory_16bit_AI(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
+void OSD_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
 bool is_OSD_busy();
 void OSD_print_logo();
 void OSD_print_battery_voltage();
