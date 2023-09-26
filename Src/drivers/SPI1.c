@@ -46,7 +46,7 @@ void SPI1_transmit(const uint8_t* data, int size)
         {
             if (failsafe_SPI1())
             {
-                break; // wait
+                break;
             }
         }
         SPI1->DR = data[i]; // data sending as soon as TX flag is set
@@ -58,7 +58,7 @@ void SPI1_transmit(const uint8_t* data, int size)
     {
         if (failsafe_SPI1())
         {
-            break; // wait
+            break;
         }
     }
     time_flag4_1 = get_Global_Time();
@@ -66,7 +66,7 @@ void SPI1_transmit(const uint8_t* data, int size)
     {
         if (failsafe_SPI1())
         {
-            break; // wait
+            break;
         }
     }
     SPI1->DR;
@@ -86,7 +86,7 @@ void SPI1_receive(uint8_t* data, int size)
         {
             if (failsafe_SPI1())
             {
-                break; // wait
+                break;
             }
         }
         SPI1->DR = 0xAA; // send anything 
@@ -95,7 +95,7 @@ void SPI1_receive(uint8_t* data, int size)
         {
             if (failsafe_SPI1())
             {
-                break; // wait
+                break;
             }
         }
         *data++ = SPI1->DR;
@@ -108,7 +108,7 @@ void SPI1_receive(uint8_t* data, int size)
     {
         if (failsafe_SPI1())
         {
-            break; // wait
+            break;
         }
     }
     // wait for BSY flag
@@ -117,7 +117,7 @@ void SPI1_receive(uint8_t* data, int size)
     {
         if (failsafe_SPI1())
         {
-            break; // wait
+            break;
         }
     }
     SPI1->DR;
