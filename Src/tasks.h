@@ -41,6 +41,9 @@ typedef enum
 	TASK_USB_HANDLING,
 	TASK_BLACKBOX,
 	TASK_BLACKBOX_INIT,
+	TASK_BARO_INIT,
+	TASK_BARO,
+	TASK_ALT_HOLD,
 	TASKS_COUNT
 } taskID_e;
 
@@ -58,11 +61,11 @@ typedef struct
 {
 	const char* task_name;										   // task name
 	void (*task_fun)(timeUs_t current_time);					   // main task function
-	bool (*check_fun)(timeUs_t current_time, timeUs_t delta_time); // function for checking event occurrence
+	bool (*check_fun)(timeUs_t current_time, timeUs_t delta_time); // function for checking event occurrence delta_time is a time from the last execution - average_execution_time
 	taskPriority_e static_priority;								   // task basic priority
 	uint16_t dynamic_priority;									   // prevent task from not being executed
-	timeUs_t last_execution;									   // last time when this task was done
-	timeUs_t desired_period;									   // period that wishes to be achieved in [us]
+	timeUs_t last_execution;									   // last time when task function was started (not after axecution)
+	timeUs_t desired_period;									   // period wished to be achieved in [us]
 	float avg_execution_time;									   // average execution time of this task
 	float avg_delayed_cycles;									   // average delayed cycles for this task 
 } task_t;

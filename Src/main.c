@@ -13,7 +13,7 @@
 #include "global_functions.h"
 #include "setup.h"
 #include "OSD.h"
-#include "MPU6000.h"
+#include "sensors/MPU6000.h"
 #include "scheduler.h"
 #include "blackbox/blackbox.h"
 #include "usb.h"
