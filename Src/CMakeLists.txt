@@ -24,6 +24,7 @@ set(MAIN_SRC
     math/statistics.c 
     math/quaternions.c
     math/math_quicker.c
+    mixer.c
     motors.c
     OSD.c
     rx.c

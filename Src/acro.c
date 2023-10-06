@@ -13,6 +13,7 @@
 #include "sensors/MPU6000.h"
 #include "filters.h"
 #include "telemetry.h"
+#include "mixer.h"
 #include "acro.h"
 
 static threef_t corrections(float);

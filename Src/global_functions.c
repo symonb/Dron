@@ -166,33 +166,6 @@ void anti_windup()
 	}
 }
 
-void set_motors(threef_t corr)
-{
-
-	// MIXER:
-	if (flight_mode == FLIGHT_MODE_ACRO || flight_mode == FLIGHT_MODE_STABLE) {
-		throttle = receiver.Throttle;
-	}
-
-	//	right back:
-	motor_value[0] = (throttle - corr.roll + corr.pitch - corr.yaw) * 2;
-	//	right front:
-	motor_value[1] = (throttle - corr.roll - corr.pitch + corr.yaw) * 2;
-	//	left back:
-	motor_value[2] = (throttle + corr.roll + corr.pitch + corr.yaw) * 2;
-	//	left front:
-	motor_value[3] = (throttle + corr.roll - corr.pitch - corr.yaw) * 2;
-
-
-	for (uint8_t i = 0; i < MOTORS_COUNT;++i) {
-		if (motor_value[i] < MOTOR_OUTPUT_MIN * 2) {
-			motor_value[i] = MOTOR_OUTPUT_MIN * 2;
-		}
-		else if (motor_value[i] > MOTOR_OUTPUT_MAX * 2) {
-			motor_value[i] = MOTOR_OUTPUT_MAX * 2;
-		}
-	}
-}
 
 void turn_ON_BLUE_LED()
 {
@@ -287,8 +260,6 @@ void EXTI15_10_IRQHandler()
 	// FAILSAFEs
 	if ((EXTI->PR & EXTI_PR_PR15))
 	{
-		OSD_print_warnings();
-
 		EXTI->PR |= EXTI_PR_PR15; // clear(setting 1) this bit (and at the same time bit SWIER15)
 
 		switch (FailSafe_status)
@@ -305,6 +276,7 @@ void EXTI15_10_IRQHandler()
 
 			failsafe_counter[FAILSAFE_INCORRECT_CHANNELS_VALUES]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_RX_ERROR;
 			break;
 		case FAILSAFE_RX_TIMEOUT: // FAILSAFE_RX_TIMEOUT
 
@@ -317,22 +289,27 @@ void EXTI15_10_IRQHandler()
 
 			failsafe_counter[FAILSAFE_RX_TIMEOUT]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_NO_RX;
 			break;
 		case FAILSAFE_NO_PREARM:
 			failsafe_counter[FAILSAFE_NO_PREARM]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_NO_PREARM;
 			break;
 		case FAILSAFE_THROTTLE_PREARM:
 			failsafe_counter[FAILSAFE_THROTTLE_PREARM]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_THROTTLE_PREARM;
 			break;
 		case FAILSAFE_SPI_IMU_ERROR:
 			failsafe_counter[FAILSAFE_SPI_IMU_ERROR]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_IMU_ERROR;
 			break;
 		case FAILSAFE_SPI_FLASH_ERROR:
 			failsafe_counter[FAILSAFE_SPI_FLASH_ERROR]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_FLASH_ERROR;
 			break;
 		case FAILSAFE_SPI_OSD_ERROR:
 			failsafe_counter[FAILSAFE_SPI_OSD_ERROR]++;
@@ -341,19 +318,23 @@ void EXTI15_10_IRQHandler()
 		case FAILSAFE_GYRO_CALIBRATION:
 			failsafe_counter[FAILSAFE_GYRO_CALIBRATION]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_GYRO_CALIBRATION;
 			break;
 		case FAILSAFE_I2C1_ERROR:
 			failsafe_counter[FAILSAFE_I2C1_ERROR]++;
 			MS5XXX_unstack();
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_I2C_ERROR;
 			break;
 		case FAILSAFE_BLACKBOX_FULL:
 			failsafe_counter[FAILSAFE_BLACKBOX_FULL]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_BLACKBOX_FULL;
 			break;
 		case FAILSAFE_BATTERY_LOW:
 			failsafe_counter[FAILSAFE_BATTERY_LOW]++;
 			FailSafe_status = FAILSAFE_NO_FAILSAFE;
+			OSD_warning = WARNING_BATTERY_LOW;
 			break;
 		default:
 			break;

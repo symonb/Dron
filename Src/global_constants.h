@@ -30,9 +30,10 @@
 //-------------BATTERY------------
 #define BATTERY_SCALE 11
 #define ADC_REFERENCE_VOLTAGE 3.3f	  //	[V]
-#define BATTERY_CELL_MIN_VOLTAGE 3.35f //	[V]
-#define BATTERY_CELL_WARNING_VOLTAGE 3.5f //	[V]
+#define BATTERY_CELL_MIN_VOLTAGE 3.4f //	[V]
+#define BATTERY_CELL_WARNING_VOLTAGE 3.55f //	[V]
 #define BATTERY_CELL_MAX_VOLTAGE 4.2f //	[V]
+#define USE_BATTERY_SAG_COMPENSATION
 
 //-------------BUZZER-------------
 #define BUZZER_TIME_ON 0.2f	//	[s]
@@ -189,42 +190,22 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define FREQUENCY_BARO 200					//	[Hz]
 #define FREQUENCY_ALT_HOLD 100				//	[Hz]
 
-//------------FAILSAFE--------------------
-
-typedef enum
-{
-	FAILSAFE_NO_FAILSAFE,
-	FAILSAFE_INCORRECT_CHANNELS_VALUES,
-	FAILSAFE_RX_TIMEOUT,
-	FAILSAFE_NO_PREARM,
-	FAILSAFE_THROTTLE_PREARM,
-	FAILSAFE_SPI_IMU_ERROR,
-	FAILSAFE_SPI_FLASH_ERROR,
-	FAILSAFE_SPI_OSD_ERROR,
-	FAILSAFE_GYRO_CALIBRATION,
-	FAILSAFE_I2C1_ERROR,
-	FAILSAFE_BLACKBOX_FULL,
-	FAILSAFE_BATTERY_LOW,
-	FAILSAFE_COUNTER
-} failsafe_e;
-
-typedef enum
-{
-	DISARMED,
-	ARMED,
-	PREARMED
-}arming_e;
 //--------------------FLASH-------------------
 #define USE_FLASHFS	// USE_FLASHFS required for USB MSC and BLACKBOX  
 
 //--------------BLACKBOX-------------------
 #define USE_BLACKBOX // USE_BLACKBOX if you want BLACKBOX
-/*define which parameters you would like to save:
- * BLACKBOX_SAVE_RAW_GYRO				- 3 values save gyro values without filtering
- * BLACKBOX_SAVE_RAW_ACC				- 3 values save acc values without filtering
- * BLACKBOX_SAVE_CHANNELS_RAW			- 4 values save raw channels values without filtering
+/* define which parameters you would like to save:
+ * they would be saved as debug parameters
+ * BLACKBOX_DEBUG_GYRO_RAW				- 3 values save gyro values without filtering
+ * BLACKBOX_DEBUG_ACC_RAW				- 3 values save acc values without filtering
+ * BLACKBOX_DEBUG_CHANNELS_RAW			- 4 values save raw channels values without filtering
+ * BLACKBOX_DEBUG_BARO					- 4 values PID values + baro.vel
+ * BLACKBOX_DEBUG_RPM_ERR				- 4 values bdshot rpm error * 1000
+ * BLACKBOX_DEBUG_ATTITIUDE				- 3 Euler angles roll, pitch, yaw * 100 [deg]
  */
- // #define BLACKBOX_SAVE_CHANNELS_RAW
+
+#define BLACKBOX_DEBUG_BARO
 #define BLACKBOX_SAMPLE_RATE 1		//	sampling is 1/2^BLACKBOX_SAMPLE_RATE so for 0 it is equal to main PID loop frequency, for half frequency of main loop set this as 1
 
 #define REQUIRE_CC_ARM_PRINTF_SUPPORT
@@ -248,6 +229,7 @@ typedef enum
 #define OSD_LOGO_PLACEMENT 123
 #define OSD_WARNING_PLACEMENT 315
 #define OSD_AUTO_NTSC_PAL //	options:	OSD_AUTO_NTSC_PAL/OSD_CAMERA_PAL/OSD_CAMERA_NTSC
+#define OSD_WARNINGS_TIME 1 // [s] time of showing warnings (after that it will be cleared)
 
 //-----------------I2C----------------
 #define USE_I2C1
@@ -269,10 +251,10 @@ typedef enum
 
 #define USE_RC_SMOOTHING	// if you want use rc smoothing USE_RC_SMOOTHING
 
-#define BIQUAD_LPF_CUTOFF_GYRO 70		//	[Hz]
+#define BIQUAD_LPF_CUTOFF_GYRO 70	    //	[Hz]
 #define BIQUAD_LPF_CUTOFF_ACC 10		//	[Hz]
 #define BIQUAD_LPF_CUTOFF_D_TERM 100	//	[Hz]
-#define BIQUAD_LPF_CUTOFF_FF_TERM 100	//  [Hz]
+#define BIQUAD_LPF_CUTOFF_FF_TERM 120	//  [Hz]
 #define BIQUAD_LPF_CUTOFF_RC 50			//  [Hz]
 
 #define BIQUAD_LPF_Q (1.f / sqrtf(2)) 	//	Q factor for Low-pass filters
@@ -285,7 +267,7 @@ typedef enum
 // #define USE_RPM_FILTER_ACC	// if you want use RPM_filter for acc USE_RPM_FILTER_ACC
 #endif
 
-#define RPM_MIN_FREQUENCY_HZ 70 // all frequencies <= than this value will not be filtered by RPM filter
+#define RPM_MIN_FREQUENCY_HZ 50 // all frequencies <= than this value will not be filtered by RPM filter
 #define RPM_FADE_RANGE_HZ 50	// fade out notch when approaching RPM_MIN_FREQUENCY_HZ (turn it off for RPM_MIN_FREQUENCY_HZ)
 #define RPM_Q_FACTOR 400		// Q factor for all notches. It is VERY HIGH therefore notches are really narrow and selective
 #define RPM_MAX_HARMONICS 3		// max. number of filtered harmonics
