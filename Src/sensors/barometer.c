@@ -22,12 +22,67 @@ void baro_calculate_altitude(baro_t* baro, timeUs_t current_time) {
     baro_preasure_filtering();
     float current_alt = 0.001f * (baro->h0_preasure - baro->filtered_preasure) * CONST_MOLAR_GAS / (CONST_GRAVITY * CONST_MOLAR_MASS_AIR) * CONST_TEMPERATURE;
 
-    baro->vel_raw = (current_alt - baro->altitude) / dt;// + 0.8 * (baro_1.ver_vel + 40 * dt * (acc_z - 1));
+    baro->vel_raw = (current_alt - baro->altitude) / dt;
 
     baro_vel_filtering();
 
     baro->altitude = current_alt;
 
+}
+
+void baro_kalman_fusion(baro_t* baro, timeUs_t current_time) {
+
+    // simplest version of KF: 
+    static timeUs_t last_time;
+    const float dt = US_TO_SEC(current_time - last_time);
+    last_time = current_time;
+    const float A[2][2] = { {1, dt },{ 0, 1} };
+    const float B[2] = { dt * dt / 2, dt };
+    const float C[2] = { 1, 0 };
+    const float acc_dev = 0.01f;
+    const float R[2][2] = { {acc_dev * B[0] * B[0], acc_dev * B[0] * B[1]},{acc_dev * B[1] * B[0], acc_dev * B[1] * B[1]} };     // diagonal
+    const float Q = 0.01f;   // diagonal
+    // covariance
+    static float P[2][2];
+    threef_t acc_vec = { Gyro_Acc[3], Gyro_Acc[4], Gyro_Acc[5] };
+
+    // transform acc values into global frame and add filtering:
+    float u = CONST_GRAVITY * (quaternion_rotate_vector(acc_vec, quaternion_conjugate(q_global_attitude)).yaw - 1);
+    // state:
+    static float x[2];
+    // tate estimation:
+    float x_e[2] = { A[0][0] * x[0] + A[0][1] * x[1] + B[0] * u , A[1][0] * x[0] + A[1][1] * x[1] + B[1] * u };
+
+    float P_temp[2][2];
+    P_temp[0][0] = A[0][0] * (P[0][0] * A[0][0] + P[0][1] * A[0][1]) + A[0][1] * (P[1][0] * A[0][0] + P[1][1] * A[0][1]) + R[0][0];
+    P_temp[0][1] = A[0][0] * (P[0][0] * A[1][0] + P[0][1] * A[1][1]) + A[0][1] * (P[1][0] * A[1][0] + P[1][1] * A[1][1]) + R[0][1];
+    P_temp[1][0] = A[1][0] * (P[0][0] * A[0][0] + P[0][1] * A[0][1]) + A[1][1] * (P[1][0] * A[0][0] + P[1][1] * A[0][1]) + R[1][0];
+    P_temp[1][1] = A[1][0] * (P[0][0] * A[1][0] + P[0][1] * A[1][1]) + A[1][1] * (P[1][0] * A[1][0] + P[1][1] * A[1][1]) + R[1][1];
+
+    float K[2];
+    // calculate kalman gains:
+    float L = C[0] * (C[0] * P_temp[0][0] + C[1] * P_temp[0][1]) + C[1] * (C[0] * P_temp[1][0] + C[1] * P_temp[1][1]) + Q;
+    K[0] = (P_temp[0][0] * C[0] + P_temp[0][1] * C[1]) / L;
+    K[1] = (P_temp[1][0] * C[0] + P_temp[1][1] * C[1]) / L;
+
+    // update state:
+    float g = (baro->altitude - (C[0] * x_e[0] + C[1] * x_e[1]));
+    x[0] = x_e[0] + K[0] * g;
+    x[1] = x_e[1] + K[1] * g;
+    baro->altitude = x[0];
+    baro->ver_vel = x[1];
+
+    // update covariance matrix:
+    float temp[2][2];
+    temp[0][0] = 1 - K[0] * C[0];
+    temp[0][1] = -K[0] * C[1];
+    temp[1][0] = -K[1] * C[0];
+    temp[1][1] = 1 - K[1] * C[1];
+
+    P[0][0] = temp[0][0] * P_temp[0][0] + temp[0][1] * P_temp[1][0];
+    P[0][1] = temp[0][0] * P_temp[0][1] + temp[0][1] * P_temp[1][1];
+    P[1][0] = temp[1][0] * P_temp[0][0] + temp[1][1] * P_temp[1][0];
+    P[1][1] = temp[1][0] * P_temp[0][1] + temp[1][1] * P_temp[1][1];
 }
 
 void baro_set_h0_preasure(baro_t* baro) {
@@ -47,10 +102,10 @@ void alt_hold(timeUs_t current_time) {
     float dt = US_TO_SEC(dt_us);
 
     static uint8_t alt_hold;
-    threef_t acc_vec = { Gyro_Acc[3] ,Gyro_Acc[4],Gyro_Acc[5] };
+    threef_t acc_vec = { Gyro_Acc[3], Gyro_Acc[4], Gyro_Acc[5] };
 
     // transform acc values into global frame and add filtering:
-    acc_z = acc_z * 0.9 + 0.1 * quaternion_rotate_vector(acc_vec, quaternion_conjugate(q_global_attitude)).yaw;
+    acc_z = acc_z * 0.9f + 0.1f * quaternion_rotate_vector(acc_vec, quaternion_conjugate(q_global_attitude)).yaw;
 
     if (Arming_status == ARMED) {
         if (alt_hold == 1) {
