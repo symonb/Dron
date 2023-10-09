@@ -73,6 +73,48 @@ typedef enum
 	FLIGHT_MODE_COUNT
 } flight_mode_e;
 
+//------------FAILSAFE--------------------
+
+typedef enum
+{
+	FAILSAFE_NO_FAILSAFE,
+	FAILSAFE_INCORRECT_CHANNELS_VALUES,
+	FAILSAFE_RX_TIMEOUT,
+	FAILSAFE_NO_PREARM,
+	FAILSAFE_THROTTLE_PREARM,
+	FAILSAFE_SPI_IMU_ERROR,
+	FAILSAFE_SPI_FLASH_ERROR,
+	FAILSAFE_SPI_OSD_ERROR,
+	FAILSAFE_GYRO_CALIBRATION,
+	FAILSAFE_I2C1_ERROR,
+	FAILSAFE_BLACKBOX_FULL,
+	FAILSAFE_BATTERY_LOW,
+	FAILSAFE_COUNTER
+} failsafe_e;
+
+typedef enum {
+	WARNING_NONE,
+	WARNING_NO_RX,
+	WARNING_RX_ERROR,
+	WARNING_NO_PREARM,
+	WARNING_THROTTLE_PREARM,
+	WARNING_IMU_ERROR,
+	WARNING_FLASH_ERROR,
+	WARNING_GYRO_CALIBRATION,
+	WARNING_I2C_ERROR,
+	WARNING_BLACKBOX_FULL,
+	WARNING_BATTERY_LOW,
+	WARNING_COUNTER
+} warning_e;
+
+typedef enum
+{
+	DISARMED,
+	ARMED,
+	PREARMED
+}arming_e;
+
+
 typedef struct {
 	char* name;
 	uint8_t	address;
@@ -210,8 +252,9 @@ extern float Gyro_Acc[];
 extern uint16_t table_to_send[];
 
 //----------------FAILSAFE-------------------
-
+extern failsafe_e FailSafe_status;
 extern uint16_t failsafe_counter[FAILSAFE_COUNTER];
+extern warning_e OSD_warning;
 
 //-------------------FILTERS--------------------
 #if defined(USE_FIR_FILTERS)
@@ -265,8 +308,6 @@ extern uint32_t dshot_bb_buffer_1_4[];
 extern uint32_t dshot_bb_buffer_2_3[];
 extern uint32_t dshot_bb_buffer_1_4_r[];
 extern uint32_t dshot_bb_buffer_2_3_r[];
-
-extern failsafe_e FailSafe_status;
 
 extern uint16_t MOTOR_OFF;
 

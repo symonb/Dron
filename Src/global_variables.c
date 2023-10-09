@@ -47,16 +47,16 @@ timeUs_t time_flag7_1 = 0;
 
 //------------PIDF-------------
 // angular speed control:
-PIDF_t R_PIDF = { 1000, 2300, 16, 2 };
-PIDF_t P_PIDF = { 1200, 2600, 20, 4 };
-PIDF_t Y_PIDF = { 700, 100, 0.1, 0 };
+PIDF_t R_PIDF = { 800, 2000, 7, 6 };
+PIDF_t P_PIDF = { 1000, 2200, 10, 10 };
+PIDF_t Y_PIDF = { 1100, 1000, 0.2, 0 };
 float tpa_coef = 1; // Throttle PID atenuation value tpa_coef = 1-TPA_MAX_VALUE * (throttle-TPA_BREAKPOINT)/(THROTTLE_MAX_VALUE - TPA_BREAKPOINT)
 
 // attitiude control:
-PIDF_t att_PIDF = { 1.5,0.5,0,0 };    // Only P and I values are used
+PIDF_t att_PIDF = { 1.5, 0.5, 0, 0 };    // Only P and I values are used
 
 // altitiude control:
-PIDF_t rate_throttle_PIDF = { 0.2, 0.1,0 };// { 100, 50, 200, 0 };//{ 80, 20, 100, 0 };
+PIDF_t rate_throttle_PIDF = { 0.2, 0.1, 0 };// { 100, 50, 200, 0 };//{ 80, 20, 100, 0 };
 PIDF_t corr_rate_throttle;
 PIDF_t acc_throttle_PIDF = { 250, 50, 5, 0 };
 PIDF_t corr_acc_throttle;
@@ -110,8 +110,9 @@ float Gyro_Acc[GYRO_ACC_SIZE]; // table for measurements 3 gyro, 3 accelerometer
 uint16_t table_to_send[ALL_ELEMENTS_TO_SEND];
 
 //----------------FAILSAFE-------------------
-
+failsafe_e FailSafe_status;
 uint16_t failsafe_counter[FAILSAFE_COUNTER];
+warning_e OSD_warning = WARNING_NONE;
 
 //----------------FILTERS--------------------
 #if defined(USE_FIR_FILTERS)
@@ -168,7 +169,7 @@ uint32_t dshot_bb_buffer_2_3[DSHOT_BB_BUFFER_LENGTH * DSHOT_BB_FRAME_SECTIONS];
 uint32_t dshot_bb_buffer_1_4_r[(int)(33 * BDSHOT_RESPONSE_BITRATE / 1000 + BDSHOT_RESPONSE_LENGTH + 1) * BDSHOT_RESPONSE_OVERSAMPLING];
 uint32_t dshot_bb_buffer_2_3_r[(int)(33 * BDSHOT_RESPONSE_BITRATE / 1000 + BDSHOT_RESPONSE_LENGTH + 1) * BDSHOT_RESPONSE_OVERSAMPLING];
 #endif
-failsafe_e FailSafe_status;
+
 
 // value of PWM to power off motors (range is 2000-4000 which is in standard PWM 1000-2000):
 #if defined(ESC_PROTOCOL_DSHOT) || defined(ESC_PROTOCOL_BDSHOT)

@@ -228,6 +228,7 @@ typedef enum
 #define OSD_FLIGHT_MODE_PLACEMENT 23
 #define OSD_LOGO_PLACEMENT 123
 #define OSD_WARNING_PLACEMENT 315
+#define OSD_POINTER_PLACEMENT 195
 #define OSD_AUTO_NTSC_PAL //	options:	OSD_AUTO_NTSC_PAL/OSD_CAMERA_PAL/OSD_CAMERA_NTSC
 #define OSD_WARNINGS_TIME 1 // [s] time of showing warnings (after that it will be cleared)
 

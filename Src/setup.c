@@ -790,6 +790,8 @@ static void setup_SPI2()
 
 	SPI2->CR1 |= SPI_CR1_BR_1;							   // APB1 is 42 [MHz] and max frequency of OSD registers is 10 [MHz] (42/8<10 [MHz])
 	SPI2->CR1 |= SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_MSTR; // NSS value of master is set by software (SSM) it has to be high so set  SSI; Master configuration; clock idle is low (CPOL not set); first (rising) edge data capture (CPHA not set)
+	// enable DMA transmission:
+	SPI2->CR2 |= SPI_CR2_TXDMAEN;
 	//	enable SPI2:
 	SPI2->CR1 |= SPI_CR1_SPE;
 }

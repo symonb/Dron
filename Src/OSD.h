@@ -47,40 +47,53 @@
 
 //----------IMPORTANT FLAGS and commands------------
 #define OSD_BUSY_FLAG 0x20 // it is set when Character Memory is unavailable to be written or read from
-#define OSD_CLEAR_DM 0x04  //  is set when Display Memory is clearing and is reset when is done
+#define OSD_DMM_CLEAR_DM 0x04  //  is set when Display Memory is clearing and is reset when is done
+#define OSD_DMM_AUTO_INCREMENT 0x01 // auto-increment bit
+#define OSD_DMM_MODE 0x40  // 8-bit mode when set 16-bit mode when reset
+#define OSD_DMM_INV 0x08 // invert bit
+#define OSD_DMM_BLK 0x10 // blink bit
+#define OSD_DMM_LBS 0x20 // local brithness bit
+
 #define OSD_NTSC_SIGNAL_DETECTED 0x02
 #define OSD_PAL_SIGNAL_DETECTED 0x01
 #define OSD_TERMINATE_AUTO_INCREMENT 0xFF
 
+
+
 #define OSD_MAX_CHARACTER_NUMBER 256
-
-bool OSD_init();
-void OSD_SPI_write(uint8_t instruction, uint8_t data);
-void OSD_SPI_read(uint8_t instruction, uint8_t* memory_address);
-void OSD_write_new_character(const uint8_t* new_character_table, uint8_t character_number);
-void OSD_read_character(uint8_t* table_to_save_character, uint8_t character_number);
-void OSD_clear_Display_Memory();
-
-void OSD_write_to_Display_Memory_8bit(uint8_t character_number, uint16_t character_position_on_display, uint8_t attributes);
-
-void OSD_write_to_Display_Memory_16bit(uint8_t character_number, uint16_t character_position_on_display);
-void OSD_write_to_Display_Memory_16bit_AI(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
-void OSD_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
-bool is_OSD_busy();
-void OSD_print_logo();
-void OSD_print_battery_voltage();
-void OSD_print_battery_cell_voltage();
-void OSD_print_time();
-void OSD_print_flight_mode();
-void OSD_print_warnings();
-void OSD_update_logo_characters();
+#define OSD_CHARACTER_PIXELS_NUMBER 54
+#define OSD_SCREEN_SIZE 16*30
+#define SPI_BUFFER_MAX_SIZE  250
 
 typedef struct
 {
     char* chip_name;
     bool calibrated;
     timeUs_t logo_time;
+    uint8_t buffer[OSD_SCREEN_SIZE];
+    uint8_t shadow_buffer[OSD_SCREEN_SIZE];
+
 } osd_t;
+
+bool OSD_init(osd_t* OSD, timeUs_t current_time);
+void OSD_clear_Display_Memory();
+bool OSD_is_cleared();
+void OSD_write_to_DM_8bit(uint8_t character_number, uint16_t character_position_on_display, uint8_t attributes);
+void OSD_write_to_DM_16bit(uint8_t character_number, uint16_t character_position_on_display);
+void OSD_write_to_DM_16bit_AI(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
+void OSD_write_to_DM_16_bit_AI_blinking(uint8_t* character_number_tab, uint16_t first_character_position_on_display, uint16_t string_length);
+bool OSD_is_busy();
+void OSD_read_character(uint8_t* table_to_save_character, uint8_t character_number);
+void OSD_write_new_character(const uint8_t* new_character_table, uint8_t character_number);
+void OSD_update_logo_characters(uint8_t** new_logo_characters_tab);
+void OSD_print_logo();
+void OSD_print_battery_voltage();
+void OSD_print_battery_cell_voltage();
+void OSD_print_time();
+void OSD_print_flight_mode();
+void OSD_print_warnings(timeUs_t current_time);
+void OSD_update_screen(osd_t* OSD, timeUs_t current_time);
+bool OSD_draw_screen(osd_t* OSD, timeUs_t current_time);
 
 extern osd_t main_OSD;
 
