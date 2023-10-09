@@ -83,8 +83,8 @@ static quaternion_t gyro_angles(quaternion_t q_position, float dt)
 static quaternion_t acc_angles(quaternion_t q_position)
 {
 
-	threef_t acc_vector = { Gyro_Acc[3], Gyro_Acc[4] Gyro_Acc[5] };
-	static quaternion_t q_acc = { 1, 0, 0, 0 };
+	threef_t acc_vector = { Gyro_Acc[3], Gyro_Acc[4], Gyro_Acc[5] };
+	static quaternion_t q_acc;
 
 	threef_t gravity_estimated = quaternion_rotate_vector(acc_vector,
 		quaternion_conjugate(q_position));
@@ -143,7 +143,7 @@ static void madgwick_filter(float dt)
 	quaternion_t angular_velocity = { 0,Gyro_Acc[0] * DEG_TO_RAD ,Gyro_Acc[1] * DEG_TO_RAD ,Gyro_Acc[2] * DEG_TO_RAD };
 
 	float error_function[3];
-	quaternion_t acc_reading = { 0,Gyro_Acc[3] ,Gyro_Acc[4] ,Gyro_Acc[5] };
+	quaternion_t acc_reading = { 0, Gyro_Acc[3] ,Gyro_Acc[4] ,Gyro_Acc[5] };
 
 	// normalize acc_reading:
 	acc_reading = quaternion_multiply(acc_reading,
@@ -195,8 +195,7 @@ static void madgwick_filter(float dt)
 #elif defined(MAGDWICK_NEW)
 	// teoretycznie poprawne dla kwaternionu transformacji z ukladu global do lokal:
 	q_prim = quaternion_multiply(
-		quaternions_multiplication(angular_velocity, q_global_attitude),
-		-0.5f);
+		quaternions_multiplication(angular_velocity, q_global_attitude), -0.5f);
 
 	//	compute values of error_function:
 	error_function[0] = 2 * (q_global_attitude.w * q_global_attitude.y + q_global_attitude.x * q_global_attitude.z) - acc_reading.x;

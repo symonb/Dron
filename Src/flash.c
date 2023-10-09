@@ -31,7 +31,7 @@ void DMA1_Stream0_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (!((SPI3->SR) & SPI_SR_TXE))
 		{
-			if (failsafe_SPI3())
+			if (SPI3_failsafe())
 			{
 				break; // wait
 			}
@@ -39,7 +39,7 @@ void DMA1_Stream0_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (((SPI3->SR) & SPI_SR_BSY))
 		{
-			if (failsafe_SPI3())
+			if (SPI3_failsafe())
 			{
 				break; // wait
 			}
@@ -48,7 +48,7 @@ void DMA1_Stream0_IRQHandler(void)
 		SPI3->SR;
 		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
 
-		CS_SPI3_disable();
+		SPI3_CS_disable();
 
 	}
 }
@@ -65,7 +65,7 @@ void DMA1_Stream5_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (!((SPI3->SR) & SPI_SR_TXE))
 		{
-			if (failsafe_SPI3())
+			if (SPI3_failsafe())
 			{
 				break; // wait
 			}
@@ -73,7 +73,7 @@ void DMA1_Stream5_IRQHandler(void)
 		time_flag5_1 = get_Global_Time();
 		while (((SPI3->SR) & SPI_SR_BSY))
 		{
-			if (failsafe_SPI3())
+			if (SPI3_failsafe())
 			{
 				break; // wait
 			}
@@ -81,7 +81,7 @@ void DMA1_Stream5_IRQHandler(void)
 		SPI3->DR;
 		SPI3->SR;
 		DMA1_Stream5->CR &= ~DMA_SxCR_EN;
-		CS_SPI3_disable();
+		SPI3_CS_disable();
 		data_sending = false;
 	}
 }
@@ -102,9 +102,9 @@ static void W25Q128_write_enable()
 {
 	uint8_t instruction = FLASH_WRITE_ENABLE;
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	SPI3_transmit(&instruction, 1);
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 
 }
 
@@ -119,9 +119,9 @@ void W25Q128_erase(uint8_t instruction, uint32_t address)
 	W25Q128_write_enable();
 
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	SPI3_transmit(instruction_and_address, 4);
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 }
 
 void W25Q128_erase_full_chip()
@@ -135,22 +135,22 @@ void W25Q128_erase_full_chip()
 	W25Q128_write_enable();
 
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	SPI3_transmit(&instruction, 1);
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 }
 
 uint8_t W25Q128_read_status_register(uint8_t instruction)
 {
 	uint8_t status;
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 
 	// wait for TXE flag before sending anything
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
-		if (failsafe_SPI3())
+		if (SPI3_failsafe())
 		{
 			break; // wait
 		}
@@ -161,7 +161,7 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
-		if (failsafe_SPI3())
+		if (SPI3_failsafe())
 		{
 			break; // wait
 		}
@@ -171,7 +171,7 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_RXNE))
 	{ // wait
-		if (failsafe_SPI3())
+		if (SPI3_failsafe())
 		{
 			break;
 		}
@@ -186,7 +186,7 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_TXE))
 	{
-		if (failsafe_SPI3())
+		if (SPI3_failsafe())
 		{
 			break; // wait
 		}
@@ -196,7 +196,7 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 	time_flag5_1 = get_Global_Time();
 	while (!((SPI3->SR) & SPI_SR_RXNE))
 	{
-		if (failsafe_SPI3())
+		if (SPI3_failsafe())
 		{	//if failsafe occure return:
 			return 0xFF;
 			break;
@@ -212,7 +212,7 @@ uint8_t W25Q128_read_status_register(uint8_t instruction)
 	status = SPI3->DR;
 	SPI3->SR;
 
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 
 	return status;
 }
@@ -222,10 +222,10 @@ uint32_t W25Q128_read_JEDEC_ID()
 	uint8_t temp[3];
 	uint8_t instr = FLASH_JEDEC_ID;
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	SPI3_transmit(&instr, 1);
 	SPI3_receive(temp, 3);
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 
 	return (temp[0] << 16 | temp[1] << 8 | temp[2]);
 }
@@ -257,7 +257,7 @@ void W25Q128_write_data(uint32_t memory_address, uint8_t* data, int number_of_by
 	// must be done before writing:
 	W25Q128_write_enable();
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	data_sending = true;
 	SPI3_transmit(instruction_and_address, 4);
 	SPI3_transmit_DMA(data, number_of_bytes);
@@ -283,7 +283,7 @@ void W25Q128_fast_write_data(uint32_t memory_address, uint8_t* data, int number_
 	// must be done before writing:
 	W25Q128_write_enable();
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	data_sending = true;
 	SPI3_transmit(instruction_and_address, 4);
 	SPI3_transmit_DMA(data, number_of_bytes);
@@ -306,7 +306,7 @@ void W25Q128_unsafe_write_data(uint32_t memory_address, uint8_t* data, int numbe
 	// must be done before writing:
 	W25Q128_write_enable();
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	data_sending = true;
 	SPI3_transmit(instruction_and_address, 4);
 	SPI3_transmit_DMA(data, number_of_bytes);
@@ -370,10 +370,10 @@ void W25Q128_read_data(uint32_t memory_address, uint8_t* pointer_for_data, int n
 		;//wait
 	}
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	SPI3_transmit(instruction_and_address, 4);
 	SPI3_receive(pointer_for_data, number_of_bytes);
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 
 }
 
@@ -393,10 +393,10 @@ void W25Q128_fast_read_data(uint32_t memory_address, uint8_t* pointer_for_data, 
 		;//wait
 	}
 
-	CS_SPI3_enable();
+	SPI3_CS_enable();
 	SPI3_transmit(instruction_and_address, 5);
 	SPI3_receive(pointer_for_data, number_of_bytes);
-	CS_SPI3_disable();
+	SPI3_CS_disable();
 
 }
 

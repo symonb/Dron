@@ -89,16 +89,8 @@ void baro_set_h0_preasure(baro_t* baro) {
     baro->h0_preasure = baro->filtered_preasure;
 }
 
-void alt_hold(timeUs_t current_time) {
+void alt_hold(timeUs_t dt_us) {
 
-    static timeUs_t last_time;
-    timeUs_t dt_us = current_time - last_time;
-    //	prevent too big dt (e.g first iteration after being inactive):
-    if (dt_us > 1.5f * TASK_PERIOD_HZ(FREQUENCY_ALT_HOLD))
-    {
-        dt_us = TASK_PERIOD_HZ(FREQUENCY_ALT_HOLD);
-    }
-    last_time = current_time;
     float dt = US_TO_SEC(dt_us);
 
     static uint8_t alt_hold;

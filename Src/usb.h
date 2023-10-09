@@ -5,7 +5,7 @@
 #include "global_variables.h"
 
 void USB_check_connection();
-void usb_communication(timeUs_t time);
+void usb_communication();
 
 typedef enum {
     USB_CLASS_CDC,

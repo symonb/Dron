@@ -47,7 +47,7 @@ void DMA2_Stream0_IRQHandler(void)
 		}
 		acc_1.new_raw_data_flag = true;
 		gyro_1.new_raw_data_flag = true;
-		CS_SPI1_disable();
+		SPI1_CS_disable();
 		SPI1_disable();
 	}
 }
@@ -94,29 +94,29 @@ void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value)
 	uint8_t data[2];
 	data[0] = adress_of_register & 0x7F; // first bit of 1 byte has to be write (0) or read(1)
 	data[1] = value;
-	CS_SPI1_enable();
+	SPI1_CS_enable();
 	SPI1_transmit(data, 2);
-	CS_SPI1_disable();
+	SPI1_CS_disable();
 }
 
 void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t* data,
 	uint16_t size)
 {
-	CS_SPI1_enable();
+	SPI1_CS_enable();
 	SPI1_transmit(&adress_of_register, 1);
 
 	// SPI1->CR1 |= SPI_CR1_RXONLY;
 
 	SPI1_receive(data, size);
 
-	CS_SPI1_disable();
+	SPI1_CS_disable();
 }
 
 void MPU6000_SPI_read_DMA(const uint8_t instruction, uint8_t* data, uint16_t size)
 {
 	// RXONLY mode doesn't work so full duplex DMA:
 	SPI1_enable();
-	CS_SPI1_enable();
+	SPI1_CS_enable();
 	SPI1_transmit(&instruction, 1);
 	SPI1_disable();
 	SPI1_receive_DMA(data, size);
@@ -298,41 +298,45 @@ void read_all_DMA() {
 	MPU6000_SPI_read_DMA(MPU6000_ACCEL_READ, rx_buffer, 14);
 }
 
-void gyro_update(timeUs_t time)
+/**
+*@brief Function process and filter raw data from gyro
+* @param gyro pointer to the struct to update
+*/
+void gyro_update(gyro_t* gyro)
 {
 	// convert raw input to [degree/s]:
-	threef_t temp = { GYRO_TO_DPS * gyro_1.raw_data[0] - gyro_1.offset[0],
-	GYRO_TO_DPS * gyro_1.raw_data[1] - gyro_1.offset[1],
-	GYRO_TO_DPS * gyro_1.raw_data[2] - gyro_1.offset[2] };
+	threef_t temp = { GYRO_TO_DPS * gyro->raw_data[0] - gyro->offset[0],
+	GYRO_TO_DPS * gyro->raw_data[1] - gyro->offset[1],
+	GYRO_TO_DPS * gyro->raw_data[2] - gyro->offset[2] };
 	// transform raw data from sensor frame into drone frame:
 	temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
-	float temporary[3] = { temp.roll,temp.pitch,temp.yaw };
+	float temporary[3] = { temp.roll, temp.pitch, temp.yaw };
 	// filter raw data:
 	gyro_filtering(temporary);
 	// set flags:
-	gyro_1.new_raw_data_flag = false;
-	gyro_1.new_filtered_data = true;
+	gyro->new_raw_data_flag = false;
+	gyro->new_filtered_data = true;
 }
 
 /**
  *Function process and filter raw data from accelerometer
- *@param time not used
+ *@param acc pointer to the struct to update
 */
-void acc_update(timeUs_t time)
+void acc_update(acc_t* acc)
 {
 	// convert raw data to [g] unit:
 	threef_t temp = {
-	acc_1.scale[0] * (ACC_TO_GRAVITY * acc_1.raw_data[0] - acc_1.offset[0]),
-	acc_1.scale[1] * (ACC_TO_GRAVITY * acc_1.raw_data[1] - acc_1.offset[1]),
-	acc_1.scale[2] * (ACC_TO_GRAVITY * acc_1.raw_data[2] - acc_1.offset[2]) };
+	acc->scale[0] * (ACC_TO_GRAVITY * acc->raw_data[0] - acc->offset[0]),
+	acc->scale[1] * (ACC_TO_GRAVITY * acc->raw_data[1] - acc->offset[1]),
+	acc->scale[2] * (ACC_TO_GRAVITY * acc->raw_data[2] - acc->offset[2]) };
 	// trnansform raw data from sensor frame into drone frame:
 	temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
 	float temporary[3] = { temp.roll, temp.pitch, temp.yaw };
 	// filter raw data:
 	acc_filtering(temporary);
 	// set flags:
-	acc_1.new_raw_data_flag = false;
-	acc_1.new_filtered_data = true;
+	acc->new_raw_data_flag = false;
+	acc->new_filtered_data = true;
 }
 
 void gyro_calibration(gyro_t* gyro_to_calibrate, timeUs_t time)

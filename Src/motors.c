@@ -204,7 +204,7 @@ void DMA2_Stream2_IRQHandler(void)
 
 #endif
 
-void update_motors(timeUs_t current_time)
+void update_motors()
 {
 #if defined(ESC_PROTOCOL_BDSHOT)
     // prepare for sending

@@ -18,7 +18,7 @@ bool MS5XXX_init(baro_t* baro) {
 }
 
 /**
- *@brief function to reset sensor after hanging up
+ *@brief function to reset sensor after hang up
  *@note According to datasheet the only way to get back to function is to send a few SCLKs and reset sequence
  * */
 void MS5XXX_unstack() {
@@ -116,7 +116,6 @@ void MS5XXX_calculate_preasure(baro_t* baro) {
 #endif
 }
 
-
 /**
  *@brief read ADC value and save as raw preasure
  *@param baro pointer for baro_t object where preasure can be saved.
@@ -204,7 +203,6 @@ void MS5XXX_reset()
     I2C1_Write(MS5XXX_ADDR_W, MS5XXX_CMD_RESET, NULL, 0);
     I2C1_Stop();
 }
-
 
 /**
  *@brief function read PROM registers

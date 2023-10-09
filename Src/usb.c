@@ -16,6 +16,7 @@
 #include "ff.h"
 #include "usb.h" 
 #include "scheduler.h"
+#include "tasks.h"
 #include "sensors/MPU6000.h"
 
 usb_t main_usb = { .class = USB_CLASS_CDC, .status = USB_STATE_NOT_CONNECTED, .connected = false };
@@ -26,14 +27,16 @@ void USB_check_connection() {
     if (main_usb.connected) {
         if (main_usb.status == USB_STATE_NOT_CONNECTED) {
             main_usb.status = USB_STATE_IDLE;
+            add_to_queue(&all_tasks[TASK_USB_HANDLING], &main_scheduler);
         }
     }
     else {
         main_usb.status = USB_STATE_NOT_CONNECTED;
+        remove_from_queue(&all_tasks[TASK_USB_HANDLING], &main_scheduler);
     }
 };
 
-void usb_communication(timeUs_t time) {
+void usb_communication() {
     switch (main_usb.status)
     {
     case USB_STATE_NOT_CONNECTED:
