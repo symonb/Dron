@@ -22,7 +22,6 @@ typedef struct
 bool scheduler_initialization(scheduler_t* scheduler);
 void scheduler_reset_tasks_statistics(scheduler_t* scheduler);
 void scheduler_execute(scheduler_t* scheduler);
-void task_system_fun(timeUs_t currentTime);
 bool remove_from_queue(task_t* task, scheduler_t* scheduler);
 bool add_to_queue(task_t* task, scheduler_t* scheduler);
 extern scheduler_t main_scheduler;
