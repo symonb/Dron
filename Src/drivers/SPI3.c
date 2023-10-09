@@ -7,12 +7,12 @@
 
 
 
-void CS_SPI3_enable()
+void SPI3_CS_enable()
 {
     GPIOB->BSRR |= GPIO_BSRR_BR_3;
 }
 
-void CS_SPI3_disable()
+void SPI3_CS_disable()
 {
     GPIOB->BSRR |= GPIO_BSRR_BS_3;
 }
@@ -36,7 +36,7 @@ void SPI3_transmit(const uint8_t* data, int size)
         time_flag5_1 = get_Global_Time();
         while (!((SPI3->SR) & SPI_SR_TXE))
         {
-            if (failsafe_SPI3())
+            if (SPI3_failsafe())
             {
                 break; // wait
             }
@@ -48,7 +48,7 @@ void SPI3_transmit(const uint8_t* data, int size)
     time_flag5_1 = get_Global_Time();
     while (!((SPI3->SR) & SPI_SR_TXE))
     {
-        if (failsafe_SPI3())
+        if (SPI3_failsafe())
         {
             break; // wait
         }
@@ -56,7 +56,7 @@ void SPI3_transmit(const uint8_t* data, int size)
     time_flag5_1 = get_Global_Time();
     while (((SPI3->SR) & SPI_SR_BSY))
     {
-        if (failsafe_SPI3())
+        if (SPI3_failsafe())
         {
             break; // wait
         }
@@ -78,7 +78,7 @@ void SPI3_receive(uint8_t* data, int size)
         time_flag5_1 = get_Global_Time();
         while (!((SPI3->SR) & SPI_SR_TXE))
         {
-            if (failsafe_SPI3())
+            if (SPI3_failsafe())
             {
                 break; // wait
             }
@@ -87,7 +87,7 @@ void SPI3_receive(uint8_t* data, int size)
         time_flag5_1 = get_Global_Time();
         while (!((SPI3->SR) & SPI_SR_RXNE))
         {
-            if (failsafe_SPI3())
+            if (SPI3_failsafe())
             {
                 break; // wait
             }
@@ -100,7 +100,7 @@ void SPI3_receive(uint8_t* data, int size)
     time_flag5_1 = get_Global_Time();
     while (!((SPI3->SR) & SPI_SR_TXE))
     {
-        if (failsafe_SPI3())
+        if (SPI3_failsafe())
         {
             break; // wait
         }
@@ -109,7 +109,7 @@ void SPI3_receive(uint8_t* data, int size)
     time_flag5_1 = get_Global_Time();
     while (((SPI3->SR) & SPI_SR_BSY))
     {
-        if (failsafe_SPI3())
+        if (SPI3_failsafe())
         {
             break; // wait
         }
@@ -131,7 +131,7 @@ void SPI3_receive_DMA(uint8_t* data, int size)
     DMA1_Stream5->CR |= DMA_SxCR_EN;
 }
 
-bool failsafe_SPI3()
+bool SPI3_failsafe()
 {
     //	waiting as Data will be sent or failsafe (if set time passed)
     if ((get_Global_Time() - time_flag5_1) >= SEC_TO_US(SPI_TIMEOUT_VALUE))

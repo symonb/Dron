@@ -5,15 +5,6 @@
  *      Author: symon
  */
 
-
- /*
-  * 1 reset command
-  * 2 read PROM
-  * 3 read data
-  *
-  */
-
-
 #include <math.h>
 #include "stm32f4xx.h"
 #include "global_constants.h"
@@ -21,32 +12,31 @@
 #include "global_functions.h"
 #include "I2C1.h"
 
-  // variable for DMA purpose (you can use any other):
-// uint8_t DMA_receiving_table[20];
+static bool I2C1_failsafe();
 
+#if defined(USE_I2C1)
+void DMA1_Stream0_IRQHandler(void) {
 
-static bool failsafe_I2C1();
+	//if stream0 transfer is completed:
+	if (DMA1->LISR & DMA_LISR_TCIF0) {
+		DMA1->LIFCR |= DMA_LIFCR_CTCIF0;
 
+		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
+		// generate STOP conditions:
+		I2C1->CR1 |= I2C_CR1_STOP;
+	}
+}
+#endif
 
-//RX:
-// #if defined(USE_I2C1)
-// void DMA1_Stream0_IRQHandler(void) {
-
-// 	//if stream0 transfer is completed:
-// 	if (DMA1->LISR & DMA_LISR_TCIF0) {
-// 		DMA1->LIFCR |= DMA_LIFCR_CTCIF0;
-
-// 		DMA1_Stream0->CR &= ~DMA_SxCR_EN;
-// 		// generate STOP conditions:
-// 		I2C1->CR1 |= I2C_CR1_STOP;
-// 	}
-// }
-// #endif
-
-
-// functions for I2C usage:
+/**
+ *@brief manually unstack I2c lines by bitbanging
+ *@note When I2C hang up it seems impossible to unstack it by I2C commands.
+ *@note Set GPIO ports as outputs and manually clock STOP condition.
+* @note Next set GPIO to alternate function for I2C operation and reconfigure I2C.
+*/
 void I2C1_reset() {
 
+	I2C1->CR1 &= ~I2C_CR1_PE;
 	// set output mode:
 	GPIOB->MODER &= ~GPIO_MODER_MODER6;
 	GPIOB->MODER |= GPIO_MODER_MODER6_0;
@@ -112,7 +102,7 @@ void I2C1_Start() {
 	// wait for flag:
 	time_flag7_1 = get_Global_Time();
 	while (!(I2C1->SR1 & I2C_SR1_SB)) {
-		if (failsafe_I2C1())
+		if (I2C1_failsafe())
 		{
 			break;
 		}
@@ -131,7 +121,7 @@ void I2C1_Write(uint8_t address, uint8_t command, uint8_t* data, uint16_t size) 
 	//	wait for ADDR bit:
 	time_flag7_1 = get_Global_Time();
 	while (!(I2C1->SR1 & I2C_SR1_ADDR)) {
-		if (failsafe_I2C1())
+		if (I2C1_failsafe())
 		{
 			break;
 		}
@@ -141,7 +131,7 @@ void I2C1_Write(uint8_t address, uint8_t command, uint8_t* data, uint16_t size) 
 	//	send command:
 	time_flag7_1 = get_Global_Time();
 	while (!(I2C1->SR1 & I2C_SR1_TXE)) {
-		if (failsafe_I2C1())
+		if (I2C1_failsafe())
 		{
 			break;
 		}
@@ -151,7 +141,7 @@ void I2C1_Write(uint8_t address, uint8_t command, uint8_t* data, uint16_t size) 
 	while (size) {
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_TXE)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -163,13 +153,12 @@ void I2C1_Write(uint8_t address, uint8_t command, uint8_t* data, uint16_t size) 
 	}
 	time_flag7_1 = get_Global_Time();
 	while (!(I2C1->SR1 & I2C_SR1_BTF) && !(I2C1->SR1 & I2C_SR1_TXE)) {
-		if (failsafe_I2C1())
+		if (I2C1_failsafe())
 		{
 			break;
 		}
 	}
 }
-
 
 /**
  *@note STOP condition is generated during this function. No need for STOP generating after this function.
@@ -182,7 +171,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 	// wait for ADDR bit:
 	time_flag7_1 = get_Global_Time();
 	while (!(I2C1->SR1 & I2C_SR1_ADDR)) {
-		if (failsafe_I2C1())
+		if (I2C1_failsafe())
 		{
 			break;
 		}
@@ -198,7 +187,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_BTF)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -208,7 +197,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_RXNE)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -225,7 +214,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 		I2C1->CR1 |= I2C_CR1_STOP;
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_RXNE)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -240,7 +229,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 		while (size > 3) {
 			time_flag7_1 = get_Global_Time();
 			while (!(I2C1->SR1 & I2C_SR1_RXNE)) {
-				if (failsafe_I2C1())
+				if (I2C1_failsafe())
 				{
 					break;
 				}
@@ -252,7 +241,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_BTF)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -265,7 +254,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_BTF)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -279,7 +268,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 
 		time_flag7_1 = get_Global_Time();
 		while (!(I2C1->SR1 & I2C_SR1_RXNE)) {
-			if (failsafe_I2C1())
+			if (I2C1_failsafe())
 			{
 				break;
 			}
@@ -289,7 +278,7 @@ void I2C1_Read(uint8_t address, uint8_t* data, uint16_t size) {
 	}
 }
 
-static bool failsafe_I2C1()
+static bool I2C1_failsafe()
 {
 	//	waiting as Data will be sent or failsafe if set time passed
 	if ((get_Global_Time() - time_flag7_1) >= SEC_TO_US(I2C_TIMEOUT_VALUE))
@@ -303,23 +292,23 @@ static bool failsafe_I2C1()
 	return false;
 }
 
-//  void I2C1_Read_DMA(uint8_t address, uint8_t* data, uint16_t size) {
-// 	DMA1_Stream0->NDTR = size;
-// 	DMA1_Stream0->M0AR = (uint32_t)(data);
+void I2C1_Read_DMA(uint8_t address, uint8_t* data, uint16_t size) {
+	DMA1_Stream0->NDTR = size;
+	DMA1_Stream0->M0AR = (uint32_t)(data);
 
-// 	I2C1_Start();
+	I2C1_Start();
 
-// 	I2C1->DR = (address | 0x1);
-// 	// wait for ADDR bit:
-// 	while (!(I2C1->SR1 & I2C_SR1_ADDR)) {
-// 	}
-// 	// activate DMA:
-// 	DMA1_Stream0->CR |= DMA_SxCR_EN;
+	I2C1->DR = (address | 0x1);
+	// wait for ADDR bit:
+	while (!(I2C1->SR1 & I2C_SR1_ADDR)) {
+	}
+	// activate DMA:
+	DMA1_Stream0->CR |= DMA_SxCR_EN;
 
-// 	// for clearing ADDR bit read also SR2:
-// 	I2C1->SR2;
+	// for clearing ADDR bit read also SR2:
+	I2C1->SR2;
 
-// }
+}
 
 
 

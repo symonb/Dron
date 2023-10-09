@@ -17,12 +17,12 @@ void SPI1_disable()
     SPI1->CR1 &= ~SPI_CR1_SPE; //	disabling SPI1
 }
 
-void CS_SPI1_enable()
+void SPI1_CS_enable()
 {
     GPIOA->BSRR |= GPIO_BSRR_BR_4;
 }
 
-void CS_SPI1_disable()
+void SPI1_CS_disable()
 {
     GPIOA->BSRR |= GPIO_BSRR_BS_4;
 }
@@ -44,7 +44,7 @@ void SPI1_transmit(const uint8_t* data, int size)
         time_flag4_1 = get_Global_Time();
         while (!((SPI1->SR) & SPI_SR_TXE))
         {
-            if (failsafe_SPI1())
+            if (SPI1_failsafe())
             {
                 break;
             }
@@ -56,7 +56,7 @@ void SPI1_transmit(const uint8_t* data, int size)
     time_flag4_1 = get_Global_Time();
     while (!((SPI1->SR) & SPI_SR_TXE))
     {
-        if (failsafe_SPI1())
+        if (SPI1_failsafe())
         {
             break;
         }
@@ -64,7 +64,7 @@ void SPI1_transmit(const uint8_t* data, int size)
     time_flag4_1 = get_Global_Time();
     while (((SPI1->SR) & SPI_SR_BSY))
     {
-        if (failsafe_SPI1())
+        if (SPI1_failsafe())
         {
             break;
         }
@@ -84,7 +84,7 @@ void SPI1_receive(uint8_t* data, int size)
         time_flag4_1 = get_Global_Time();
         while (!((SPI1->SR) & SPI_SR_TXE))
         {
-            if (failsafe_SPI1())
+            if (SPI1_failsafe())
             {
                 break;
             }
@@ -93,7 +93,7 @@ void SPI1_receive(uint8_t* data, int size)
         time_flag4_1 = get_Global_Time();
         while (!((SPI1->SR) & SPI_SR_RXNE))
         {
-            if (failsafe_SPI1())
+            if (SPI1_failsafe())
             {
                 break;
             }
@@ -106,7 +106,7 @@ void SPI1_receive(uint8_t* data, int size)
     time_flag4_1 = get_Global_Time();
     while (!((SPI1->SR) & SPI_SR_TXE))
     {
-        if (failsafe_SPI1())
+        if (SPI1_failsafe())
         {
             break;
         }
@@ -115,7 +115,7 @@ void SPI1_receive(uint8_t* data, int size)
     time_flag4_1 = get_Global_Time();
     while (((SPI1->SR) & SPI_SR_BSY))
     {
-        if (failsafe_SPI1())
+        if (SPI1_failsafe())
         {
             break;
         }
@@ -143,7 +143,7 @@ void SPI1_receive_DMA(uint8_t* data, uint16_t size)
     DMA2_Stream3->CR |= DMA_SxCR_EN;
 }
 
-bool failsafe_SPI1()
+bool SPI1_failsafe()
 {
     //	waiting as Data will be sent or failsafe if set time passed
     if ((get_Global_Time() - time_flag4_1) >= SEC_TO_US(SPI_TIMEOUT_VALUE))
