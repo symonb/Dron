@@ -30,8 +30,10 @@
 #include "ff.h"
 #include "common/encoding.h"
 #include "battery.h"
+#include "math/quaternions.h"
 #include "blackbox/blackbox_encoding.h"
 #include "blackbox_fielddefs.h"
+#include "blackbox/debug.h"
 #include "blackbox/blackbox.h"
 
 #define CONCAT(x,y) x ## y 
@@ -109,9 +111,35 @@ static blackboxMainState_t* blackboxHistory[3];
  */
 static uint16_t vbatReference;
 
+const blackbox_debug_e blackbox_debug =
+#if defined(BLACKBOX_DEBUG_ACC_RAW)
+DEBUG_ACC_RAW;
+#elif defined(BLACKBOX_DEBUG_GYRO_RAW)
+DEBUG_GYRO_SCALED;
+#elif defined(BLACKBOX_DEBUG_CHANNELS_RAW)
+DEBUG_RC_SMOOTHING;
+#elif defined(BLACKBOX_DEBUG_BARO)
+DEBUG_BARO;
+#elif defined(BLACKBOX_DEBUG_RPM_ERR)
+DEBUG_DSHOT_RPM_ERRORS;
+#elif defined(BLACKBOX_DEBUG_ATTITIUDE)
+DEBUG_ATTITUDE;
+#else
+DEBUG_NONE;
+#endif
 
 blackbox_config_t blackbox_config = {
-    .fields_disabled_mask = ~(1 << (FIELD_SELECT(BATTERY)) | 1 << (FIELD_SELECT(GYRO)) | 1 << (FIELD_SELECT(ACC)) | 1 << (FIELD_SELECT(MOTOR)) | 1 << (FIELD_SELECT(RC_COMMANDS)) | 1 << (FIELD_SELECT(SETPOINT)) | 1 << (FIELD_SELECT(PID)) | 1 << (FIELD_SELECT(ALTITUDE))),
+    .fields_disabled_mask = ~(
+      1 << (FIELD_SELECT(BATTERY))
+    | 1 << (FIELD_SELECT(GYRO))
+    | 1 << (FIELD_SELECT(ACC))
+    | 1 << (FIELD_SELECT(MOTOR))
+    | 1 << (FIELD_SELECT(RC_COMMANDS))
+    | 1 << (FIELD_SELECT(SETPOINT))
+    | 1 << (FIELD_SELECT(PID))
+    | 1 << (FIELD_SELECT(ALTITUDE))
+    | ((blackbox_debug != DEBUG_NONE) * 1) << (FIELD_SELECT(DEBUG_LOG))
+    ),
     .sample_rate = BLACKBOX_SAMPLE_RATE };
 
 static const char blackboxHeader[] =
@@ -454,56 +482,67 @@ static void loadMainState(timeUs_t currentTimeUs)
         blackboxCurrent->axisPID_I[i] = lrintf(corr_att[i].I);
         blackboxCurrent->axisPID_D[i] = lrintf(corr_att[i].D);
         blackboxCurrent->axisPID_F[i] = lrintf(corr_att[i].F);
-#if defined(BLACKBOX_SAVE_RAW_GYRO)
-        blackboxCurrent->gyroADC[i] = gyro_1.raw_data[i]
-#else 
-        blackboxCurrent->gyroADC[i] = Gyro_Acc[i];
-#endif
-#if defined(BLACKBOX_SAVE_RAW_ACC)
-        blackboxCurrent->accADC[i] = acc_1.raw_data[i]
-#else
-        blackboxCurrent->accADC[i] = Gyro_Acc[i + 3] / ACC_TO_GRAVITY;
-#endif
 
+        blackboxCurrent->gyroADC[i] = Gyro_Acc[i];
+        blackboxCurrent->accADC[i] = Gyro_Acc[i + 3] / ACC_TO_GRAVITY;
 
 #ifdef USE_MAG
         blackboxCurrent->magADC[i] = lrintf(mag.magADC[i]);
 #endif
     }
 
-#if defined(BLACKBOX_SAVE_CHANNELS_RAW)
-    blackboxCurrent->rcCommand[0] = receiver.channels_raw[0] - 1500;
-    blackboxCurrent->rcCommand[1] = receiver.channels_raw[1] - 1500;
-    blackboxCurrent->rcCommand[2] = receiver.channels_raw[3] - 1500;
-    blackboxCurrent->rcCommand[3] = receiver.channels_raw[2];
-#else
     blackboxCurrent->rcCommand[0] = receiver.channels[0] - 1500;
     blackboxCurrent->rcCommand[1] = receiver.channels[1] - 1500;
     blackboxCurrent->rcCommand[2] = receiver.channels[3] - 1500;
     blackboxCurrent->rcCommand[3] = receiver.channels[2];
-#endif
+
     // log the currentPidSetpoint values applied to the PID controller
     blackboxCurrent->setpoint[0] = lrintf(corr_sum.roll);
     blackboxCurrent->setpoint[1] = lrintf(corr_sum.pitch);
     blackboxCurrent->setpoint[2] = lrintf(corr_sum.yaw);
-
-    // if debugging althold:
-    // blackboxCurrent->axisPID_P[2] = lrintf(corr_rate_throttle.P);
-    // blackboxCurrent->axisPID_I[2] = lrintf(corr_rate_throttle.I);
-    // blackboxCurrent->axisPID_D[2] = lrintf(corr_rate_throttle.D);
-    // blackboxCurrent->axisPID_F[2] = lrintf(corr_rate_throttle.F);
-    // blackboxCurrent->gyroADC[2] = lrintf(baro_1.ver_vel * 100);
-
-    blackboxCurrent->axisPID_P[2] = lrintf(corr_acc_throttle.P);
-    blackboxCurrent->axisPID_I[2] = lrintf(corr_acc_throttle.I);
-    blackboxCurrent->axisPID_D[2] = lrintf(corr_acc_throttle.D);
-    blackboxCurrent->axisPID_F[2] = lrintf(corr_rate_throttle.P * 100);
-    blackboxCurrent->gyroADC[2] = lrintf(baro_1.ver_vel * 100);
-
-    //
-
     // log the final throttle value used in the mixer
     blackboxCurrent->setpoint[3] = (throttle);
+
+    // debuging 
+#if defined(BLACKBOX_DEBUG_BARO)
+    blackboxCurrent->debug[0] = lrintf(corr_acc_throttle.P);
+    blackboxCurrent->debug[1] = lrintf(corr_acc_throttle.I);
+    blackboxCurrent->debug[2] = lrintf(corr_acc_throttle.D);
+    blackboxCurrent->debug[3] = lrintf(baro_1.ver_vel * 100);
+#elif defined(BLACKBOX_DEBUG_CHANNELS_RAW)
+    blackboxCurrent->debug[0] = (int16_t)(receiver.channels_raw[0] - 1500);
+    blackboxCurrent->debug[1] = (int16_t)(receiver.channels_raw[1] - 1500);
+    blackboxCurrent->debug[2] = (int16_t)(receiver.channels_raw[3] - 1500);
+    blackboxCurrent->debug[3] = (int16_t)(receiver.channels_raw[2]);
+#elif defined(BLACKBOX_DEBUG_GYRO_RAW)
+    // raw data only teansformed into body frame:
+    threef_t temp = { GYRO_TO_DPS * gyro_1.raw_data[0], GYRO_TO_DPS * gyro_1.raw_data[1],GYRO_TO_DPS * gyro_1.raw_data[2] };
+    // transform raw data from sensor frame into drone frame:
+    temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
+    blackboxCurrent->debug[0] = temp.roll;
+    blackboxCurrent->debug[1] = temp.pitch;
+    blackboxCurrent->debug[2] = temp.yaw;
+    blackboxCurrent->debug[3] = 0;
+#elif defined(BLACKBOX_DEBUG_ACC_RAW)
+        // raw data (no offsets, no scaling only transform into body frame):
+    threef_t temp = { acc_1.raw_data[0],acc_1.raw_data[1],acc_1.raw_data[2] };
+    // trnansform raw data from sensor frame into drone frame:
+    temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
+    blackboxCurrent->debug[0] = temp.roll;
+    blackboxCurrent->debug[1] = temp.pitch;
+    blackboxCurrent->debug[2] = temp.yaw;
+    blackboxCurrent->debug[3] = 0;
+#elif defined(BLACKBOX_DEBUG_RPM_ERR)
+    blackboxCurrent->debug[0] = motors_error[0] * 1000;
+    blackboxCurrent->debug[1] = motors_error[1] * 1000;
+    blackboxCurrent->debug[2] = motors_error[2] * 1000;
+    blackboxCurrent->debug[3] = motors_error[3] * 1000;
+#elif defined(BLACKBOX_DEBUG_ATTITIUDE)
+    blackboxCurrent->debug[0] = global_angles.roll * 100;
+    blackboxCurrent->debug[1] = global_angles.pitch * 100;
+    blackboxCurrent->debug[2] = global_angles.yaw * 100;
+    blackboxCurrent->debug[3] = 0;
+#endif
 
     const int motorCount = MOTORS_COUNT;
     for (int i = 0; i < motorCount; i++)
@@ -1011,13 +1050,12 @@ static bool blackboxWriteSysinfo(void)
         BLACKBOX_PRINT_HEADER_LINE("rate_limits", "%d,%d,%d", RATES_MAX_RATE_R, RATES_MAX_RATE_P, RATES_MAX_RATE_Y);
         BLACKBOX_PRINT_HEADER_LINE("rollPID", "%d,%d,%d", (int)R_PIDF.P, (int)R_PIDF.I, (int)R_PIDF.D);
         BLACKBOX_PRINT_HEADER_LINE("pitchPID", "%d,%d,%d", (int)P_PIDF.P, (int)P_PIDF.I, (int)P_PIDF.D);
-        // BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)Y_PIDF.P, (int)Y_PIDF.I, (int)Y_PIDF.D);
-        // BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)rate_throttle_PIDF.P, (int)rate_throttle_PIDF.I, (int)rate_throttle_PIDF.D);
-        BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)acc_throttle_PIDF.P, (int)acc_throttle_PIDF.I, (int)acc_throttle_PIDF.D);
+        BLACKBOX_PRINT_HEADER_LINE("yawPID", "%d,%d,%d", (int)Y_PIDF.P, (int)Y_PIDF.I, (int)Y_PIDF.D);
         BLACKBOX_PRINT_HEADER_LINE("vbat_scale", "%u", 124);
         BLACKBOX_PRINT_HEADER_LINE("vbatcellvoltage", "%u,%u,%u", (uint16_t)(BATTERY_CELL_MIN_VOLTAGE * 100), (uint16_t)(BATTERY_CELL_WARNING_VOLTAGE * 100), (uint16_t)(BATTERY_CELL_MAX_VOLTAGE * 100));
         BLACKBOX_PRINT_HEADER_LINE("vbatref", "%u", vbatReference);
         BLACKBOX_PRINT_HEADER_LINE("looptime", "%d", TASK_PERIOD_HZ(FREQUENCY_MAIN_LOOP));
+        BLACKBOX_PRINT_HEADER_LINE("debug_mode", "%d", blackbox_debug);
 
 
     default:
@@ -1190,10 +1228,16 @@ static void writeInterframe(void)
     {
         blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, accADC), 3);
     }
+    if (testBlackboxCondition(CONDITION(DEBUG_LOG)))
+    {
+        blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, debug), 4);
+    }
     if (isFieldEnabled(FIELD_SELECT(MOTOR)))
     {
         blackboxWriteMainStateArrayUsingAveragePredictor(offsetof(blackboxMainState_t, motor), MOTORS_COUNT);
     }
+
+
 
     // Rotate our history buffers
     blackboxHistory[2] = blackboxHistory[1];
@@ -1294,6 +1338,12 @@ static void writeIntraframe(void)
         blackboxWriteSigned16VBArray(blackboxCurrent->accADC, 3);
     }
 
+    if (testBlackboxCondition(CONDITION(DEBUG_LOG)))
+    {
+        blackboxWriteSigned16VBArray(blackboxCurrent->debug, 4);
+
+    }
+
     if (isFieldEnabled(FIELD_SELECT(MOTOR)))
     {
         // Motors can be below minimum output when disarmed, but that doesn't happen much
@@ -1312,6 +1362,8 @@ static void writeIntraframe(void)
             blackboxWriteSignedVB(blackboxCurrent->servo[0] - 1500);
         }
     }
+
+
 
     // Rotate our history buffers:
 

@@ -49,7 +49,7 @@ typedef struct blackboxMainState_s
     int16_t setpoint[4];
     int16_t gyroADC[3];
     int16_t accADC[3];
-    int16_t debug[3];
+    int16_t debug[4];
     int16_t motor[MOTORS_COUNT];
     int16_t servo[1];
 
