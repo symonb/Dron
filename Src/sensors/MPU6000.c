@@ -40,11 +40,14 @@ void DMA2_Stream0_IRQHandler(void)
 		DMA2->LIFCR |= DMA_LIFCR_CTCIF0;
 		DMA2_Stream0->CR &= ~DMA_SxCR_EN;
 
+		// oversampling counter:
+		gyro_1.counter++;
 
 		for (int i = 0;i < 3;i++) {
 			acc_1.raw_data[i] = (int16_t)(rx_buffer[i * 2] << 8 | rx_buffer[i * 2 + 1]);
-			gyro_1.raw_data[i] = (int16_t)(rx_buffer[i * 2 + 8] << 8 | rx_buffer[i * 2 + 9]);
+			gyro_1.raw_data[i] = ((gyro_1.counter - 1) * gyro_1.raw_data[i] + (int16_t)(rx_buffer[i * 2 + 8] << 8 | rx_buffer[i * 2 + 9])) / gyro_1.counter;
 		}
+
 		acc_1.new_raw_data_flag = true;
 		gyro_1.new_raw_data_flag = true;
 		SPI1_CS_disable();
@@ -87,6 +90,7 @@ void setup_MPU6000()
 	SPI1_disable();
 	SPI1->CR1 &= ~SPI_CR1_BR;
 	SPI1->CR1 |= SPI_CR1_BR_1;
+	SPI1_enable();
 }
 
 void MPU6000_SPI_write(uint8_t adress_of_register, uint8_t value)
@@ -115,20 +119,16 @@ void MPU6000_SPI_read(uint8_t adress_of_register, uint8_t* data,
 void MPU6000_SPI_read_DMA(const uint8_t instruction, uint8_t* data, uint16_t size)
 {
 	// RXONLY mode doesn't work so full duplex DMA:
-	SPI1_enable();
 	SPI1_CS_enable();
 	SPI1_transmit(&instruction, 1);
-	SPI1_disable();
 	SPI1_receive_DMA(data, size);
 }
 
 //-------main MPU6000 setting-----------
 static void	check_gyro_version(gyro_t* gyro) {
-	SPI1_enable();
 	MPU6000_SPI_read(MPU6000_WHO_I_AM_READ, &(gyro->address), 1);
 	delay_micro(15);
 	MPU6000_SPI_read(MPU6000_PRODUCT_ID_READ, &(gyro->rev_id), 1);
-	SPI1_disable();
 }
 
 static void setup_conf()
@@ -235,7 +235,7 @@ static void setup_conf()
 	// MPU6000_SPI_write(register_address, data);
 	// delay_micro(15);
 
-	SPI1_disable();
+	// SPI1_disable();
 }
 
 void read_acc()
@@ -295,6 +295,7 @@ void read_all()
 }
 
 void read_all_DMA() {
+	SPI1_enable();
 	MPU6000_SPI_read_DMA(MPU6000_ACCEL_READ, rx_buffer, 14);
 }
 
@@ -306,8 +307,10 @@ void gyro_update(gyro_t* gyro)
 {
 	// convert raw input to [degree/s]:
 	threef_t temp = { GYRO_TO_DPS * gyro->raw_data[0] - gyro->offset[0],
-	GYRO_TO_DPS * gyro->raw_data[1] - gyro->offset[1],
-	GYRO_TO_DPS * gyro->raw_data[2] - gyro->offset[2] };
+					  GYRO_TO_DPS * gyro->raw_data[1] - gyro->offset[1],
+					  GYRO_TO_DPS * gyro->raw_data[2] - gyro->offset[2] };
+	// reset oversampling counter:
+	gyro_1.counter = 0;
 	// transform raw data from sensor frame into drone frame:
 	temp = quaternion_rotate_vector(temp, q_trans_sensor_to_body_frame);
 	float temporary[3] = { temp.roll, temp.pitch, temp.yaw };
@@ -385,12 +388,12 @@ void acc_level_calibration(acc_t* acc_to_calibrate) {
 	const float MAX_DEV = 0.001f;	// maximal deviation for succesful calibration [g] units
 
 	acc_to_calibrate->calibrated = false;
-	q_trans_sensor_to_body_frame = (quaternion_t){ 0, 0, 0, 1 };
+	q_trans_sensor_to_body_frame = quaternion_from_euler_angles((threef_t) { ACC_GYRO_MOUNT_X, ACC_GYRO_MOUNT_Y, ACC_GYRO_MOUNT_Z });
 
 
 	while (!acc_to_calibrate->calibrated) {
 
-		acc_update(0);
+		acc_update(&acc_1);
 
 		dev_push(&acc_x_dev, Gyro_Acc[3]);
 		dev_push(&acc_y_dev, Gyro_Acc[4]);
@@ -406,9 +409,28 @@ void acc_level_calibration(acc_t* acc_to_calibrate) {
 				// convert acc reading to quaternion transforming from sensor frame to body frame and set it as 
 				// q_trans_sensor_to_body_frame used for acc and gyro data transforamtion
 				threef_t euler_angles = quaternion_to_euler_angles(q_trans_sensor_to_body_frame);
+
+				quaternion_t q_acc = { 0, acc_x_dev.m_newM, acc_y_dev.m_newM, acc_z_dev.m_newM };
+				quaternion_t q_ref = { 0, 0, 0, 1 };
+				q_acc = quaternion_multiply(q_acc, 1.f / quaternion_norm(q_acc));
+				// angle between vectors:
+				float theta = acosf(quaternions_scalar_multiplication(q_acc, q_ref));
+				// cross product of 2 vectors to get axis of rotation:
+				quaternion_t q_temp = quaternions_multiplication(q_ref, q_acc);
+				q_temp.w = 0;
+				// normalize to get unit vector:
+				q_temp = quaternion_multiply(q_temp, 1.f / quaternion_norm(q_temp));
+				q_temp = quaternion_multiply(q_temp, sinf(theta / 2));
+				q_temp.w = cosf(theta / 2);
+
+				// q_temp is quaternion which rotate from current body to level orientation
+				// to get quaternion of transpose we need a conjugate of it:
+				q_trans_sensor_to_body_frame = quaternions_multiplication(quaternion_conjugate(q_temp), q_trans_sensor_to_body_frame);
+				// normalize:
+				q_trans_sensor_to_body_frame = quaternion_multiply(q_trans_sensor_to_body_frame, 1.f / quaternion_norm(q_trans_sensor_to_body_frame));
 				euler_angles.roll += -atan2f(acc_y_dev.m_newM, acc_z_dev.m_newM) * RAD_TO_DEG;
 				euler_angles.pitch += atan2f(acc_x_dev.m_newM, acc_z_dev.m_newM) * RAD_TO_DEG;
-				q_trans_sensor_to_body_frame = quaternion_conjugate(euler_angles_to_quaternion(euler_angles));
+				// q_trans_sensor_to_body_frame = quaternion_conjugate(quaternion_from_euler_angles(euler_angles));
 				acc_to_calibrate->calibrated = true;
 			}
 		}
@@ -456,7 +478,7 @@ uint8_t acc_calibration(acc_t* acc_to_calibrate) {
 	}
 
 	while (1) {
-		acc_update(0);
+		acc_update(&acc_1);
 
 		dev_push(&acc_x_dev, acc_1.raw_data[0] * ACC_TO_GRAVITY);
 		dev_push(&acc_y_dev, acc_1.raw_data[1] * ACC_TO_GRAVITY);
