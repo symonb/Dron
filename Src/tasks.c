@@ -271,6 +271,14 @@ static bool task_baro_init_check_fun(timeUs_t current_time, timeUs_t dt_us) {
 		if (MS5XXX_init(&baro_1)) {
 			remove_from_queue(&all_tasks[TASK_BARO_INIT], &main_scheduler);
 			add_to_queue(&all_tasks[TASK_BARO], &main_scheduler);
+
+			MS5XXX_ADC_read_wait(&baro_1, MS5XXX_CMD_ADC_4096);
+			MS5XXX_calculate_preasure(&baro_1);
+			baro_1.h0_preasure = baro_1.raw_preasure;
+			baro_1.vel_raw = 0;
+			baro_1.ver_vel = 0;
+			baro_calculate_altitude(&baro_1, get_Global_Time());
+
 		}
 	}
 	return false;
@@ -280,7 +288,8 @@ static void task_baro_update_fun(timeUs_t current_time, timeUs_t dt_us)
 {
 	// process the last data read from the sensor (filtering):
 	baro_calculate_altitude(&baro_1, current_time);
-	baro_kalman_fusion(&baro_1, current_time);
+	// baro_kalman_fusion(&baro_1, current_time);
+	baro_kalman_fusion_v2(&baro_1, current_time);
 	// this function only starts process of reading barometer sensor main part is in check_fun():
 	// initialize pressure conversion:
 	MS5XXX_start_conversion_preasure(MS5XXX_CMD_ADC_4096);
@@ -321,7 +330,7 @@ static bool task_baro_update_check_fun(timeUs_t current_time, timeUs_t dt_us)
 
 			time_flag = current_time;
 			// there is no need for reading temperature each time (it doesn't chage so much)
-			if (counter++ < FREQUENCY_BARO / 2) {
+			if (counter++ < 1) {
 				current_state = UPDATE_MEASUREMENTS;
 			}
 			else {

@@ -108,6 +108,6 @@ void rc_filtering();
 void baro_filters_init();
 void baro_D_term_filtering();
 void baro_preasure_filtering();
-void baro_vel_filtering();
+void baro_rate_filtering(float* output, float input);
 
 #endif /* FILTERS_H_ */

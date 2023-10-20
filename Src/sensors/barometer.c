@@ -22,17 +22,17 @@ void baro_calculate_altitude(baro_t* baro, timeUs_t current_time) {
     baro_preasure_filtering();
     float current_alt = 0.001f * (baro->h0_preasure - baro->filtered_preasure) * CONST_MOLAR_GAS / (CONST_GRAVITY * CONST_MOLAR_MASS_AIR) * CONST_TEMPERATURE;
 
+    // not used for now (see kalman filter):
     baro->vel_raw = (current_alt - baro->altitude) / dt;
 
-    baro_vel_filtering();
-
+    // update altitiude:
     baro->altitude = current_alt;
 
 }
 
 void baro_kalman_fusion(baro_t* baro, timeUs_t current_time) {
 
-    // simplest version of KF: 
+    // simplest version of KF (without updating velocity by measuremnts): 
     static timeUs_t last_time;
     const float dt = US_TO_SEC(current_time - last_time);
     last_time = current_time;
@@ -40,8 +40,8 @@ void baro_kalman_fusion(baro_t* baro, timeUs_t current_time) {
     const float B[2] = { dt * dt / 2, dt };
     const float C[2] = { 1, 0 };
     const float acc_dev = 0.01f;
-    const float R[2][2] = { {acc_dev * B[0] * B[0], acc_dev * B[0] * B[1]},{acc_dev * B[1] * B[0], acc_dev * B[1] * B[1]} };     // diagonal
-    const float Q = 0.01f;   // diagonal
+    const float R[2][2] = { {acc_dev * B[0] * B[0], acc_dev * B[0] * B[1]},{acc_dev * B[1] * B[0], acc_dev * B[1] * B[1]} };
+    const float Q = 0.001f;
     // covariance
     static float P[2][2];
     threef_t acc_vec = { Gyro_Acc[3], Gyro_Acc[4], Gyro_Acc[5] };
@@ -85,6 +85,84 @@ void baro_kalman_fusion(baro_t* baro, timeUs_t current_time) {
     P[1][1] = temp[1][0] * P_temp[0][1] + temp[1][1] * P_temp[1][1];
 }
 
+void baro_kalman_fusion_v2(baro_t* baro, timeUs_t current_time) {
+    // version of KF with velocity updated from barometer: 
+    static timeUs_t last_time;
+    const float dt = US_TO_SEC(current_time - last_time);
+    last_time = current_time;
+    const float A[2][2] = { {1, dt },{ 0, 1} };
+    const float B[2] = { dt * dt / 2, dt };
+    const float C[2][2] = { {1, 0},{0,1} };
+    const float acc_dev = 0.01f;
+    const float R[2][2] = { {acc_dev * B[0] * B[0], acc_dev * B[0] * B[1]}, {acc_dev * B[1] * B[0], acc_dev * B[1] * B[1]} };
+    const float baro_dev = 0.01f;
+    const float Q[2][2] = { {baro_dev, 0} ,{0, baro_dev / dt} };
+    // covariance
+    static float P[2][2];
+    threef_t acc_vec = { Gyro_Acc[3], Gyro_Acc[4], Gyro_Acc[5] };
+
+    // transform acc values into global frame and add filtering:
+    float u = CONST_GRAVITY * (quaternion_rotate_vector(acc_vec, quaternion_conjugate(q_global_attitude)).yaw - 1);
+    // state:
+    static float x[2];
+    // tate estimation:
+    float x_e[2] = { A[0][0] * x[0] + A[0][1] * x[1] + B[0] * u , A[1][0] * x[0] + A[1][1] * x[1] + B[1] * u };
+
+    float P_temp[2][2];
+    P_temp[0][0] = A[0][0] * (P[0][0] * A[0][0] + P[0][1] * A[0][1]) + A[0][1] * (P[1][0] * A[0][0] + P[1][1] * A[0][1]) + R[0][0];
+    P_temp[0][1] = A[0][0] * (P[0][0] * A[1][0] + P[0][1] * A[1][1]) + A[0][1] * (P[1][0] * A[1][0] + P[1][1] * A[1][1]) + R[0][1];
+    P_temp[1][0] = A[1][0] * (P[0][0] * A[0][0] + P[0][1] * A[0][1]) + A[1][1] * (P[1][0] * A[0][0] + P[1][1] * A[0][1]) + R[1][0];
+    P_temp[1][1] = A[1][0] * (P[0][0] * A[1][0] + P[0][1] * A[1][1]) + A[1][1] * (P[1][0] * A[1][0] + P[1][1] * A[1][1]) + R[1][1];
+
+    float K[2][2];
+    // calculate kalman gains:
+    float L[2][2];
+    float L_inv[2][2];
+    L[0][0] = C[0][0] * (C[0][0] * P_temp[0][0] + C[0][1] * P_temp[0][1]) + C[0][1] * (C[0][0] * P_temp[1][0] + C[0][1] * P_temp[1][1]) + Q[0][0];
+    L[0][1] = C[0][0] * (C[1][0] * P_temp[0][0] + C[1][1] * P_temp[0][1]) + C[0][1] * (C[1][0] * P_temp[1][0] + C[1][1] * P_temp[1][1]) + Q[0][1];
+    L[1][0] = C[1][0] * (C[0][0] * P_temp[0][0] + C[0][1] * P_temp[0][1]) + C[1][1] * (C[0][0] * P_temp[1][0] + C[0][1] * P_temp[1][1]) + Q[1][0];
+    L[1][1] = C[1][0] * (C[1][0] * P_temp[0][0] + C[1][1] * P_temp[0][1]) + C[1][1] * (C[1][0] * P_temp[1][0] + C[1][1] * P_temp[1][1]) + Q[1][1];
+    //inverse of L:
+    float det = L[0][0] * L[1][1] - L[0][1] * L[1][0];
+    if (det != 0.0f) {
+        L_inv[0][0] = L[1][1] / det;
+        L_inv[0][1] = -L[1][0] / det;
+        L_inv[1][0] = -L[0][1] / det;
+        L_inv[1][1] = L[0][0] / det;
+    }
+    else {
+        L_inv[0][0] = 0;
+        L_inv[0][1] = 0;
+        L_inv[1][0] = 0;
+        L_inv[1][1] = 0;
+    }
+
+    K[0][0] = L_inv[0][0] * (C[0][0] * P_temp[0][0] + C[0][1] * P_temp[0][1]) + L_inv[1][0] * (C[1][0] * P_temp[0][0] + C[1][1] * P_temp[0][1]);
+    K[0][1] = L_inv[0][1] * (C[0][0] * P_temp[0][0] + C[0][1] * P_temp[0][1]) + L_inv[1][1] * (C[1][0] * P_temp[0][0] + C[1][1] * P_temp[0][1]);
+    K[1][0] = L_inv[0][0] * (C[0][0] * P_temp[1][0] + C[0][1] * P_temp[1][1]) + L_inv[1][0] * (C[1][0] * P_temp[1][0] + C[1][1] * P_temp[1][1]);
+    K[1][1] = L_inv[0][1] * (C[0][0] * P_temp[1][0] + C[0][1] * P_temp[1][1]) + L_inv[1][1] * (C[1][0] * P_temp[1][0] + C[1][1] * P_temp[1][1]);
+
+    // update state:
+    float inov[2] = { baro->altitude - (C[0][0] * x_e[0] + C[0][1] * x_e[1]), baro->vel_raw - (C[1][0] * x_e[0] + C[1][1] * x_e[1]) };
+    x[0] = x_e[0] + K[0][0] * inov[0] + K[0][1] * inov[1];
+    x[1] = x_e[1] + K[1][0] * inov[0] + K[1][1] * inov[1];
+
+    baro->altitude = x[0];
+    baro->ver_vel = x[1];
+
+    // update covariance matrix:
+    float temp[2][2];
+    temp[0][0] = 1 - (K[0][0] * C[0][0] + K[0][1] * C[1][0]);
+    temp[0][1] = -(K[0][0] * C[0][1] + K[0][1] * C[1][1]);
+    temp[1][0] = -(K[1][0] * C[0][0] + K[1][1] * C[1][0]);
+    temp[1][1] = 1 - (K[1][0] * C[0][1] + K[1][1] * C[1][1]);
+
+    P[0][0] = temp[0][0] * P_temp[0][0] + temp[0][1] * P_temp[1][0];
+    P[0][1] = temp[0][0] * P_temp[0][1] + temp[0][1] * P_temp[1][1];
+    P[1][0] = temp[1][0] * P_temp[0][0] + temp[1][1] * P_temp[1][0];
+    P[1][1] = temp[1][0] * P_temp[0][1] + temp[1][1] * P_temp[1][1];
+}
+
 void baro_set_h0_preasure(baro_t* baro) {
     baro->h0_preasure = baro->filtered_preasure;
 }
@@ -106,11 +184,11 @@ void alt_hold(timeUs_t dt_us) {
             // if throttle is out of center bounds velocity will be set and desired altitiude will be updated to current altitude
             if (receiver.Throttle > THROTTLE_HOLD_UP) {
                 vertical_vel_desired = (float)(receiver.Throttle - THROTTLE_HOLD_UP) / (THROTTLE_MAX - THROTTLE_HOLD_UP) * MAX_RISING_RATE;
-                desired_altitude = baro_1.altitude;
+                desired_altitude = 0.1f * desired_altitude + 0.9f * baro_1.altitude;// smooth out 
             }
             else if (receiver.Throttle < THROTTLE_HOLD_LOW) {
                 vertical_vel_desired = (float)(receiver.Throttle - THROTTLE_HOLD_LOW) / (THROTTLE_HOLD_LOW - THROTTLE_MIN) * MAX_DECLINE_RATE;
-                desired_altitude = baro_1.altitude;
+                desired_altitude = 0.1f * desired_altitude + 0.9f * baro_1.altitude;// smooth out 
             }
             else {
                 // if throttle is in the middle position altitude will be hold and desired vertical speed is received from altitude error
@@ -149,6 +227,7 @@ void alt_hold(timeUs_t dt_us) {
             }
 
             float acc_z_desired = 1 + corr_rate_throttle.P + corr_rate_throttle.I + corr_rate_throttle.D + corr_rate_throttle.F;
+
             if (acc_z_desired > 1.5f)
             {
                 acc_z_desired = 1.5f;
@@ -156,8 +235,12 @@ void alt_hold(timeUs_t dt_us) {
             else if (acc_z_desired < 0.5f) {
                 acc_z_desired = 0.5f;
             }
+
+            baro_rate_filtering(&acc_z_desired, acc_z_desired);
+
             // only for debuging in blackbox:
-            corr_rate_throttle.P = acc_z_desired;
+            debug_variable[0] = desired_altitude;
+            debug_variable[1] = acc_z_desired * 100;
 
             float err_acc = acc_z_desired - acc_z;
             static float err_acc_prev;

@@ -798,7 +798,7 @@ void rc_filtering() {
 void baro_filters_init() {
 	biquad_filter_init(&filter_D_term_alt, BIQUAD_LPF, BIQUAD_LPF_CUTOFF_D_TERM, BIQUAD_LPF_Q, FREQUENCY_BARO);
 	biquad_filter_init(&filter_baro_preasure, BIQUAD_LPF, BIQUAD_LPF_CUTOFF_ACC, BIQUAD_LPF_Q, FREQUENCY_BARO);
-	biquad_filter_init(&filter_baro_vel, BIQUAD_LPF, BIQUAD_LPF_CUTOFF_ACC, BIQUAD_LPF_Q, FREQUENCY_BARO);
+	biquad_filter_init(&filter_baro_vel, BIQUAD_LPF, BIQUAD_LPF_CUTOFF_ACC, BIQUAD_LPF_Q, FREQUENCY_ALT_HOLD);
 }
 
 void baro_D_term_filtering() {
@@ -806,11 +806,11 @@ void baro_D_term_filtering() {
 }
 
 void baro_preasure_filtering() {
-	float alpha = 0.4;
+	float alpha = 0.6f;
 	baro_1.filtered_preasure = baro_1.filtered_preasure * (1 - alpha) + alpha * biquad_filter_apply_DF2(&filter_baro_preasure, baro_1.raw_preasure);
 }
 
-void baro_vel_filtering() {
-	float alpha = 0.1;
-	baro_1.ver_vel = baro_1.ver_vel * (1 - alpha) + alpha * biquad_filter_apply_DF2(&filter_baro_vel, baro_1.vel_raw);
+void baro_rate_filtering(float* output, float input) {
+
+	*output = biquad_filter_apply_DF2(&filter_baro_vel, input);
 }
