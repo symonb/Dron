@@ -26,7 +26,7 @@ void acro(timeUs_t dt_us)
 
 static threef_t corrections(float dt)
 {
-	static three_t last_measurement = { 0, 0, 0 };
+	static threef_t last_measurement;
 
 	threef_t err = { 0, 0, 0 };
 

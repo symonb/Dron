@@ -506,8 +506,8 @@ static void loadMainState(timeUs_t currentTimeUs)
     // debuging 
 #if defined(BLACKBOX_DEBUG_BARO)
     blackboxCurrent->debug[0] = lrintf(corr_acc_throttle.P);
-    blackboxCurrent->debug[1] = lrintf(corr_acc_throttle.I);
-    blackboxCurrent->debug[2] = lrintf(corr_acc_throttle.D);
+    blackboxCurrent->debug[1] = lrintf(debug_variable[1]);
+    blackboxCurrent->debug[2] = lrint(debug_variable[0] * 100);
     blackboxCurrent->debug[3] = lrintf(baro_1.ver_vel * 100);
 #elif defined(BLACKBOX_DEBUG_CHANNELS_RAW)
     blackboxCurrent->debug[0] = (int16_t)(receiver.channels_raw[0] - 1500);
@@ -538,9 +538,9 @@ static void loadMainState(timeUs_t currentTimeUs)
     blackboxCurrent->debug[2] = motors_error[2] * 1000;
     blackboxCurrent->debug[3] = motors_error[3] * 1000;
 #elif defined(BLACKBOX_DEBUG_ATTITIUDE)
-    blackboxCurrent->debug[0] = global_angles.roll * 100;
-    blackboxCurrent->debug[1] = global_angles.pitch * 100;
-    blackboxCurrent->debug[2] = global_angles.yaw * 100;
+    blackboxCurrent->debug[0] = global_euler_angles.roll * 100;
+    blackboxCurrent->debug[1] = global_euler_angles.pitch * 100;
+    blackboxCurrent->debug[2] = global_euler_angles.yaw * 100;
     blackboxCurrent->debug[3] = 0;
 #endif
 

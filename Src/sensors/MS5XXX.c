@@ -16,7 +16,6 @@ bool MS5XXX_init(baro_t* baro) {
     MS5XXX_PROM_read(temp);
     return MS5XXX_get_coefficients(temp, baro);
 }
-
 /**
  *@brief function to reset sensor after hang up
  *@note According to datasheet the only way to get back to function is to send a few SCLKs and reset sequence
@@ -166,7 +165,7 @@ void MS5XXX_start_conversion_temp(uint8_t CONVERSION_OSR) {
  *@brief simplest version of reading data from sensor with usage of delay functions
  *@param baro pointer for baro_t object where temperature and preasure can be saved.
 * @param CONVERSION_OSR oversampling ratio value - use defined values in MS5XXX.h
-* @note This function will block program for 2 conversions. Not recommneded.
+* @note This function will block program for 2 conversions. Recomended only for initialization.
  * */
 void MS5XXX_ADC_read_wait(baro_t* baro, uint8_t CONVERSION_OSR)
 {
@@ -188,8 +187,6 @@ void MS5XXX_ADC_read_wait(baro_t* baro, uint8_t CONVERSION_OSR)
     I2C1_Write(MS5XXX_ADDR_W, MS5XXX_CMD_ADC_READ, NULL, 0);
     I2C1_Stop();
     I2C1_Read(MS5XXX_ADDR_R, &data[3], 3);
-
-
 
     baro->ADC_value[0] = data[0] << 16 | data[1] << 8 | data[2];
     baro->ADC_value[1] = data[3] << 16 | data[4] << 8 | data[5];
@@ -280,7 +277,7 @@ static bool MS5XXX_get_coefficients(uint8_t* data, baro_t* baro) {
         return true;
     }
     else {
-        // if CRC not corect return false:
+        // if CRC not correct return false:
         return false;
     }
 }

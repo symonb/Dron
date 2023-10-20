@@ -11,13 +11,13 @@
 
  // FOR DEBUGING ONLY
 
-double debug_variable_1;
+double debug_variable[3];
 
 volatile flight_mode_e flight_mode;
 
 volatile arming_e Arming_status;
 
-gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .new_raw_data_flag = false,.address = 0, .rev_id = 0, .offset = {0,0,0} };
+gyro_t gyro_1 = { .name = "MPU6000", .calibrated = false, .counter = 0, .new_raw_data_flag = false, .address = 0, .rev_id = 0, .offset = {0,0,0} };
 acc_t acc_1 = { .name = "MPU6000", .calibrated = true, .new_raw_data_flag = false, .id = 0 ,
  .offset = {-0.022267f,  -0.008086f, -0.016104f}, .scale = { 1.000239f, 0.994042f, 0.991673f } };
 baro_t baro_1 = { .name = "MS5611",.h0_preasure = 1013,.ver_vel = 0 };
@@ -47,18 +47,18 @@ timeUs_t time_flag7_1 = 0;
 
 //------------PIDF-------------
 // angular speed control:
-PIDF_t R_PIDF = { 800, 2000, 7, 6 };
-PIDF_t P_PIDF = { 1000, 2200, 10, 10 };
-PIDF_t Y_PIDF = { 1100, 1000, 0.2, 0 };
-float tpa_coef = 1; // Throttle PID atenuation value tpa_coef = 1-TPA_MAX_VALUE * (throttle-TPA_BREAKPOINT)/(THROTTLE_MAX_VALUE - TPA_BREAKPOINT)
+PIDF_t R_PIDF = { 1000, 900, 22, 8 };
+PIDF_t P_PIDF = { 1200, 1000, 25, 10 };
+PIDF_t Y_PIDF = { 1500, 500, 0, 0 };
+float tpa_coef = 1; // Throttle PID attenuation value tpa_coef = 1-TPA_MAX_VALUE * (throttle-TPA_BREAKPOINT)/(THROTTLE_MAX_VALUE - TPA_BREAKPOINT)
 
 // attitiude control:
-PIDF_t att_PIDF = { 1.5, 0.5, 0, 0 };    // Only P and I values are used
+PIDF_t att_PIDF = { 1.5f, 2, 0, 0 };    // Only P and I values are used
 
 // altitiude control:
-PIDF_t rate_throttle_PIDF = { 0.2, 0.1, 0 };// { 100, 50, 200, 0 };//{ 80, 20, 100, 0 };
+PIDF_t rate_throttle_PIDF = { 0.5, 0.05, 0.1, 0 };// { 100, 50, 200, 0 };//{ 80, 20, 100, 0 };
 PIDF_t corr_rate_throttle;
-PIDF_t acc_throttle_PIDF = { 250, 50, 5, 0 };
+PIDF_t acc_throttle_PIDF = { 250, 0, 0, 0 };
 PIDF_t corr_acc_throttle;
 
 PIDF_t corr_att[3];
@@ -71,15 +71,15 @@ float MCU_temperature = 0;
 bool buzzer_active = false;
 
 rx_t receiver = { .number_of_channels = 14, .type = RX_IBUS , .last_time = 0 };
-
+/**
+ *@brief Euler angles of the drone [deg]
+*/
 threef_t global_euler_angles = { 0, 0, 0 };
-
-threef_t global_angles = { 0, 0, 0 };
 
 quaternion_t q_global_attitude = { 1, 0, 0, 0 };
 
 //  quaternion transforming from IMU frame (acc and gyro) to drone frame
-quaternion_t q_trans_sensor_to_body_frame = { -0.000019f, 0.001861f, 0.010147f, 0.999947f };
+quaternion_t q_trans_sensor_to_body_frame = { 0, -0.017517f, 0.001319f, -0.999846f };
 
 
 //------------SETPOINTS---------------

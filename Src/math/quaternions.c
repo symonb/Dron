@@ -48,7 +48,7 @@ threef_t quaternion_to_euler_angles(quaternion_t q) {
 
 	return angles;
 }
-quaternion_t euler_angles_to_quaternion(threef_t euler_angles) {
+quaternion_t quaternion_from_euler_angles(threef_t euler_angles) {
 
 	float cr = cosf(euler_angles.roll * 0.5f * DEG_TO_RAD);
 	float sr = sinf(euler_angles.roll * 0.5f * DEG_TO_RAD);

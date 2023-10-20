@@ -67,9 +67,13 @@ void usb_communication() {
                 "\n\rpossible commands:"
                 "\n\rset_mode\t<MODE>\tchange USB mode <MSC, DFU>"
                 "\n\rPID_show\t\tshow current PID values"
-                "\n\rflash_format\t\terase and format flash memory"
+                "\n\rflash_format\t\terase and format flash memory");
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+            delay_mili(10);
+            strcpy((char*)main_usb.data_to_send,
                 "\n\racc_level\t\tlevel up drone (set curent attitiude as level)"
                 "\n\racc_calibrate\t\tcalibrate accelerometer"
+                "\n\rangles_show\t\tprint current Euler angles"
                 "\n\rreboot\t\t\treboot drone"
                 "\n\rhelp\t\t\thelp info\n\r");
             CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
@@ -207,6 +211,15 @@ void usb_communication() {
                 acc_1.offset[0], acc_1.offset[1], acc_1.offset[2],
                 acc_1.scale[0], acc_1.scale[1], acc_1.scale[2]);
 
+            CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
+
+        }
+        else if (strcmp((char*)main_usb.data_received, "angles_show") == 0) {
+            snprintf((char*)main_usb.data_to_send, sizeof main_usb.data_to_send, "\n\rcurrent Euler angles:\n\r"
+                "ROLL:\t%.2lf\n\r"
+                "PITCH:\t%.2lf\n\r"
+                "YAW:\t%.2lf\n\r",
+                global_euler_angles.roll, global_euler_angles.pitch, global_euler_angles.yaw);
             CDC_Transmit_FS(main_usb.data_to_send, strlen((char*)main_usb.data_to_send));
 
         }

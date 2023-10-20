@@ -214,7 +214,7 @@ static void madgwick_filter(float dt)
 	delta_error_function = quaternion_multiply(delta_error_function,
 		1.f / quaternion_norm(delta_error_function));
 
-	float coefficient_Beta = 0.073f; // 0.073f from original article
+	float coefficient_Beta = 0.01f; // 0.073f from original article
 
 	q_global_attitude = quaternions_sum(q_global_attitude,
 		quaternion_multiply(
@@ -332,7 +332,7 @@ static threef_t corrections_from_quaternion(quaternion_t attitude_quaternion)
 	}
 
 	// define quaternion of desired attitude (quaternion transformation from global to body frame):
-	set_attitude_quaternion = euler_angles_to_quaternion(desired_angles);
+	set_attitude_quaternion = quaternion_from_euler_angles(desired_angles);
 
 #if defined(MAGDWICK_ORIGINAL)
 

@@ -114,18 +114,41 @@ typedef enum
 	PREARMED
 }arming_e;
 
-
+/**
+ * @brief struct for gyro sensor
+ * @param name name of the module
+ * @param address
+ * @param rev_id revision id of device
+ * @param counter oversampling counter for everaging raw data
+ * @param raw_data tab with raw data from sensor (if reading raw data frequency is bigger than filtering frequency raw data are everaged )
+ * @param offset tab with offset for each axis (sensor values for not moving drone)
+ * @param calibrated flag set after gyro calibration
+ * @param new_raw_data_flag if new raw data are ready
+ * @param new_filtered_data_flag if new filtered data are ready
+*/
 typedef struct {
 	char* name;
 	uint8_t	address;
 	uint8_t rev_id;
-	int16_t raw_data[3];
+	uint8_t counter;
+	int32_t raw_data[3];
 	float offset[3];
 	bool calibrated;
 	bool new_raw_data_flag;
 	bool new_filtered_data;
 } gyro_t;
 
+/**
+ * @brief struct for accelerometer sensor
+ * @param name name of the module
+ * @param id revision id of device
+ * @param raw_data tab with raw data from sensor
+ * @param offset tab with offset for each axis
+ * @param scale tab with scale for each axis
+ * @param calibrated flag set after gyro calibration
+ * @param new_raw_data_flag if new raw data are ready
+ * @param new_filtered_data_flag if new filtered data are ready
+*/
 typedef struct {
 	char* name;
 	uint8_t id;
@@ -153,7 +176,6 @@ typedef struct
 	int16_t Throttle;
 	timeUs_t last_time;
 	bool new_data_flag;
-
 } rx_t;
 
 extern rx_t receiver;
@@ -169,7 +191,7 @@ extern baro_t baro_1;
 #endif
 
 // FOR DEBUG ONLY:
-extern double debug_variable_1;
+extern double debug_variable[];
 
 //---------TIME VARIABLES-------------
 
@@ -222,8 +244,6 @@ extern float MCU_temperature;
 extern bool buzzer_active;
 
 extern threef_t global_euler_angles;
-
-extern threef_t global_angles;
 
 extern quaternion_t q_global_attitude;
 

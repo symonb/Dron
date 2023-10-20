@@ -136,8 +136,6 @@ void SPI1_receive_DMA(uint8_t* data, uint16_t size)
     DMA2_Stream3->M0AR = (uint32_t)(data);
     DMA2_Stream3->NDTR = size;
 
-    SPI1_enable();
-
     // enable DMA:
     DMA2_Stream0->CR |= DMA_SxCR_EN;
     DMA2_Stream3->CR |= DMA_SxCR_EN;

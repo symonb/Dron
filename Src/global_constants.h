@@ -147,9 +147,9 @@ linear dependance for a=b otherwise curve (max for b = 0)
 
 //----------MOTORS_AND_CORRECTIONS-------
 #define TPA_MAX_VALUE 0.5f		// Throttle PID atennuation (when full throttle PID values are 0.7 of original values (if this is set to 0.3))
-#define TPA_BREAKPOINT 1500	// throttle value when attenuation begins (when throttle vary between 1000-2000 attenuation will start at 1500 and increase up to 2000)
-#define MAX_I_CORRECTION 400 // maximal I_corr for PIDs between <0;1000>
-#define MOTOR_OUTPUT_MIN 1050
+#define TPA_BREAKPOINT 1650	// throttle value when attenuation begins (when throttle vary between 1000-2000 attenuation will start at 1500 and increase up to 2000)
+#define MAX_I_CORRECTION 200 // maximal I_corr for PIDs between <0;1000>
+#define MOTOR_OUTPUT_MIN 1040
 #define MOTOR_OUTPUT_MAX 2000
 #define MOTORS_COUNT 4		  // how many motors are used
 #define MOTOR_1 3			  // PA3
@@ -187,8 +187,8 @@ linear dependance for a=b otherwise curve (max for b = 0)
 #define FREQUENCY_OSD_UPDATE 30			 	//	[Hz]
 #define FREQUENCY_USB_CHECK 50				//	[Hz]
 #define FREQUENCY_BLACKBOX FREQUENCY_MAIN_LOOP/(1<<BLACKBOX_SAMPLE_RATE)				//	[Hz]
-#define FREQUENCY_BARO 200					//	[Hz]
-#define FREQUENCY_ALT_HOLD 100				//	[Hz]
+#define FREQUENCY_BARO 100					//	[Hz]
+#define FREQUENCY_ALT_HOLD 50				//	[Hz]
 
 //--------------------FLASH-------------------
 #define USE_FLASHFS	// USE_FLASHFS required for USB MSC and BLACKBOX  
@@ -205,7 +205,7 @@ linear dependance for a=b otherwise curve (max for b = 0)
  * BLACKBOX_DEBUG_ATTITIUDE				- 3 Euler angles roll, pitch, yaw * 100 [deg]
  */
 
-#define BLACKBOX_DEBUG_BARO
+#define BLACKBOX_DEBUG_BARO	
 #define BLACKBOX_SAMPLE_RATE 1		//	sampling is 1/2^BLACKBOX_SAMPLE_RATE so for 0 it is equal to main PID loop frequency, for half frequency of main loop set this as 1
 
 #define REQUIRE_CC_ARM_PRINTF_SUPPORT
@@ -238,8 +238,15 @@ typedef enum
 
 //------------------SENSORS-------------------
 #define USE_BARO
-#define ACC_GYRO_MOUNT 180	// how is IMU mounted refering to drone axes (Z is up, X is pointed with drone's nose and Y is pointed left)
-
+// how is IMU mounted refering to drone axes 
+// imagine all rotations required to align sensor axes with drone axes
+// you rotate always in sensor frame 
+// first rotate along sensor Z axis
+// next rotate along sensor Y axis 
+// at the end rotate along sensor X axis
+#define ACC_GYRO_MOUNT_Z 180	
+#define ACC_GYRO_MOUNT_Y 0
+#define ACC_GYRO_MOUNT_X 0
 // #define USE_MAG
 
 //-------------------FILTERS------------------
@@ -252,11 +259,11 @@ typedef enum
 
 #define USE_RC_SMOOTHING	// if you want use rc smoothing USE_RC_SMOOTHING
 
-#define BIQUAD_LPF_CUTOFF_GYRO 70	    //	[Hz]
+#define BIQUAD_LPF_CUTOFF_GYRO 90	    //	[Hz]
 #define BIQUAD_LPF_CUTOFF_ACC 10		//	[Hz]
-#define BIQUAD_LPF_CUTOFF_D_TERM 100	//	[Hz]
+#define BIQUAD_LPF_CUTOFF_D_TERM 90	//	[Hz]
 #define BIQUAD_LPF_CUTOFF_FF_TERM 120	//  [Hz]
-#define BIQUAD_LPF_CUTOFF_RC 50			//  [Hz]
+#define BIQUAD_LPF_CUTOFF_RC 70			//  [Hz]
 
 #define BIQUAD_LPF_Q (1.f / sqrtf(2)) 	//	Q factor for Low-pass filters
 #define BIQUAD_NOTCH_Q 10				//	Q factor for notch filters
@@ -268,9 +275,9 @@ typedef enum
 // #define USE_RPM_FILTER_ACC	// if you want use RPM_filter for acc USE_RPM_FILTER_ACC
 #endif
 
-#define RPM_MIN_FREQUENCY_HZ 50 // all frequencies <= than this value will not be filtered by RPM filter
+#define RPM_MIN_FREQUENCY_HZ 100 // all frequencies <= than this value will not be filtered by RPM filter
 #define RPM_FADE_RANGE_HZ 50	// fade out notch when approaching RPM_MIN_FREQUENCY_HZ (turn it off for RPM_MIN_FREQUENCY_HZ)
-#define RPM_Q_FACTOR 400		// Q factor for all notches. It is VERY HIGH therefore notches are really narrow and selective
+#define RPM_Q_FACTOR 500		// Q factor for all notches. It is VERY HIGH therefore notches are really narrow and selective
 #define RPM_MAX_HARMONICS 3		// max. number of filtered harmonics
 
 //	remember to define coefficients in global_variables.c
