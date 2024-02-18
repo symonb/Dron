@@ -105,6 +105,7 @@ target_include_directories(${TARGET_ELF} PUBLIC
     USB_files/USB_DEVICE/App
     USB_files/USB_DEVICE/Target
     USB_files/FatFS/Inc
+    Src/deepc
     )
 
 set(CMAKE_C_FLAGS "${C_flags}")
